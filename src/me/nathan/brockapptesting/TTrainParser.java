@@ -9,6 +9,7 @@ import net.sourceforge.tess4j.Tesseract;
 import net.sourceforge.tess4j.TesseractException;
 
 import javax.imageio.ImageIO;
+import javax.swing.*;
 import java.awt.*;
 import java.awt.image.BufferedImage;
 import java.io.*;
@@ -22,8 +23,6 @@ import java.util.List;
 public class TTrainParser {
 
     /*
-     * Do File path selection etc here
-     *
      * display live departure board via digital screens, where the information is self-refreshing;
      * , must say Powered by National Rail Enquiries
      *
@@ -32,21 +31,39 @@ public class TTrainParser {
      */
 
     public static TTrainParser mainInstance;
+    public static JFrame frame;
+    public static MainForm mainForm;
+    private static String pathBefore = System.getProperty("user.dir") + File.separator + "Parsed Timetable Data" + File.separator;
+    private static String potentialTimetableString = pathBefore + "My Timetable.pdf";
+    private static String potentialTimetableStringJpeg = pathBefore + "My Timetable.jpg";
+    private static boolean hasTimetablePdfAlready = false;
     private static ITesseract instance = new Tesseract();
 
     public static void main(String[] args) throws IOException {
         mainInstance = new TTrainParser();
-        String pathBefore = System.getProperty("user.dir") + File.separator + "Parsed Timetable Data" + File.separator;
-        System.setProperty("sun.java2d.cmm", "sun.java2d.cmm.kcms.KcmsServiceProvider");
+        frame = new JFrame("TTrainParser");
 
-        String potentialTimetableString = pathBefore + "My Timetable.pdf";
-        String potentialTimetableStringJpeg = pathBefore + "My Timetable.jpg";
+        hasTimetablePdfAlready = new File(potentialTimetableString).exists();
 
-        boolean parsedAlready = new File(potentialTimetableString).exists();
+        mainForm = new MainForm(mainInstance);
+
+        DisplayMode mode = GraphicsEnvironment.getLocalGraphicsEnvironment().getDefaultScreenDevice().getDisplayMode();
+        int frameHeight = 500;
+        int frameWidth = 500;
+
+        frame.setLocation(new Point(mode.getWidth() / 2 - (frameWidth / 2), mode.getHeight() / 2 - (frameHeight / 2)));
+        frame.setPreferredSize(new Dimension(frameWidth, frameHeight));
+
+        frame.setContentPane(mainForm.getWelcomePanel());
+        frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+
+        frame.pack();
+        frame.setVisible(true);
 
         BufferedImage selectedFileImage;
 
         long now = System.currentTimeMillis();
+
 
         File selectedFile = new File("");
         //DO FILE SELECTION HERE & SET 'selectedFile' to something
@@ -61,10 +78,12 @@ public class TTrainParser {
         BufferedImage allDayCroppedImage = null;
         boolean successfulParse = false;
 
-        if (!parsedAlready) {
+        if (!hasTimetablePdfAlready) {
             ParsedTimetable timetable = new ParsedTimetable(mainInstance, selectedFileImage);
+
             successfulParse = timetable.successfullyParsed();
-            allDayCroppedImage = timetable.getSuccessfullyParsedImage(); //Updates the variable to the parsed one for sementation to do its thing
+
+            allDayCroppedImage = timetable.getSuccessfullyParsedImage(); //Updates the variable to the parsed one for segmentation to do its thing
             File start = new File(potentialTimetableStringJpeg);
             jpgToPdf(start, potentialTimetableString, true); //making a My Timetable.pdf
         } else {
@@ -72,13 +91,12 @@ public class TTrainParser {
         }
 
         Map<DayOfWeek, String> opticallyReadText = new HashMap<>();
-
         if (!successfulParse) {
             displayError("Parsing was not successful! Does the provided image contain timetable borders?");
             return; //Terminate
         }
 
-        Segmentation segmentation = new Segmentation(mainInstance, allDayCroppedImage); //allday image is the cropped image
+        Segmentation segmentation = new Segmentation(mainInstance, allDayCroppedImage);
 
         String ocrText = "";
         for (int i = 1; i <= 5; i++) {
@@ -111,10 +129,6 @@ public class TTrainParser {
         }
         System.out.println("Timetable parsed successfully in " + (System.currentTimeMillis() - now) + "ms");
 
-    }
-
-    private static String attemptLoadFileName(String property) {
-        return null;
     }
 
     private static String depleteFutileInfo(String ocrResult) throws IOException {
@@ -233,6 +247,25 @@ public class TTrainParser {
         if (deleteJpgs) startImageFile.delete();
     }
 
+    public static BufferedImage getNewImage(BufferedImage firstImage, int topLeftX, int topLeftY, int bottomRightX, int bottomRightY) {
+        int subImageHeight = bottomRightY - topLeftY;
+        int subImageWidth = bottomRightX - topLeftX;
+        BufferedImage newImage = firstImage.getSubimage(topLeftX, topLeftY, subImageWidth, subImageHeight);
+        return newImage;
+    }
+
+    public static ITesseract getTesseractInstance() {
+        return instance;
+    }
+
+    public static boolean hasTimetablePdfAlready() {
+        return hasTimetablePdfAlready;
+    }
+
+    private static void displayError(String string) {
+        System.out.println("Error -> " + string);
+    }
+
     public TablePart getTableType(String rgbString) {
         TablePart tableType = TablePart.UNKNOWN;
         int[] rgbArray = new int[3];
@@ -257,22 +290,14 @@ public class TTrainParser {
 
     }
 
-    public static BufferedImage getNewImage(BufferedImage firstImage, int topLeftX, int topLeftY, int bottomRightX, int bottomRightY) {
-        int subImageHeight = bottomRightY - topLeftY;
-        int subImageWidth = bottomRightX - topLeftX;
-        BufferedImage newImage = firstImage.getSubimage(topLeftX, topLeftY, subImageWidth, subImageHeight);
-        return newImage;
-    }
-
-    public static ITesseract getTesseractInstance() {
-        return instance;
-    }
-
     public String pixelRGBToString(Color colour) {
         return colour.getRed() + ", " + colour.getGreen() + ", " + colour.getBlue();
     }
 
-    private static void displayError(String string) {
-        System.out.println("Error -> " + string);
+    public boolean passesPreliminaryChecks(File selected) {
+        if (selected.getName().endsWith(".pdf")) {
+            return true;
+        }
+        return false;
     }
 }
