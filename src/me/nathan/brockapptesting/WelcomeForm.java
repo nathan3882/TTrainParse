@@ -1,6 +1,8 @@
 package me.nathan.brockapptesting;
 
 import net.sourceforge.tess4j.TesseractException;
+import net.sourceforge.yamlbeans.YamlException;
+import net.sourceforge.yamlbeans.YamlWriter;
 
 import javax.imageio.ImageIO;
 import javax.swing.*;
@@ -10,13 +12,14 @@ import java.awt.event.ItemEvent;
 import java.awt.event.ItemListener;
 import java.awt.image.BufferedImage;
 import java.io.File;
+import java.io.FileWriter;
 import java.io.IOException;
 import java.time.DayOfWeek;
 import java.util.HashMap;
 import java.util.Map;
 
 
-public class MainForm {
+public class WelcomeForm {
 
     public JPanel welcomePanel;
     public JLabel welcomeLabel;
@@ -34,16 +37,10 @@ public class MainForm {
 
     private boolean isValidFile = false;
 
-    public MainForm(TTrainParser main) {
+    public WelcomeForm(TTrainParser main) {
         this.main = main;
         advanceToTrainButton.setEnabled(false);
         confirmValidTimetable.setEnabled(false);
-        String welcomeText = "<html><center>Welcome!<br>You've already added your timetable to the app!<br>Press 'Show Trains'</center></html>";
-        if (!main.hasCroppedTimetableFileAlready(false)) {
-            welcomeText = "<html><center>Welcome!<br>We've sensed you haven't got a timetable stored already...<br>Add one below along with some basic info about yourself!</center></html>";
-        }
-
-        welcomeLabel.setText(welcomeText);
 
         selectFile.addActionListener(new ActionListener() {
 
@@ -68,8 +65,11 @@ public class MainForm {
         confirmValidTimetable.addItemListener(new ItemListener() {
             @Override
             public void itemStateChanged(ItemEvent e) {
-                if (confirmValidTimetable.isSelected() && isValidFile) {
-                    advanceToTrainButton.setEnabled(true);
+
+                //open register / login screen
+                if (isValidFile) {
+                    advanceToTrainButton.setEnabled(confirmValidTimetable.isSelected());
+
                 }
             }
         });
@@ -77,7 +77,7 @@ public class MainForm {
         long now = System.currentTimeMillis();
         /**
          * This listener below handles advance button when it's clicked.
-         * It generates a new cropped PDF fie
+         * It generates a new cropped PDF file if doesnt already exist
          */
         advanceToTrainButton.addActionListener(new ActionListener() {
             @Override
@@ -92,27 +92,49 @@ public class MainForm {
                         return;
                     }
 
-                    if (!main.hasCroppedTimetableFileAlready(false)) {
-                        ParsedTimetable timetable = new ParsedTimetable(main, selectedFileImage);
+
+                    DataFileInfo info = new DataFileInfo();
+
+                    /**TODO potentially jump straight into getting cropped days from big file?
+                     Instead of cropping to get all days then cropping again, will stop image equality reducing*/
+                    if (!main.hasCroppedTimetableFileAlready(false)) { //hasn't got a pdf
+                        ParsedTimetable timetable = new ParsedTimetable(main, selectedFileImage); //parses jpg
                         successfullyParsed = timetable.successfullyParsed();
 
-                        allDayCroppedImage = timetable.getSuccessfullyParsedImage(); //Updates the variable to the parsed one for segmentation to do its thing
-                        String outputFileName = selectedFile.getName().split(".")[0] + ".pdf";
-                        main.jpgToPdf(selectedFile, outputFileName, true); //making a My Timetable.pdf
+                        allDayCroppedImage = timetable.getSuccessfullyParsedImage(); //variable equal to cropped image now
+
+                        info.setTimetableCroppepJpgFileName(selectedFile.getName());
+                        try {
+                            ImageIO.write(allDayCroppedImage, "jpg", selectedFile); //outputs cropped jpg to uncropped jpg file
+                        } catch (IOException e) {
+                            e.printStackTrace();
+                        }
+                        String outputFileName = selectedFile.getName().split("\\.")[0] + ".pdf";
+                        info.setTimetableCroppedPdfFileName(outputFileName);
+                        main.jpgToPdf(selectedFile, outputFileName, false); //making a pdf of the cropped image
                     } else {
                         successfullyParsed = true;
                     }
 
-
-                    if (!successfullyParsed) {
+                    if (!successfullyParsed) { //Terminate
                         main.displayError("Parsing was not successful! Does the provided image contain timetable borders?");
-                        return; //Terminate
+                        return;
+                    } else { //Update data file
+                        YamlWriter writer = null;
+                        try {
+                            //TODO Store System current millis for the time which the user had first timetable parsed
+                            writer = new YamlWriter(new FileWriter("data.yml"));
+                            writer.write(info); //writes previously collected data about jpg & pdf file names
+                            writer.close();
+                        } catch (IOException | YamlException e) {
+                            e.printStackTrace();
+                        }
                     }
 
                     Map<DayOfWeek, String> opticallyReadText = new HashMap<>();
-//TODO in writeup mention it was between storing all days once, or doing a new segmentation object each time and just extracting one day
+                    //TODO in writeup mention it was between storing all days once, or doing a new segmentation object each time and just extracting one day
 
-                    if (main.hasCroppedTimetableFileAlready(true)) {
+                    if (main.hasCroppedTimetableFileAlready(true)) { //true = check for jpg
                         //Has a valid cropped JPG file already, set ImageIO allDayCroppedImage
                         try {
                             allDayCroppedImage = ImageIO.read(main.getCroppedTimetableFileName(true));
@@ -134,8 +156,6 @@ public class MainForm {
                             } catch (IOException e) {
                                 e.printStackTrace();
                             }
-                            /*Make a temp JPG version*/
-
                             try {
                                 main.jpgToPdf(file, day.name() + ".pdf", true);
 

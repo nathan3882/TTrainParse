@@ -1,2 +1,3 @@
-timetable-cropped-pdf-file-name: "not-set"
-timetable-cropped-jpg-file-name: "not-set"
+!me.nathan.brockapptesting.DataFileInfo
+timetableCroppedPdfFileName: My Timetable.pdf
+timetableCroppepJpgFileName: My Timetable.jpg

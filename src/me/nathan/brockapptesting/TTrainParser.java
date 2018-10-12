@@ -30,26 +30,61 @@ public class TTrainParser {
      */
 
     public static final String USER_DIRECTORY = System.getProperty("user.dir");
+
     public static TTrainParser mainInstance;
     public static JFrame frame;
-    public static MainForm mainForm;
+    public WelcomeForm welcomeForm;
+    public LoginRegisterForm loginRegisterForm;
+
+    public static final String WELCOME_PANEL = "welcomePanel";
+    public static final String LOGIN_REGISTER_PANEL = "loginRegisterPanel";
+
+    public JPanel cards;
+    public JPanel welcomePanel;
+    public JPanel loginRegisterPanel;
+
+    public CardLayout cardLayout;
+
     private static String pathBefore = USER_DIRECTORY + File.separator + "Parsed Timetable Data" + File.separator;
     private static ITesseract instance = new Tesseract();
 
     public static void main(String[] args) throws IOException {
         mainInstance = new TTrainParser();
         frame = new JFrame("TTrainParser");
+        try {
+            for (UIManager.LookAndFeelInfo info : UIManager.getInstalledLookAndFeels()) {
+                if ("Nimbus".equals(info.getName())) {
+                    UIManager.setLookAndFeel(info.getClassName());
+                    break;
+                }
+            }
+        } catch (Exception e) {
+            // If Nimbus is not available, you can set the GUI to another look and feel.
+        }
+        mainInstance.cards = new JPanel(new CardLayout());
 
-        mainForm = new MainForm(mainInstance);
+        mainInstance.welcomeForm = new WelcomeForm(mainInstance);
+        mainInstance.welcomePanel = mainInstance.welcomeForm.getWelcomePanel();
+
+        mainInstance.loginRegisterForm = new LoginRegisterForm(mainInstance);
+        mainInstance.loginRegisterPanel = mainInstance.loginRegisterForm.getLoginRegisterPanel();
+
+        mainInstance.cards.add(mainInstance.welcomePanel, WELCOME_PANEL);
+        mainInstance.cards.add(mainInstance.loginRegisterPanel, LOGIN_REGISTER_PANEL);
+
+        frame.setContentPane(mainInstance.cards);
+        if (mainInstance.hasCroppedTimetableFileAlready(false)) {
+            mainInstance.openPanel(LOGIN_REGISTER_PANEL);
+        } else {
+            mainInstance.openPanel(WELCOME_PANEL);
+        }
 
         DisplayMode mode = GraphicsEnvironment.getLocalGraphicsEnvironment().getDefaultScreenDevice().getDisplayMode();
         int frameHeight = 500;
         int frameWidth = 500;
-
         frame.setLocation(new Point(mode.getWidth() / 2 - (frameWidth / 2), mode.getHeight() / 2 - (frameHeight / 2)));
         frame.setPreferredSize(new Dimension(frameWidth, frameHeight));
 
-        frame.setContentPane(mainForm.getWelcomePanel());
         frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
 
         frame.pack();
@@ -155,7 +190,7 @@ public class TTrainParser {
     public void jpgToPdf(File startImageFile, String outputFileName, boolean deleteJpgs) {
         Image image = null;
         try {
-            Image.getInstance(startImageFile.getName());
+            image = Image.getInstance(startImageFile.getName());
         } catch (BadElementException | IOException e) {
             e.printStackTrace();
         }
@@ -195,7 +230,7 @@ public class TTrainParser {
     }
 
     public void displayError(String string) {
-        JOptionPane.showMessageDialog(mainForm.getWelcomePanel(), string);
+        JOptionPane.showMessageDialog(welcomeForm.getWelcomePanel(), string);
     }
 
     public TablePart getTableType(String rgbString) {
@@ -227,7 +262,7 @@ public class TTrainParser {
     }
 
     public String getFileSuffix(File selected) {
-        return selected.getName().split(".")[1];
+        return selected.getName().split("\\.")[1];
     }
 
     /**
@@ -237,10 +272,10 @@ public class TTrainParser {
     public File getCroppedTimetableFileName(boolean trueForJPG) {
 
         YamlReader reader = null;
-        Map map = null;
+        DataFileInfo info = null;
         try {
             reader = new YamlReader(new FileReader(USER_DIRECTORY + File.separator + "data.yml"));
-            map = (Map) reader.read();
+            info = reader.read(DataFileInfo.class);
         } catch (FileNotFoundException | YamlException e) {
             displayError("An error occurred whilst reading from data.yml file!");
             e.printStackTrace();
@@ -250,16 +285,15 @@ public class TTrainParser {
             return null;
         }
 
-        String pdfOrJpg = trueForJPG ? "jpg" : "pdf";
-        return new File(USER_DIRECTORY + File.separator + String.valueOf(map.get("timetable-cropped-" + pdfOrJpg + "-file-name")));
+        return new File(USER_DIRECTORY + File.separator + (trueForJPG ? info.getTimetableCroppepJpgFileName() : info.getTimetableCroppedPdfFileName()));
     }
 
     public boolean hasCroppedTimetableFileAlready(boolean trueForJPG) {
         YamlReader reader = null;
-        Map map = null;
+        DataFileInfo info = null;
         try {
             reader = new YamlReader(new FileReader(USER_DIRECTORY + File.separator + "data.yml"));
-            map = (Map) reader.read();
+            info = reader.read(DataFileInfo.class);
         } catch (FileNotFoundException | YamlException e) {
             displayError("An error occurred whilst reading from data.yml file!");
             e.printStackTrace();
@@ -269,8 +303,8 @@ public class TTrainParser {
             return false;
         }
 
-        String pdfOrJpg = trueForJPG ? "jpg" : "pdf";
-        String setFilenameInDataFile = String.valueOf(map.get("timetable-cropped-" + pdfOrJpg + "-file-name"));
+        String pdfOrJpg = trueForJPG ? "Jpg" : "Pdf";
+        String setFilenameInDataFile = (trueForJPG ? info.getTimetableCroppepJpgFileName() : info.getTimetableCroppedPdfFileName());
         File[] files = new File(USER_DIRECTORY).listFiles();
         for (File aFile : files) {
             if (aFile.getName().equals(setFilenameInDataFile)) {
@@ -279,5 +313,11 @@ public class TTrainParser {
         }
         //No set filename, pdf file has been relocated
         return false;
+    }
+
+    public void openPanel(String panelName) {
+        CardLayout cardLayout = (CardLayout) (cards.getLayout());
+        cardLayout.show(cards, panelName);
+        cards.revalidate();
     }
 }
