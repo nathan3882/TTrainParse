@@ -6,14 +6,13 @@ import com.lowagie.text.Rectangle;
 import com.lowagie.text.pdf.PdfWriter;
 import net.sourceforge.tess4j.ITesseract;
 import net.sourceforge.tess4j.Tesseract;
-import net.sourceforge.tess4j.TesseractException;
+import net.sourceforge.yamlbeans.YamlException;
+import net.sourceforge.yamlbeans.YamlReader;
 
-import javax.imageio.ImageIO;
 import javax.swing.*;
 import java.awt.*;
 import java.awt.image.BufferedImage;
 import java.io.*;
-import java.time.DayOfWeek;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -30,20 +29,16 @@ public class TTrainParser {
      * to retrieve WSDL/Info in XML format to manipulate and get train times
      */
 
+    public static final String USER_DIRECTORY = System.getProperty("user.dir");
     public static TTrainParser mainInstance;
     public static JFrame frame;
     public static MainForm mainForm;
-    private static String pathBefore = System.getProperty("user.dir") + File.separator + "Parsed Timetable Data" + File.separator;
-    private static String potentialTimetableString = pathBefore + "My Timetable.pdf";
-    private static String potentialTimetableStringJpeg = pathBefore + "My Timetable.jpg";
-    private static boolean hasTimetablePdfAlready = false;
+    private static String pathBefore = USER_DIRECTORY + File.separator + "Parsed Timetable Data" + File.separator;
     private static ITesseract instance = new Tesseract();
 
     public static void main(String[] args) throws IOException {
         mainInstance = new TTrainParser();
         frame = new JFrame("TTrainParser");
-
-        hasTimetablePdfAlready = new File(potentialTimetableString).exists();
 
         mainForm = new MainForm(mainInstance);
 
@@ -60,78 +55,9 @@ public class TTrainParser {
         frame.pack();
         frame.setVisible(true);
 
-        BufferedImage selectedFileImage;
-
-        long now = System.currentTimeMillis();
-
-
-        File selectedFile = new File("");
-        //DO FILE SELECTION HERE & SET 'selectedFile' to something
-        try {
-            selectedFileImage = ImageIO.read(selectedFile); //Get BufferedImage object from File
-        } catch (Exception e) {
-            e.printStackTrace();
-            displayError("Your provided image of timetable could not be found");
-            return;
-        }
-
-        BufferedImage allDayCroppedImage = null;
-        boolean successfulParse = false;
-
-        if (!hasTimetablePdfAlready) {
-            ParsedTimetable timetable = new ParsedTimetable(mainInstance, selectedFileImage);
-
-            successfulParse = timetable.successfullyParsed();
-
-            allDayCroppedImage = timetable.getSuccessfullyParsedImage(); //Updates the variable to the parsed one for segmentation to do its thing
-            File start = new File(potentialTimetableStringJpeg);
-            jpgToPdf(start, potentialTimetableString, true); //making a My Timetable.pdf
-        } else {
-            successfulParse = true;
-        }
-
-        Map<DayOfWeek, String> opticallyReadText = new HashMap<>();
-        if (!successfulParse) {
-            displayError("Parsing was not successful! Does the provided image contain timetable borders?");
-            return; //Terminate
-        }
-
-        Segmentation segmentation = new Segmentation(mainInstance, allDayCroppedImage);
-
-        String ocrText = "";
-        for (int i = 1; i <= 5; i++) {
-            DayOfWeek day = DayOfWeek.of(i);
-
-            /*Make a temp JPG version*/
-            File file = new File(day.name() + ".jpg");
-            ImageIO.write(segmentation.getDay(day), "jpg", file);
-            /*Make a temp JPG version*/
-
-            try {
-                jpgToPdf(file, day.name() + ".pdf", true);
-
-                ocrText = getTesseractInstance().doOCR(new File(day.name() + ".pdf"));
-            } catch (TesseractException e) {
-                displayError("An error occured whilst doing OCR on PDF");
-                e.printStackTrace();
-            }
-            if (ocrText.length() < 30) {
-                continue; /*No Lessons*/
-            }
-
-            opticallyReadText.put(day, depleteFutileInfo(ocrText));
-
-        }
-        for (DayOfWeek day : opticallyReadText.keySet()) {
-            if (day == DayOfWeek.THURSDAY) {
-                System.out.println(opticallyReadText.get(day));
-            }
-        }
-        System.out.println("Timetable parsed successfully in " + (System.currentTimeMillis() - now) + "ms");
-
     }
 
-    private static String depleteFutileInfo(String ocrResult) throws IOException {
+    public String depleteFutileInfo(String ocrResult) {
 
         /**Following Code removes teacher names from OCR string**/
         ocrResult = ocrResult/**class names or numbers**/
@@ -180,16 +106,26 @@ public class TTrainParser {
         return ocrResult;
     }
 
-    private static Map<String, String[]> getSubjectNamesWithMultipleTeachers() throws IOException {
+    private static Map<String, String[]> getSubjectNamesWithMultipleTeachers() {
         Map<String, String[]> subjectNamesWithMultipleTeachers = new HashMap<>();
         String fileName = "Teacher Names.txt";
-        BufferedReader reader = new BufferedReader(new FileReader(fileName));
+        BufferedReader reader = null;
+        try {
+            reader = new BufferedReader(new FileReader(fileName));
+        } catch (FileNotFoundException e) {
+            e.printStackTrace();
+        }
         while (true) {
 
-            String subjectWithTeachers = reader.readLine(); //Biology - name1, name2, name3
-            if (subjectWithTeachers == null) {
-                reader.close();
-                break;
+            String subjectWithTeachers = null; //Biology - name1, name2, name3
+            try {
+                subjectWithTeachers = reader.readLine();
+                if (subjectWithTeachers == null) {
+                    reader.close();
+                    break;
+                }
+            } catch (IOException e) {
+                e.printStackTrace();
             }
             /**Following Strings are for Readability**/
             String subjectName = subjectWithTeachers;
@@ -216,7 +152,7 @@ public class TTrainParser {
     /*
      * From Stack Overflow
      */
-    private static void jpgToPdf(File startImageFile, String outputFileName, boolean deleteJpgs) {
+    public void jpgToPdf(File startImageFile, String outputFileName, boolean deleteJpgs) {
         Image image = null;
         try {
             Image.getInstance(startImageFile.getName());
@@ -258,12 +194,8 @@ public class TTrainParser {
         return instance;
     }
 
-    public static boolean hasTimetablePdfAlready() {
-        return hasTimetablePdfAlready;
-    }
-
-    private static void displayError(String string) {
-        System.out.println("Error -> " + string);
+    public void displayError(String string) {
+        JOptionPane.showMessageDialog(mainForm.getWelcomePanel(), string);
     }
 
     public TablePart getTableType(String rgbString) {
@@ -294,10 +226,58 @@ public class TTrainParser {
         return colour.getRed() + ", " + colour.getGreen() + ", " + colour.getBlue();
     }
 
-    public boolean passesPreliminaryChecks(File selected) {
-        if (selected.getName().endsWith(".pdf")) {
-            return true;
+    public String getFileSuffix(File selected) {
+        return selected.getName().split(".")[1];
+    }
+
+    /**
+     * //TODO For the following 2 methods-TODO can I call reader.read() to get latest version of file, or do I have to instantiate YamlReader each time?
+     */
+
+    public File getCroppedTimetableFileName(boolean trueForJPG) {
+
+        YamlReader reader = null;
+        Map map = null;
+        try {
+            reader = new YamlReader(new FileReader(USER_DIRECTORY + File.separator + "data.yml"));
+            map = (Map) reader.read();
+        } catch (FileNotFoundException | YamlException e) {
+            displayError("An error occurred whilst reading from data.yml file!");
+            e.printStackTrace();
         }
+        if (reader == null) {
+            displayError("There's no data.yml file");
+            return null;
+        }
+
+        String pdfOrJpg = trueForJPG ? "jpg" : "pdf";
+        return new File(USER_DIRECTORY + File.separator + String.valueOf(map.get("timetable-cropped-" + pdfOrJpg + "-file-name")));
+    }
+
+    public boolean hasCroppedTimetableFileAlready(boolean trueForJPG) {
+        YamlReader reader = null;
+        Map map = null;
+        try {
+            reader = new YamlReader(new FileReader(USER_DIRECTORY + File.separator + "data.yml"));
+            map = (Map) reader.read();
+        } catch (FileNotFoundException | YamlException e) {
+            displayError("An error occurred whilst reading from data.yml file!");
+            e.printStackTrace();
+        }
+        if (reader == null) {
+            displayError("There's no data.yml file");
+            return false;
+        }
+
+        String pdfOrJpg = trueForJPG ? "jpg" : "pdf";
+        String setFilenameInDataFile = String.valueOf(map.get("timetable-cropped-" + pdfOrJpg + "-file-name"));
+        File[] files = new File(USER_DIRECTORY).listFiles();
+        for (File aFile : files) {
+            if (aFile.getName().equals(setFilenameInDataFile)) {
+                return true;
+            }
+        }
+        //No set filename, pdf file has been relocated
         return false;
     }
 }
