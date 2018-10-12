@@ -1,4 +1,6 @@
-package me.nathan.brockapptesting;
+package me.nathan.forms;
+
+import me.nathan.ttrainparse.TTrainParser;
 
 import javax.swing.*;
 import java.awt.event.MouseAdapter;
@@ -10,6 +12,7 @@ public class LoginRegisterForm {
     private JTextField emailTextField;
     private String startingEmailTextFieldText;
     private JLabel aboveEverythingLabel;
+    private JButton advanceToTrainsButton;
 
     public LoginRegisterForm(TTrainParser mainInstance) {
         this.mainInstance = mainInstance;
@@ -25,6 +28,13 @@ public class LoginRegisterForm {
 
     public JPanel getLoginRegisterPanel() {
         return loginRegisterPanel;
+    }
+
+    public boolean isValidEmailAddress(String email) {
+        String ePattern = "^[a-zA-Z0-9.!#$%&'*+/=?^_`{|}~-]+@((\\[[0-9]{1,3}\\.[0-9]{1,3}\\.[0-9]{1,3}\\.[0-9]{1,3}\\])|(([a-zA-Z\\-0-9]+\\.)+[a-zA-Z]{2,}))$";
+        java.util.regex.Pattern p = java.util.regex.Pattern.compile(ePattern);
+        java.util.regex.Matcher m = p.matcher(email);
+        return m.matches();
     }
 
 }

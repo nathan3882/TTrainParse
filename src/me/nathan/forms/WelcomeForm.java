@@ -1,6 +1,8 @@
-package me.nathan.brockapptesting;
+package me.nathan.forms;
 
-import net.sourceforge.tess4j.TesseractException;
+import me.nathan.ttrainparse.DataFileInfo;
+import me.nathan.ttrainparse.ParsedTimetable;
+import me.nathan.ttrainparse.TTrainParser;
 import net.sourceforge.yamlbeans.YamlException;
 import net.sourceforge.yamlbeans.YamlWriter;
 
@@ -26,7 +28,7 @@ public class WelcomeForm {
     public JFileChooser timetableFileChooser;
     private JButton selectFile;
     private JCheckBox confirmValidTimetable;
-    private JButton advanceToTrainButton;
+    private JButton advanceToLoginButton;
     private TTrainParser main;
 
     private File selectedFile;
@@ -39,7 +41,7 @@ public class WelcomeForm {
 
     public WelcomeForm(TTrainParser main) {
         this.main = main;
-        advanceToTrainButton.setEnabled(false);
+        advanceToLoginButton.setEnabled(false);
         confirmValidTimetable.setEnabled(false);
 
         selectFile.addActionListener(new ActionListener() {
@@ -68,7 +70,7 @@ public class WelcomeForm {
 
                 //open register / login screen
                 if (isValidFile) {
-                    advanceToTrainButton.setEnabled(confirmValidTimetable.isSelected());
+                    advanceToLoginButton.setEnabled(confirmValidTimetable.isSelected());
 
                 }
             }
@@ -79,10 +81,10 @@ public class WelcomeForm {
          * This listener below handles advance button when it's clicked.
          * It generates a new cropped PDF file if doesnt already exist
          */
-        advanceToTrainButton.addActionListener(new ActionListener() {
+        advanceToLoginButton.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent event) {
-                if (advanceToTrainButton.isEnabled() && isValidFile) {
+                if (advanceToLoginButton.isEnabled() && isValidFile) {
                     try {
                         selectedFileImage = ImageIO.read(selectedFile); //Get BufferedImage object from previously selected file
                     } catch (Exception e) {
@@ -143,34 +145,8 @@ public class WelcomeForm {
                             main.displayError("Could not load image file, file name in data.yml is invalid!");
                             return;
                         }
-                        Segmentation segmentation = new Segmentation(main, allDayCroppedImage);
 
-                        String ocrText = "";
-                        for (int i = 1; i <= 5; i++) {
-                            DayOfWeek day = DayOfWeek.of(i);
 
-                            /**Make a temp JPG version of the specific day, ie MONDAY**/
-                            File file = new File(day.name() + ".jpg");
-                            try {
-                                ImageIO.write(segmentation.getDay(day), "jpg", file);
-                            } catch (IOException e) {
-                                e.printStackTrace();
-                            }
-                            try {
-                                main.jpgToPdf(file, day.name() + ".pdf", true);
-
-                                ocrText = main.getTesseractInstance().doOCR(new File(day.name() + ".pdf"));
-                            } catch (TesseractException e) {
-                                main.displayError("An error occured whilst doing OCR on PDF");
-                                e.printStackTrace();
-                            }
-                            if (ocrText.length() < 30) {
-                                continue; /*No Lessons*/
-                            }
-
-                            opticallyReadText.put(day, main.depleteFutileInfo(ocrText));
-
-                        }
                     }
                     for (DayOfWeek day : opticallyReadText.keySet()) {
                         if (day == DayOfWeek.THURSDAY) {
@@ -184,7 +160,7 @@ public class WelcomeForm {
     }
 
     private void resetWelcomeButtons() {
-        advanceToTrainButton.setEnabled(false);
+        advanceToLoginButton.setEnabled(false);
         confirmValidTimetable.setSelected(false);
         confirmValidTimetable.setEnabled(false);
         timetableFileChooser.setCurrentDirectory(new File(TTrainParser.USER_DIRECTORY)); //TODO Make all instantiations of File with parameter TTrainParser.USER_DIRECTORY equal to a const in TTrainParser

@@ -1,6 +1,6 @@
-package me.nathan.brockapptesting;
+package me.nathan.ttrainparse;
 
-import java.awt.Color;
+import java.awt.*;
 import java.awt.image.BufferedImage;
 import java.time.DayOfWeek;
 import java.util.HashMap;

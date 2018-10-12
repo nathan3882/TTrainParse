@@ -1,18 +1,23 @@
-package me.nathan.brockapptesting;
+package me.nathan.ttrainparse;
 
 import com.lowagie.text.*;
 import com.lowagie.text.Image;
 import com.lowagie.text.Rectangle;
 import com.lowagie.text.pdf.PdfWriter;
+import me.nathan.forms.LoginRegisterForm;
+import me.nathan.forms.WelcomeForm;
 import net.sourceforge.tess4j.ITesseract;
 import net.sourceforge.tess4j.Tesseract;
+import net.sourceforge.tess4j.TesseractException;
 import net.sourceforge.yamlbeans.YamlException;
 import net.sourceforge.yamlbeans.YamlReader;
 
+import javax.imageio.ImageIO;
 import javax.swing.*;
 import java.awt.*;
 import java.awt.image.BufferedImage;
 import java.io.*;
+import java.time.DayOfWeek;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -59,7 +64,6 @@ public class TTrainParser {
                 }
             }
         } catch (Exception e) {
-            // If Nimbus is not available, you can set the GUI to another look and feel.
         }
         mainInstance.cards = new JPanel(new CardLayout());
 
@@ -319,5 +323,35 @@ public class TTrainParser {
         CardLayout cardLayout = (CardLayout) (cards.getLayout());
         cardLayout.show(cards, panelName);
         cards.revalidate();
+    }
+
+    public TTrainParser gI() {
+        return mainInstance;
+    }
+
+    public String getLessonsAndStartEndTimes(DayOfWeek day, BufferedImage allDayCroppedImage) {
+        Segmentation segmentation = new Segmentation(gI(), allDayCroppedImage);
+
+        String ocrText = "";
+
+        /**Make a temp JPG version of the specific day that will be deleted after pdf conversion**/
+        File file = new File(day.name() + ".jpg");
+        try {
+            ImageIO.write(segmentation.getDay(day), "jpg", file);
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+        try {
+            jpgToPdf(file, day.name() + ".pdf", true);
+            ocrText = getTesseractInstance().doOCR(new File(day.name() + ".pdf"));
+        } catch (TesseractException e) {
+            displayError("An error occured whilst doing OCR on PDF");
+            e.printStackTrace();
+        }
+        if (ocrText.length() < 30) {
+            return null; /*No Lessons*/
+        }
+
+        return depleteFutileInfo(ocrText);
     }
 }

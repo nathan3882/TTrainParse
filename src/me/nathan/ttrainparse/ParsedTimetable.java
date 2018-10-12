@@ -1,6 +1,6 @@
-package me.nathan.brockapptesting;
+package me.nathan.ttrainparse;
 
-import me.nathan.brockapptesting.ComparisonOutput.Response;
+import me.nathan.ttrainparse.ComparisonOutput.Response;
 
 import java.awt.*;
 import java.awt.image.BufferedImage;
