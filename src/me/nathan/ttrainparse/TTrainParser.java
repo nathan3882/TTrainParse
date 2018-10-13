@@ -1,28 +1,20 @@
 package me.nathan.ttrainparse;
 
-import com.lowagie.text.*;
-import com.lowagie.text.Image;
-import com.lowagie.text.Rectangle;
-import com.lowagie.text.pdf.PdfWriter;
 import me.nathan.forms.LoginRegisterForm;
 import me.nathan.forms.WelcomeForm;
 import net.sourceforge.tess4j.ITesseract;
 import net.sourceforge.tess4j.Tesseract;
-import net.sourceforge.tess4j.TesseractException;
 import net.sourceforge.yamlbeans.YamlException;
 import net.sourceforge.yamlbeans.YamlReader;
 
-import javax.imageio.ImageIO;
 import javax.swing.*;
 import java.awt.*;
 import java.awt.image.BufferedImage;
 import java.io.*;
-import java.time.DayOfWeek;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.List;
 
 public class TTrainParser {
 
@@ -187,41 +179,6 @@ public class TTrainParser {
         return subjectNamesWithMultipleTeachers;
     }
 
-
-    /*
-     * From Stack Overflow
-     */
-    public void jpgToPdf(File startImageFile, String outputFileName, boolean deleteJpgs) {
-        Image image = null;
-        try {
-            image = Image.getInstance(startImageFile.getName());
-        } catch (BadElementException | IOException e) {
-            e.printStackTrace();
-        }
-        Document document = new Document();
-
-        PdfWriter writer = null;
-        try {
-            writer = PdfWriter.getInstance(document, new FileOutputStream(outputFileName));
-        } catch (FileNotFoundException | DocumentException e) {
-            e.printStackTrace();
-        }
-        Rectangle rec = new Rectangle(0, 0, image.getWidth(), image.getHeight()); //Document size is always same size as image being inserted, minimizes blurryness
-        document.setPageSize(rec);
-        document.open();
-
-
-        image.setAbsolutePosition(0, 0);
-        try {
-            document.add(image);
-            document.close();
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
-        writer.close();
-        if (deleteJpgs) startImageFile.delete();
-    }
-
     public static BufferedImage getNewImage(BufferedImage firstImage, int topLeftX, int topLeftY, int bottomRightX, int bottomRightY) {
         int subImageHeight = bottomRightY - topLeftY;
         int subImageWidth = bottomRightX - topLeftX;
@@ -327,31 +284,5 @@ public class TTrainParser {
 
     public TTrainParser gI() {
         return mainInstance;
-    }
-
-    public String getLessonsAndStartEndTimes(DayOfWeek day, BufferedImage allDayCroppedImage) {
-        Segmentation segmentation = new Segmentation(gI(), allDayCroppedImage);
-
-        String ocrText = "";
-
-        /**Make a temp JPG version of the specific day that will be deleted after pdf conversion**/
-        File file = new File(day.name() + ".jpg");
-        try {
-            ImageIO.write(segmentation.getDay(day), "jpg", file);
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
-        try {
-            jpgToPdf(file, day.name() + ".pdf", true);
-            ocrText = getTesseractInstance().doOCR(new File(day.name() + ".pdf"));
-        } catch (TesseractException e) {
-            displayError("An error occured whilst doing OCR on PDF");
-            e.printStackTrace();
-        }
-        if (ocrText.length() < 30) {
-            return null; /*No Lessons*/
-        }
-
-        return depleteFutileInfo(ocrText);
     }
 }

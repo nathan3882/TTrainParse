@@ -16,9 +16,6 @@ import java.awt.image.BufferedImage;
 import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
-import java.time.DayOfWeek;
-import java.util.HashMap;
-import java.util.Map;
 
 
 public class WelcomeForm {
@@ -130,27 +127,6 @@ public class WelcomeForm {
                             writer.close();
                         } catch (IOException | YamlException e) {
                             e.printStackTrace();
-                        }
-                    }
-
-                    Map<DayOfWeek, String> opticallyReadText = new HashMap<>();
-                    //TODO in writeup mention it was between storing all days once, or doing a new segmentation object each time and just extracting one day
-
-                    if (main.hasCroppedTimetableFileAlready(true)) { //true = check for jpg
-                        //Has a valid cropped JPG file already, set ImageIO allDayCroppedImage
-                        try {
-                            allDayCroppedImage = ImageIO.read(main.getCroppedTimetableFileName(true));
-                        } catch (IOException e) {
-                            e.printStackTrace();
-                            main.displayError("Could not load image file, file name in data.yml is invalid!");
-                            return;
-                        }
-
-
-                    }
-                    for (DayOfWeek day : opticallyReadText.keySet()) {
-                        if (day == DayOfWeek.THURSDAY) {
-                            System.out.println(opticallyReadText.get(day));
                         }
                     }
                     System.out.println("Timetable parsed successfully in " + (System.currentTimeMillis() - now) + "ms");

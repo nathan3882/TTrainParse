@@ -94,6 +94,9 @@ public class ComparisonOutput {
         return aMap;
     }
 
+    /**
+     * Bubble Sort
+     */
     private LinkedHashMap<Integer, Integer> sortQuantitiesOfBorder(Map<Integer, Integer> toSort) {
         List<Entry<Integer, Integer>> list = new LinkedList<Entry<Integer, Integer>>(toSort.entrySet());
         Collections.sort(list, new Comparator<Entry<Integer, Integer>>() {
