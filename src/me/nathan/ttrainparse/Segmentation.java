@@ -32,7 +32,7 @@ public class Segmentation {
         int width = allDayImage.getWidth();
         for (int xValue = 0; xValue < width; xValue++) {
             String currentPixelString = main.pixelRGBToString(new Color(allDayImage.getRGB(xValue, iterativeY)));
-            if (main.getTableType(currentPixelString) == TablePart.BORDER) {
+            if (main.getTableType(currentPixelString) == TTrainParser.TablePart.BORDER) {
                 if (previousLeftGot == -1) {
                     previousLeftGot = xValue; //previousLeftGot is now first occurrence of border
                 } else {

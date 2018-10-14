@@ -20,12 +20,4 @@ public class DataFileInfo {
     public void setTimetableCroppepJpgFileName(String fileNameWithExtension) {
         this.timetableCroppepJpgFileName = fileNameWithExtension;
     }
-
-    public String getTimetableCroppedPdfFileName() {
-        return timetableCroppedPdfFileName;
-    }
-
-    public String getTimetableCroppepJpgFileName() {
-        return timetableCroppepJpgFileName;
-    }
 }

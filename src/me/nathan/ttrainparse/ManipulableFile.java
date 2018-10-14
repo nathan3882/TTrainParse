@@ -32,10 +32,10 @@ public class ManipulableFile {
      * @param newName disregard
      * @return new Pdf as file
      */
-    public File toPdf(String newName) {
+    public File toPdf(String newName, boolean deleteJpgIfMade) {
         if (getInitialUpload() instanceof BufferedImage) {
             File file = toFile(newName);
-            jpgToPdf(file, newName.split("\\.")[0] + ".pdf", true);
+            jpgToPdf(file, newName.split("\\.")[0] + ".pdf", deleteJpgIfMade);
         } else if (getInitialUpload() instanceof File) {
             File asFile = (File) getInitialUpload();
             String name = asFile.getName();
@@ -44,11 +44,12 @@ public class ManipulableFile {
                 System.out.println("Tried to get a pdf file from a pdf file???");
                 return asFile;
             } else if (fileSuffix.equals("jpg")) {
-                jpgToPdf(asFile, newName.split("\\.")[0] + ".pdf", true);
+                jpgToPdf(asFile, newName.split("\\.")[0] + ".pdf", deleteJpgIfMade);
             }
         }
         return null;
     }
+
 
     public File toFile(String newName) {
         if (getInitialUpload() instanceof BufferedImage) {

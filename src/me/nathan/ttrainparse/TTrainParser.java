@@ -11,10 +11,8 @@ import javax.swing.*;
 import java.awt.*;
 import java.awt.image.BufferedImage;
 import java.io.*;
-import java.util.ArrayList;
-import java.util.HashMap;
+import java.util.*;
 import java.util.List;
-import java.util.Map;
 
 public class TTrainParser {
 
@@ -105,7 +103,7 @@ public class TTrainParser {
                 for (String wordInOcr : words) {
                     for (String teacherFirstOrLastName : teacher.split(" ")) {
                         if (teacherFirstOrLastName.equalsIgnoreCase("UNKNOWN")) continue;
-                        int dis = Distance.calculateDistance(wordInOcr, teacherFirstOrLastName);
+                        int dis = calculateDistance(wordInOcr, teacherFirstOrLastName);
                         if (dis < 3) { //left than two characters changed
                             removeStrings.add(wordInOcr);
                         }
@@ -137,7 +135,7 @@ public class TTrainParser {
         return ocrResult;
     }
 
-    private static Map<String, String[]> getSubjectNamesWithMultipleTeachers() {
+    public static Map<String, String[]> getSubjectNamesWithMultipleTeachers() {
         Map<String, String[]> subjectNamesWithMultipleTeachers = new HashMap<>();
         String fileName = "Teacher Names.txt";
         BufferedReader reader = null;
@@ -246,7 +244,7 @@ public class TTrainParser {
             return null;
         }
 
-        return new File(USER_DIRECTORY + File.separator + (trueForJPG ? info.getTimetableCroppepJpgFileName() : info.getTimetableCroppedPdfFileName()));
+        return new File(USER_DIRECTORY + File.separator + (trueForJPG ? info.timetableCroppepJpgFileName : info.timetableCroppedPdfFileName));
     }
 
     public boolean hasCroppedTimetableFileAlready(boolean trueForJPG) {
@@ -265,7 +263,7 @@ public class TTrainParser {
         }
 
         String pdfOrJpg = trueForJPG ? "Jpg" : "Pdf";
-        String setFilenameInDataFile = (trueForJPG ? info.getTimetableCroppepJpgFileName() : info.getTimetableCroppedPdfFileName());
+        String setFilenameInDataFile = (trueForJPG ? info.timetableCroppepJpgFileName : info.timetableCroppedPdfFileName);
         File[] files = new File(USER_DIRECTORY).listFiles();
         for (File aFile : files) {
             if (aFile.getName().equals(setFilenameInDataFile)) {
@@ -282,7 +280,39 @@ public class TTrainParser {
         cards.revalidate();
     }
 
+    public enum TablePart {
+        BORDER,
+        UNKNOWN,
+        IMPORTANT_WRITING,
+        EXTERIOR_OR_INTERIOR
+    }
+
+
     public TTrainParser gI() {
         return mainInstance;
+    }
+
+    public int calculateDistance(String x, String y) {
+        if (x.isEmpty()) {
+            return y.length();
+        }
+
+        if (y.isEmpty()) {
+            return x.length();
+        }
+
+        int substitution = calculateDistance(x.substring(1), y.substring(1)) + cost(x.charAt(0), y.charAt(0));
+        int insertion = calculateDistance(x, y.substring(1)) + 1;
+        int deletion = calculateDistance(x.substring(1), y) + 1;
+
+        return min(substitution, insertion, deletion);
+    }
+
+    public int cost(char first, char last) {
+        return first == last ? 0 : 1;
+    }
+
+    public int min(int... numbers) {
+        return Arrays.stream(numbers).min().orElse(Integer.MAX_VALUE);
     }
 }
