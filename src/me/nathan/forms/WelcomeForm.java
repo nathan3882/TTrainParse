@@ -1,6 +1,7 @@
 package me.nathan.forms;
 
 import me.nathan.ttrainparse.DataFileInfo;
+import me.nathan.ttrainparse.ManipulableFile;
 import me.nathan.ttrainparse.ParsedTimetable;
 import me.nathan.ttrainparse.TTrainParser;
 import net.sourceforge.yamlbeans.YamlException;
@@ -110,7 +111,7 @@ public class WelcomeForm {
                         }
                         String outputFileName = selectedFile.getName().split("\\.")[0] + ".pdf";
                         info.setTimetableCroppedPdfFileName(outputFileName);
-                        main.jpgToPdf(selectedFile, outputFileName, false); //making a pdf of the cropped image
+                        new ManipulableFile(main, selectedFile).toPdf(outputFileName, true);
                     } else {
                         successfullyParsed = true;
                     }

@@ -86,7 +86,7 @@ public class TTrainParser {
 
     }
 
-    public String depleteFutileInfo(String ocrResult) {
+    public String depleteFutileInfo(String ocrResult, boolean oneSpaceBetweenAllInfo) {
 
         /**Following Code removes teacher names from OCR string**/
         ocrResult = ocrResult/**class names or numbers**/
@@ -132,6 +132,7 @@ public class TTrainParser {
                 ocrResult = ocrResult.substring(0, beforeYr) + ocrResult.substring(beforeColon);
             }
         }
+        if (oneSpaceBetweenAllInfo) ocrResult = ocrResult.replaceAll("\\s{2,}", " ").trim();
         return ocrResult;
     }
 
@@ -300,6 +301,7 @@ public class TTrainParser {
         if (y.isEmpty()) {
             return x.length();
         }
+
 
         int substitution = calculateDistance(x.substring(1), y.substring(1)) + cost(x.charAt(0), y.charAt(0));
         int insertion = calculateDistance(x, y.substring(1)) + 1;

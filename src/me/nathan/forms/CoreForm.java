@@ -70,32 +70,55 @@ public class CoreForm {
                 if (ocrText.length() < 30) {
                     continue; /*No Lessons*/
                 }
-                ocrText = main.depleteFutileInfo(ocrText);
+                ocrText = main.depleteFutileInfo(ocrText, true);
 
-                String[] words = ocrText.split(" ");
-                LinkedHashMap<String, String> lessons = new LinkedHashMap<>();
-                lessons.put("dummydummydummy", "dummydummydummy");
-                //Have a map that stores <String, String>   key = Biology, 4   value = Biology, 7
-                for (int i = 0; i < words.length; i++) {
-                    String potentialSubject = words[i];
-                    if (main.getSubjectNamesWithMultipleTeachers().keySet().contains(potentialSubject)) {
-                        int latestIndex = lessons.keySet().size() - 1;
-                        String key = getKey(lessons, latestIndex);
-                        if (key.equals("dummydummydummy")) {
-                            //previous key and value been entered, new dummy key and value found
-                            String val = getValue(lessons, latestIndex);
-                            lessons.remove(key);
-                            lessons.put(potentialSubject + ", " + String.valueOf(i), val);
-                            continue;
-                        }
-                        if (getValue(lessons, latestIndex).equals("dummydummydummy")) {
-                            //key has been found, but next entry subject hasnt
-                            lessons.put(key, potentialSubject + ", " + String.valueOf(i));
-                            continue;
+                List<String> words = Arrays.asList(ocrText.split(" "));
+                Map<String, String> subjectAndBounds = new LinkedHashMap<String, String>();
+                //Business Studies, "1-3"
+                //Cmp Sci, 3, 5 //3 words after previous subjects upper bound, end bound is 5
+
+                int endBoundIndex = 0;
+
+                for (int i = 0; i < words.size(); i++) {
+                    String currentWord = words.get(i);
+                    for (String aSubject : Arrays.asList("Biology", "Computer Science", "Government & Politics")) {
+                        if (aSubject.contains(" ")) {
+                            String firstWord = aSubject.split(" ")[0];
+                            if (firstWord.equals(currentWord)) {
+                                List<String> splitted = Arrays.asList(aSubject.split(" ")); //started = true because it contains " ", list = "Business", "studies", "two"
+
+                                int lowerBound = i; //If first iteration, endboundindex is 0 anyways so its i - 0 which is just i
+
+                                endBoundIndex = lowerBound + (splitted.size() - 1);
+
+                                subjectAndBounds.put(aSubject, String.valueOf(lowerBound + ", " + endBoundIndex));
+                            }
+                        } else if (aSubject.equals(currentWord)) {
+                            subjectAndBounds.putIfAbsent(aSubject, String.valueOf(i + ", " + i));
                         }
                     }
                 }
-                //if a value is null, set it to the split.length()
+                System.out.println(ocrText);
+                int previousLowerBound = -1;
+                for (String subject : subjectAndBounds.keySet()) {
+                    String[] split = subject.split(" ");
+                    String[] valueSplit = subjectAndBounds.get(subject).split(", ");
+                    int lowerOrDifferenceBound = Integer.parseInt(valueSplit[0]);
+                    if (previousLowerBound != -1) {
+                        lowerOrDifferenceBound = previousLowerBound + lowerOrDifferenceBound;
+                    } else {
+                        previousLowerBound = lowerOrDifferenceBound - 1;
+                    }
+
+
+                    int subjectNameLowerBound = lowerOrDifferenceBound;
+                    int subjectNameUpperBound = subjectNameLowerBound + (split.length - 1);
+
+                    int lowerBoundForJustTimes = subjectNameUpperBound;
+                    int upperBoundForJustTimes = subjectNameUpperBound + 3;
+
+
+                }
             }
         }
         mainString += "</html>";
