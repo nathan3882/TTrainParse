@@ -1,5 +1,6 @@
 package me.nathan.forms;
 
+import me.nathan.ttrainparse.LessonInfo;
 import me.nathan.ttrainparse.ManipulableFile;
 import me.nathan.ttrainparse.Segmentation;
 import me.nathan.ttrainparse.TTrainParser;
@@ -11,6 +12,7 @@ import java.awt.image.BufferedImage;
 import java.io.File;
 import java.io.IOException;
 import java.time.DayOfWeek;
+import java.time.LocalTime;
 import java.util.*;
 
 import static me.nathan.ttrainparse.TTrainParser.getTesseractInstance;
@@ -25,6 +27,7 @@ public class CoreForm {
         this.main = main;
         int currentDay = new Date().getDay();
         int[] showThese = new int[2];
+        /* Allow user configuration */
         if (currentDay == 6 || currentDay == 7) { //Weekend, show monday
             showThese[0] = 1;
         } else if (currentDay == 5) {
@@ -55,12 +58,13 @@ public class CoreForm {
             }
 
             Segmentation segmentation = new Segmentation(main, allDayImage);
+            LessonInfo[] infos = new LessonInfo[2];
+            int i = 0;
+            for (int dayInt : showThese) {
+                DayOfWeek day = DayOfWeek.of(dayInt);
 
-            for (int aDayToShow : showThese) {
-                DayOfWeek dowOf = DayOfWeek.of(aDayToShow);
-
-                ManipulableFile mFile = new ManipulableFile(main, segmentation.getDay(dowOf));
-                File pdfFile = mFile.toPdf(dowOf.name() + ".pdf", true);
+                ManipulableFile mFile = new ManipulableFile(main, segmentation.getDay(day));
+                File pdfFile = mFile.toPdf(day.name() + ".pdf", true);
                 String ocrText = null;
                 try {
                     ocrText = getTesseractInstance().doOCR(pdfFile);
@@ -70,88 +74,99 @@ public class CoreForm {
                 if (ocrText.length() < 30) {
                     continue; /*No Lessons*/
                 }
-                ocrText = main.depleteFutileInfo(ocrText, true);
+                ocrText = depleteFutileInfo(ocrText, true);
 
                 List<String> words = Arrays.asList(ocrText.split(" "));
-                Map<String, String> subjectAndBounds = new LinkedHashMap<String, String>();
-                //Business Studies, "1-3"
-                //Cmp Sci, 3, 5 //3 words after previous subjects upper bound, end bound is 5
+                infos[i] = new LessonInfo(words, day);
+                i++;
+            }
 
-                int endBoundIndex = 0;
-
-                for (int i = 0; i < words.size(); i++) {
-                    String currentWord = words.get(i);
-                    for (String aSubject : Arrays.asList("Biology", "Computer Science", "Government & Politics")) {
-                        if (aSubject.contains(" ")) {
-                            String firstWord = aSubject.split(" ")[0];
-                            if (firstWord.equals(currentWord)) {
-                                List<String> splitted = Arrays.asList(aSubject.split(" ")); //started = true because it contains " ", list = "Business", "studies", "two"
-
-                                int lowerBound = i; //If first iteration, endboundindex is 0 anyways so its i - 0 which is just i
-
-                                endBoundIndex = lowerBound + (splitted.size() - 1);
-
-                                subjectAndBounds.put(aSubject, String.valueOf(lowerBound + ", " + endBoundIndex));
-                            }
-                        } else if (aSubject.equals(currentWord)) {
-                            subjectAndBounds.putIfAbsent(aSubject, String.valueOf(i + ", " + i));
-                        }
-                    }
-                }
-                System.out.println(ocrText);
-                int previousLowerBound = -1;
-                for (String subject : subjectAndBounds.keySet()) {
-                    String[] split = subject.split(" ");
-                    String[] valueSplit = subjectAndBounds.get(subject).split(", ");
-                    int lowerOrDifferenceBound = Integer.parseInt(valueSplit[0]);
-                    if (previousLowerBound != -1) {
-                        lowerOrDifferenceBound = previousLowerBound + lowerOrDifferenceBound;
-                    } else {
-                        previousLowerBound = lowerOrDifferenceBound - 1;
-                    }
-
-
-                    int subjectNameLowerBound = lowerOrDifferenceBound;
-                    int subjectNameUpperBound = subjectNameLowerBound + (split.length - 1);
-
-                    int lowerBoundForJustTimes = subjectNameUpperBound;
-                    int upperBoundForJustTimes = subjectNameUpperBound + 3;
-
-
+            for (LessonInfo collegeDay : infos) {
+                for (String lessonName : collegeDay.getLessons()) {
+                    List<LocalTime> startTrains = collegeDay.getFirstTrains();
+                    List<LocalTime> endTrains = collegeDay.getEndTrains();
+                    mainString +=
+                            lessonName + "'s" +
+                                    "start time is " + collegeDay.getStartTime(lessonName) +
+                                    " and it ends at " + collegeDay.getFinishTime(lessonName) + ". Ideal trains are...";
                 }
             }
         }
-        mainString += "</html>";
         mainInfoLabel.setText(mainString);
-        /**
-         * Get OCR string as ocrString
-         *
-         * ocrString.split[" "]
-         *    <Subject, Array Position> list of integers ]is the position in split array the subject is
-         * Map<String, List<Integer>
-         * Iterate through splitting, if come across subject name add it to map
-         * times for the X lesson are between X lesson and the next lowest number that's been stored referencing the split array
-         *
-         *
-         *
-         * Friday   Biology 09:00 - 10:05     Biology 10:05 - 11:10   ;   Business studies 11:30 - 12:35
-         *
-         *
-         */
     }
 
-    public void setKey(LinkedHashMap<String, String> map, int index, String str) {
-        LinkedList<String> keys = new LinkedList<String>(map.keySet());
-        keys.set(index, str);
+    private String depleteFutileInfo(String ocrResult, boolean oneSpaceBetweenAllInfo) {
 
+        /**Following Code removes teacher names from OCR string**/
+        ocrResult = ocrResult/**class names or numbers**/
+                .replaceAll("\\(.*\\)", "")
+                /**A Level or BTEC?**/
+                .replace("A Level", "")
+                .replaceAll("A level", ""); //Computer science is lower case l for some reason? Charlie??
+        String[] words = ocrResult.split("\\s+");
+        List<String> removeStrings = new ArrayList<>();
 
+        for (String[] teachers : TTrainParser.getSubjectNamesWithMultipleTeachers().values()) {
+            for (String teacher : teachers) {
+                if (teacher == null) continue;
+                for (String wordInOcr : words) {
+                    for (String teacherFirstOrLastName : teacher.split(" ")) {
+                        if (teacherFirstOrLastName.equalsIgnoreCase("UNKNOWN")) continue;
+                        int dis = calculateDistance(wordInOcr, teacherFirstOrLastName);
+                        if (dis < 3) { //left than two characters changed
+                            removeStrings.add(wordInOcr);
+                        }
+                    }
+                }
+            }
+        }
+        ocrResult = ocrResult.replaceAll("\n", " ");
+        for (String wordToRemove : removeStrings) {
+            ocrResult = ocrResult.replace(wordToRemove, "");
+        }
+
+        /**Following code gets rid of "Yr2 in XXX"*/
+        String pastThree = "   ";
+        int beforeYr = -1;
+        int beforeColon; //No need to initialise & waste memory
+        for (int i1 = 0; i1 < ocrResult.length(); i1++) {
+            char charAt = ocrResult.charAt(i1);
+            pastThree = pastThree.substring(1) + charAt;
+
+            if (pastThree.startsWith("Yr"))
+                beforeYr = i1 - 2;
+
+            if (charAt == ':' && beforeYr != -1) { //will be -1 when it doesnt contain Yr, disregard & continue search
+                beforeColon = i1 - 2;
+                ocrResult = ocrResult.substring(0, beforeYr) + ocrResult.substring(beforeColon);
+            }
+        }
+        if (oneSpaceBetweenAllInfo) ocrResult = ocrResult.replaceAll("\\s{2,}", " ").trim();
+        return ocrResult;
     }
 
-    public String getKey(LinkedHashMap<String, String> map, int index) {
-        return String.valueOf(map.keySet().toArray()[index]);
+    private int calculateDistance(String x, String y) {
+        if (x.isEmpty()) {
+            return y.length();
+        }
+
+        if (y.isEmpty()) {
+            return x.length();
+        }
+
+
+        int substitution = calculateDistance(x.substring(1), y.substring(1)) + cost(x.charAt(0), y.charAt(0));
+        int insertion = calculateDistance(x, y.substring(1)) + 1;
+        int deletion = calculateDistance(x.substring(1), y) + 1;
+
+        return min(substitution, insertion, deletion);
     }
 
-    public String getValue(LinkedHashMap<String, String> map, int index) {
-        return String.valueOf(map.values().toArray()[index]);
+    private int cost(char first, char last) {
+        return first == last ? 0 : 1;
+    }
+
+    private int min(int... numbers) {
+        return Arrays.stream(numbers).min().orElse(Integer.MAX_VALUE);
     }
 }

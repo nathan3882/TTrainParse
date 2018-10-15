@@ -11,8 +11,8 @@ import javax.swing.*;
 import java.awt.*;
 import java.awt.image.BufferedImage;
 import java.io.*;
-import java.util.*;
-import java.util.List;
+import java.util.HashMap;
+import java.util.Map;
 
 public class TTrainParser {
 
@@ -86,55 +86,6 @@ public class TTrainParser {
 
     }
 
-    public String depleteFutileInfo(String ocrResult, boolean oneSpaceBetweenAllInfo) {
-
-        /**Following Code removes teacher names from OCR string**/
-        ocrResult = ocrResult/**class names or numbers**/
-                .replaceAll("\\(.*\\)", "")
-                /**A Level or BTEC?**/
-                .replace("A Level", "")
-                .replaceAll("A level", ""); //Computer science is lower case l for some reason? Charlie??
-        String[] words = ocrResult.split("\\s+");
-        List<String> removeStrings = new ArrayList<>();
-
-        for (String[] teachers : getSubjectNamesWithMultipleTeachers().values()) {
-            for (String teacher : teachers) {
-                if (teacher == null) continue;
-                for (String wordInOcr : words) {
-                    for (String teacherFirstOrLastName : teacher.split(" ")) {
-                        if (teacherFirstOrLastName.equalsIgnoreCase("UNKNOWN")) continue;
-                        int dis = calculateDistance(wordInOcr, teacherFirstOrLastName);
-                        if (dis < 3) { //left than two characters changed
-                            removeStrings.add(wordInOcr);
-                        }
-                    }
-                }
-            }
-        }
-        ocrResult = ocrResult.replaceAll("\n", " ");
-        for (String wordToRemove : removeStrings) {
-            ocrResult = ocrResult.replace(wordToRemove, "");
-        }
-
-        /**Following code gets rid of "Yr2 in XXX"*/
-        String pastThree = "   ";
-        int beforeYr = -1;
-        int beforeColon; //No need to initialise & waste memory
-        for (int i1 = 0; i1 < ocrResult.length(); i1++) {
-            char charAt = ocrResult.charAt(i1);
-            pastThree = pastThree.substring(1) + charAt;
-
-            if (pastThree.startsWith("Yr"))
-                beforeYr = i1 - 2;
-
-            if (charAt == ':' && beforeYr != -1) { //will be -1 when it doesnt contain Yr, disregard & continue search
-                beforeColon = i1 - 2;
-                ocrResult = ocrResult.substring(0, beforeYr) + ocrResult.substring(beforeColon);
-            }
-        }
-        if (oneSpaceBetweenAllInfo) ocrResult = ocrResult.replaceAll("\\s{2,}", " ").trim();
-        return ocrResult;
-    }
 
     public static Map<String, String[]> getSubjectNamesWithMultipleTeachers() {
         Map<String, String[]> subjectNamesWithMultipleTeachers = new HashMap<>();
@@ -293,28 +244,4 @@ public class TTrainParser {
         return mainInstance;
     }
 
-    public int calculateDistance(String x, String y) {
-        if (x.isEmpty()) {
-            return y.length();
-        }
-
-        if (y.isEmpty()) {
-            return x.length();
-        }
-
-
-        int substitution = calculateDistance(x.substring(1), y.substring(1)) + cost(x.charAt(0), y.charAt(0));
-        int insertion = calculateDistance(x, y.substring(1)) + 1;
-        int deletion = calculateDistance(x.substring(1), y) + 1;
-
-        return min(substitution, insertion, deletion);
-    }
-
-    public int cost(char first, char last) {
-        return first == last ? 0 : 1;
-    }
-
-    public int min(int... numbers) {
-        return Arrays.stream(numbers).min().orElse(Integer.MAX_VALUE);
-    }
 }
