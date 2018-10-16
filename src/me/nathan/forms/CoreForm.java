@@ -6,13 +6,10 @@ import me.nathan.ttrainparse.Segmentation;
 import me.nathan.ttrainparse.TTrainParser;
 import net.sourceforge.tess4j.TesseractException;
 
-import javax.imageio.ImageIO;
 import javax.swing.*;
 import java.awt.image.BufferedImage;
 import java.io.File;
-import java.io.IOException;
 import java.time.DayOfWeek;
-import java.time.LocalTime;
 import java.util.*;
 
 import static me.nathan.ttrainparse.TTrainParser.getTesseractInstance;
@@ -39,7 +36,8 @@ public class CoreForm {
         }
 
         String string = DayOfWeek.of(currentDay).name();
-        currentDayLabel.setText(currentDayLabel.getText().replace("{DAY}", string.substring(0, 1).toUpperCase() + string.substring(1)));
+        currentDayLabel.setText(currentDayLabel.getText().replace("{DAY}", string.substring(0, 1).toUpperCase() + string.substring(1).toLowerCase()));
+
         String mainString = "<html>";
 
         Map<DayOfWeek, String> opticallyReadText = new HashMap<>();
@@ -48,43 +46,44 @@ public class CoreForm {
         BufferedImage allDayImage;
 
         if (main.hasCroppedTimetableFileAlready(true)) { //true = check for jpg
-            //Has a valid cropped jpg file already, set ImageIO allDayCroppedImage
-            try {
-                allDayImage = ImageIO.read(main.getCroppedTimetableFileName(true));
-            } catch (IOException e) {
-                e.printStackTrace();
-                main.displayError("Could not load image file, file name in data.yml is invalid!");
-                return;
-            }
+//           valid cropped pdf, isn't just an ordinary pdf with loads of weird info"
+//            Has a valid cropped jpg file already, set ImageIO allDayCroppedImage
 
-            Segmentation segmentation = new Segmentation(main, allDayImage);
+            Segmentation segmentation = new Segmentation(main, TTrainParser.allDayCroppedImage);
+
             LessonInfo[] infos = new LessonInfo[2];
             int i = 0;
             for (int dayInt : showThese) {
                 DayOfWeek day = DayOfWeek.of(dayInt);
 
                 ManipulableFile mFile = new ManipulableFile(main, segmentation.getDay(day));
-                File pdfFile = mFile.toPdf(day.name() + ".pdf", true);
+
+                File pdfFile = mFile.toPdf(day.name() + ".pdf", false); //Convert specific day mFile toPdf
+
                 String ocrText = null;
                 try {
                     ocrText = getTesseractInstance().doOCR(pdfFile);
                 } catch (TesseractException e) {
                     e.printStackTrace();
                 }
+
                 if (ocrText.length() < 30) {
                     continue; /*No Lessons*/
                 }
                 ocrText = depleteFutileInfo(ocrText, true);
 
                 List<String> words = Arrays.asList(ocrText.split(" "));
+                for (String word : words) {
+                    System.out.print(word + " ");
+                }
                 infos[i] = new LessonInfo(words, day);
                 i++;
             }
 
             for (LessonInfo collegeDay : infos) {
                 for (String lessonName : collegeDay.getLessons()) {
-                    List<LocalTime> startTrains = collegeDay.getFirstTrains();
-                    List<LocalTime> endTrains = collegeDay.getEndTrains();
+                    //TODO List<LocalTime> startTrains = collegeDay.getFirstTrains();
+                    //TODO List<LocalTime> endTrains = collegeDay.getEndTrains();
                     mainString +=
                             lessonName + "'s" +
                                     "start time is " + collegeDay.getStartTime(lessonName) +
@@ -141,7 +140,9 @@ public class CoreForm {
                 ocrResult = ocrResult.substring(0, beforeYr) + ocrResult.substring(beforeColon);
             }
         }
+        ocrResult = ocrResult.replace("?", "").replace("/", "");
         if (oneSpaceBetweenAllInfo) ocrResult = ocrResult.replaceAll("\\s{2,}", " ").trim();
+
         return ocrResult;
     }
 
@@ -168,5 +169,9 @@ public class CoreForm {
 
     private int min(int... numbers) {
         return Arrays.stream(numbers).min().orElse(Integer.MAX_VALUE);
+    }
+
+    public JPanel getWelcomePanel() {
+        return this.coreFormPanel;
     }
 }

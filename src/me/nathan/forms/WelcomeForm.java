@@ -1,13 +1,15 @@
 package me.nathan.forms;
 
 import me.nathan.ttrainparse.DataFileInfo;
-import me.nathan.ttrainparse.ManipulableFile;
 import me.nathan.ttrainparse.ParsedTimetable;
 import me.nathan.ttrainparse.TTrainParser;
 import net.sourceforge.yamlbeans.YamlException;
 import net.sourceforge.yamlbeans.YamlWriter;
 
 import javax.imageio.ImageIO;
+import javax.imageio.ImageWriteParam;
+import javax.imageio.ImageWriter;
+import javax.imageio.stream.FileImageOutputStream;
 import javax.swing.*;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
@@ -102,16 +104,29 @@ public class WelcomeForm {
                         successfullyParsed = timetable.successfullyParsed();
 
                         allDayCroppedImage = timetable.getSuccessfullyParsedImage(); //variable equal to cropped image now
-
+                        TTrainParser.allDayCroppedImage = allDayCroppedImage;
                         info.setTimetableCroppepJpgFileName(selectedFile.getName());
                         try {
-                            ImageIO.write(allDayCroppedImage, "jpg", selectedFile); //outputs cropped jpg to uncropped jpg file
+                            /** TODO
+                             * ImageWriter writer1 = writerSpi.createWriterInstance();
+                             * BufferedImage b2=buffered.getSubimage(buffered.getWidth()/2, 0, buffered.getWidth()/2, buffered.getHeight());
+                             * writer1.setOutput(new FileImageOutputStream(new File("2.jpg")));
+                             *
+                             * writer1.write(null, new IIOImage((RenderedImage) b2, null, null), jpegParams);
+                             */
+                            ImageWriter writer = ImageIO.getImageWritersByFormatName("jpeg").next();
+                            writer.setOutput(new FileImageOutputStream(selectedFile));
+
+                            ImageWriteParam param = writer.getDefaultWriteParam();
+                            param.setCompressionMode(ImageWriteParam.MODE_EXPLICIT); // Needed see javadoc
+                            param.setCompressionQuality(1.0F); // Highest quality
+                            writer.write(allDayCroppedImage);
+                            //ImageIO.write(allDayCroppedImage, "jpg", selectedFile); //overwrites the uncropped jpg to cropped
                         } catch (IOException e) {
                             e.printStackTrace();
                         }
-                        String outputFileName = selectedFile.getName().split("\\.")[0] + ".pdf";
-                        info.setTimetableCroppedPdfFileName(outputFileName);
-                        new ManipulableFile(main, selectedFile).toPdf(outputFileName, true);
+                        main.openPanel(main.LOGIN_REGISTER_PANEL);
+
                     } else {
                         successfullyParsed = true;
                     }
@@ -123,7 +138,7 @@ public class WelcomeForm {
                         YamlWriter writer = null;
                         try {
                             //TODO Store System current millis for the time which the user had first timetable parsed
-                            writer = new YamlWriter(new FileWriter("data.yml"));
+                            writer = new YamlWriter(new FileWriter(main.USER_DIRECTORY + File.separator + "data.yml"));
                             writer.write(info); //writes previously collected data about jpg & pdf file names
                             writer.close();
                         } catch (IOException | YamlException e) {

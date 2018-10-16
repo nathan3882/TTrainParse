@@ -56,7 +56,7 @@
         </constraints>
         <properties>
           <enabled value="true"/>
-          <text value="&lt;html&gt;&lt;center&gt;Welcome!&lt;br&gt;You've already added your timetable to the app!&lt;br&gt;Please enter some credentials below!&lt;br&gt; &lt;br&gt;Just hover over a box to get some information!&lt;/center&gt;&lt;/html"/>
+          <text value="&lt;html&gt;&lt;center&gt;Welcome! Time table is stored!&lt;br&gt;Please enter some credentials below!&lt;br&gt; &lt;br&gt;Just hover over a box to get some information!&lt;/center&gt;&lt;/html"/>
         </properties>
       </component>
       <component id="4c517" class="javax.swing.JButton" binding="advanceToTrainsButton">

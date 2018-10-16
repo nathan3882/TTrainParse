@@ -10,11 +10,12 @@ public class LessonInfo {
     private DayOfWeek dayOfWeek;
     private int lessonCount;
 
-    private LinkedList<String> orderedLessons;
-    private Map<String, LocalTime> orderedSubjectStartTimes;
-    private Map<String, LocalTime> orderedSubjectFinishTimes;
+    private LinkedList<String> orderedLessons = new LinkedList<>();
+    private Map<String, LocalTime> orderedSubjectStartTimes = new LinkedHashMap<>();
+    private Map<String, LocalTime> orderedSubjectFinishTimes = new LinkedHashMap<>();
     private String lastLesson;
     private String firstLesson;
+    //Wednesday   Biology
 
     public LessonInfo(List<String> wordsForDay, DayOfWeek dayOfWeek) {
         this.dayOfWeek = dayOfWeek;
@@ -46,8 +47,11 @@ public class LessonInfo {
 
         int previousLowerBound = -1;
         for (String subject : subjectAndBounds.keySet()) {
+            System.out.print(subject);
             String[] split = subject.split(" ");
+            System.out.print(subjectAndBounds.get(subject));
             String[] valueSplit = subjectAndBounds.get(subject).split(", ");
+
             int lowerOrDifferenceBound = Integer.parseInt(valueSplit[0]);
             if (previousLowerBound != -1) {
                 lowerOrDifferenceBound = previousLowerBound + lowerOrDifferenceBound;
@@ -63,8 +67,9 @@ public class LessonInfo {
             String timeString = "";
             for (int i = lowerBoundForJustTimes; i <= upperBoundForJustTimes; i++)
                 timeString += wordsForDay.get(i);
-            String[] startFinish = timeString.split("-"); //"10:05-11:10" left is start, right is finish
 
+            String[] startFinish = timeString.split("-"); //"10:05-11:10" left is start, right is finish
+            System.out.println("time string = " + timeString);
             orderedLessons.add(subject);
             orderedSubjectStartTimes.put(subject, LocalTime.parse(startFinish[0]));
             orderedSubjectFinishTimes.put(subject, LocalTime.parse(startFinish[1]));

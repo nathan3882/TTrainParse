@@ -4,6 +4,9 @@ import com.lowagie.text.*;
 import com.lowagie.text.pdf.PdfWriter;
 
 import javax.imageio.ImageIO;
+import javax.imageio.ImageWriteParam;
+import javax.imageio.ImageWriter;
+import javax.imageio.stream.FileImageOutputStream;
 import java.awt.image.BufferedImage;
 import java.io.File;
 import java.io.FileNotFoundException;
@@ -32,10 +35,38 @@ public class ManipulableFile {
      * @param newName disregard
      * @return new Pdf as file
      */
-    public File toPdf(String newName, boolean deleteJpgIfMade) {
+    public File toPdf(String newName, boolean deleteJpgIfMade) { //day.name() + ".pdf";
+        File file = null;
         if (getInitialUpload() instanceof BufferedImage) {
-            File file = toFile(newName);
-            jpgToPdf(file, newName.split("\\.")[0] + ".pdf", deleteJpgIfMade);
+
+            File jpgFile = new File(TTrainParser.USER_DIRECTORY + File.separator + newName.split("\\.")[0] + ".jpg");
+            System.out.println("outputting jpg to " + jpgFile.getName());
+            try {
+                /**TODO
+                 * ImageWriter writer1 = writerSpi.createWriterInstance();
+                 * BufferedImage b2=buffered.getSubimage(buffered.getWidth()/2, 0, buffered.getWidth()/2, buffered.getHeight());
+                 * writer1.setOutput(new FileImageOutputStream(new File("2.jpg")));
+                 *
+                 * writer1.write(null, new IIOImage((RenderedImage) b2, null, null), jpegParams);
+                 */
+                ImageWriter writer = ImageIO.getImageWritersByFormatName("jpeg").next();
+                writer.setOutput(new FileImageOutputStream(jpgFile));
+
+                ImageWriteParam param = writer.getDefaultWriteParam();
+                param.setCompressionMode(ImageWriteParam.MODE_EXPLICIT); // Needed see javadoc
+                param.setCompressionQuality(1.0F); // Highest quality
+                writer.write((BufferedImage) getInitialUpload());
+
+                //ImageIO.write((BufferedImage) getInitialUpload(), "jpg", jpgFile);
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+
+            String newOne = newName.split("\\.")[0] + ".pdf";
+
+            jpgToPdf(jpgFile, newOne, deleteJpgIfMade);
+
+            file = new File(TTrainParser.USER_DIRECTORY + File.separator + newOne);
         } else if (getInitialUpload() instanceof File) {
             File asFile = (File) getInitialUpload();
             String name = asFile.getName();
@@ -45,15 +76,18 @@ public class ManipulableFile {
                 return asFile;
             } else if (fileSuffix.equals("jpg")) {
                 jpgToPdf(asFile, newName.split("\\.")[0] + ".pdf", deleteJpgIfMade);
+
             }
         }
-        return null;
+        return file;
     }
 
 
     public File toFile(String newName) {
         if (getInitialUpload() instanceof BufferedImage) {
-            toFile((BufferedImage) getInitialUpload(), newName, newName.split("\\.")[1]);
+            BufferedImage asBImage = (BufferedImage) getInitialUpload();
+            String[] split = newName.split("\\.");
+            return toFile(asBImage, split[0], split[1]);
         }
         System.out.println("That is already a file, call another method to either convert or delete");
         return null;
@@ -62,7 +96,14 @@ public class ManipulableFile {
     private File toFile(BufferedImage image, String newName, String extension) {
         File file = new File(newName + "." + extension);
         try {
-            ImageIO.write(image, extension, file);
+            ImageWriter writer = ImageIO.getImageWritersByFormatName("jpeg").next();
+            writer.setOutput(new FileImageOutputStream(file));
+
+            ImageWriteParam param = writer.getDefaultWriteParam();
+            param.setCompressionMode(ImageWriteParam.MODE_EXPLICIT); // Needed see javadoc
+            param.setCompressionQuality(1.0F); // Highest quality
+            writer.write(image);
+//            ImageIO.write(image, extension, file);
         } catch (IOException e) {
             e.printStackTrace();
         }

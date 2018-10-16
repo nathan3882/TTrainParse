@@ -10,20 +10,20 @@ import java.util.Map;
 
 public class Segmentation {
 
+    private final BufferedImage allDayImage;
     //go to bottom left, count up two pixels then go accross
     int bottomLeftX = 0;
     int bottomLeftY;
     int iterativeY;
 
-    private BufferedImage allDayImage;
     private LinkedHashMap<Integer, Integer> leftsAndRights;
     private Map<DayOfWeek, BufferedImage> images = new HashMap<>();
 
 
-    public Segmentation(TTrainParser main, BufferedImage allDayImage) {
+    public Segmentation(TTrainParser main, BufferedImage allDayCroppedImage) {
         for (int i = 1; i <= 5; i++) images.put(DayOfWeek.of(i), null);
 
-        this.allDayImage = allDayImage;
+        this.allDayImage = allDayCroppedImage;
         this.bottomLeftY = allDayImage.getHeight();
         this.iterativeY = 5; //just above bottom, there are never any lesson blocks here
         LinkedHashMap<Integer, Integer> leftsAndRightXValues = new LinkedHashMap<>(); //Left most x value and then right most x value

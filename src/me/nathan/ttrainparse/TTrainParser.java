@@ -1,5 +1,6 @@
 package me.nathan.ttrainparse;
 
+import me.nathan.forms.CoreForm;
 import me.nathan.forms.LoginRegisterForm;
 import me.nathan.forms.WelcomeForm;
 import net.sourceforge.tess4j.ITesseract;
@@ -7,6 +8,7 @@ import net.sourceforge.tess4j.Tesseract;
 import net.sourceforge.yamlbeans.YamlException;
 import net.sourceforge.yamlbeans.YamlReader;
 
+import javax.imageio.ImageIO;
 import javax.swing.*;
 import java.awt.*;
 import java.awt.image.BufferedImage;
@@ -26,17 +28,22 @@ public class TTrainParser {
 
     public static final String USER_DIRECTORY = System.getProperty("user.dir");
 
+    public static BufferedImage allDayCroppedImage;
+
     public static TTrainParser mainInstance;
     public static JFrame frame;
     public WelcomeForm welcomeForm;
     public LoginRegisterForm loginRegisterForm;
+    public CoreForm coreForm;
 
     public static final String WELCOME_PANEL = "welcomePanel";
+    public static final String CORE_PANEL = "corePanel";
     public static final String LOGIN_REGISTER_PANEL = "loginRegisterPanel";
 
     public JPanel cards;
     public JPanel welcomePanel;
     public JPanel loginRegisterPanel;
+    public JPanel corePanel;
 
     public CardLayout cardLayout;
 
@@ -67,8 +74,30 @@ public class TTrainParser {
         mainInstance.cards.add(mainInstance.loginRegisterPanel, LOGIN_REGISTER_PANEL);
 
         frame.setContentPane(mainInstance.cards);
-        if (mainInstance.hasCroppedTimetableFileAlready(false)) {
-            mainInstance.openPanel(LOGIN_REGISTER_PANEL);
+
+        boolean hasStoredTimetable = mainInstance.hasCroppedTimetableFileAlready(true);
+
+        if (hasStoredTimetable) { //have a pdf done already
+
+            /****
+             *
+             *
+             * This LOADING of the pre croppe timetable is where the program will no longer work
+             * Try using PNG -> pdf
+             * if that doesnt work parsing will have to occur each time, no storing.
+             *
+             *
+             */
+            allDayCroppedImage = ImageIO.read(new File(path));
+
+            if (mainInstance.getCurrentEmail() != null) {
+                mainInstance.coreForm = new CoreForm(mainInstance);
+                mainInstance.corePanel = mainInstance.coreForm.getWelcomePanel();
+                mainInstance.cards.add(mainInstance.corePanel, mainInstance.CORE_PANEL);
+                mainInstance.openPanel(CORE_PANEL);
+            } else {
+                mainInstance.openPanel(LOGIN_REGISTER_PANEL);
+            }
         } else {
             mainInstance.openPanel(WELCOME_PANEL);
         }
@@ -180,6 +209,24 @@ public class TTrainParser {
      * //TODO For the following 2 methods-TODO can I call reader.read() to get latest version of file, or do I have to instantiate YamlReader each time?
      */
 
+    public String getCurrentEmail() {
+        YamlReader reader = null;
+        DataFileInfo info = null;
+        try {
+            reader = new YamlReader(new FileReader(USER_DIRECTORY + File.separator + "data.yml"));
+            info = reader.read(DataFileInfo.class);
+        } catch (FileNotFoundException | YamlException e) {
+            displayError("An error occurred whilst reading from data.yml file!");
+            e.printStackTrace();
+        }
+        if (reader == null) {
+            displayError("There's no data.yml file");
+            return null;
+        }
+
+        return info.email;
+    }
+
     public File getCroppedTimetableFileName(boolean trueForJPG) {
 
         YamlReader reader = null;
@@ -196,7 +243,7 @@ public class TTrainParser {
             return null;
         }
 
-        return new File(USER_DIRECTORY + File.separator + (trueForJPG ? info.timetableCroppepJpgFileName : info.timetableCroppedPdfFileName));
+        return new File(USER_DIRECTORY + File.separator + (trueForJPG ? info.timetableCroppedJpgFileName : info.timetableCroppedPdfFileName));
     }
 
     public boolean hasCroppedTimetableFileAlready(boolean trueForJPG) {
@@ -215,14 +262,21 @@ public class TTrainParser {
         }
 
         String pdfOrJpg = trueForJPG ? "Jpg" : "Pdf";
-        String setFilenameInDataFile = (trueForJPG ? info.timetableCroppepJpgFileName : info.timetableCroppedPdfFileName);
+        String setFilenameInDataFile = (trueForJPG ? info.timetableCroppedJpgFileName : info.timetableCroppedPdfFileName);
+
+//        System.out.println("PDF FILE NAME APAPRENTLY STORED = " + info.timetableCroppedPdfFileName);
+//        System.out.println("FILE checker = " + setFilenameInDataFile);
         File[] files = new File(USER_DIRECTORY).listFiles();
+
         for (File aFile : files) {
             if (aFile.getName().equals(setFilenameInDataFile)) {
+//                System.out.println("equal");
                 return true;
+            } else {
+//                System.out.println(aFile.getName() + " != " + setFilenameInDataFile);
             }
         }
-        //No set filename, pdf file has been relocated
+//        No set filename, pdf file has been relocated
         return false;
     }
 
