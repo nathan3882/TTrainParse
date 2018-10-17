@@ -53,48 +53,31 @@ public class TTrainParser {
     public static void main(String[] args) throws IOException {
         mainInstance = new TTrainParser();
         frame = new JFrame("TTrainParser");
-        try {
-            for (UIManager.LookAndFeelInfo info : UIManager.getInstalledLookAndFeels()) {
-                if ("Liquidlnf".equals(info.getName())) {
-                    UIManager.setLookAndFeel(info.getClassName());
-                    break;
-                }
-            }
-        } catch (Exception e) {
-        }
+
         mainInstance.cards = new JPanel(new CardLayout());
 
-        mainInstance.welcomeForm = new WelcomeForm(mainInstance);
-        mainInstance.welcomePanel = mainInstance.welcomeForm.getWelcomePanel();
+        WelcomeForm wForm = new WelcomeForm(mainInstance);
+        mainInstance.welcomeForm = wForm;
+        mainInstance.welcomePanel = wForm.getWelcomePanel();
 
-        mainInstance.loginRegisterForm = new LoginRegisterForm(mainInstance);
-        mainInstance.loginRegisterPanel = mainInstance.loginRegisterForm.getLoginRegisterPanel();
+        LoginRegisterForm reg = new LoginRegisterForm(mainInstance);
+        mainInstance.loginRegisterForm = reg;
+        mainInstance.loginRegisterPanel = reg.getLoginRegisterPanel();
 
         mainInstance.cards.add(mainInstance.welcomePanel, WELCOME_PANEL);
         mainInstance.cards.add(mainInstance.loginRegisterPanel, LOGIN_REGISTER_PANEL);
 
         frame.setContentPane(mainInstance.cards);
-
         boolean hasStoredTimetable = mainInstance.hasCroppedTimetableFileAlready(true);
 
-        if (hasStoredTimetable) { //have a pdf done already
-
-            /****
-             *
-             *
-             * This LOADING of the pre croppe timetable is where the program will no longer work
-             * Try using PNG -> pdf
-             * if that doesnt work parsing will have to occur each time, no storing.
-             *
-             *
-             */
+        if (hasStoredTimetable) { //have a png done already
             FileInputStream fis = new FileInputStream(mainInstance.getCroppedTimetableFileName(true));
             mainInstance.allDayCroppedImage = ImageIO.read(fis);
-
             if (mainInstance.getCurrentEmail() != null) {
-                mainInstance.coreForm = new CoreForm(mainInstance);
-                mainInstance.corePanel = mainInstance.coreForm.getWelcomePanel();
-                mainInstance.cards.add(mainInstance.corePanel, mainInstance.CORE_PANEL);
+                CoreForm cForm = new CoreForm(mainInstance);
+                mainInstance.coreForm = cForm;
+                mainInstance.corePanel = cForm.getWelcomePanel();
+                mainInstance.cards.add(mainInstance.corePanel, TTrainParser.CORE_PANEL);
                 mainInstance.openPanel(CORE_PANEL);
             } else {
                 mainInstance.openPanel(LOGIN_REGISTER_PANEL);
@@ -120,11 +103,23 @@ public class TTrainParser {
     public static Map<String, String[]> getSubjectNamesWithMultipleTeachers() {
         Map<String, String[]> subjectNamesWithMultipleTeachers = new HashMap<>();
         String fileName = "Teacher Names.txt";
+        File file = new File(fileName);
         BufferedReader reader = null;
+        if (!file.exists()) {
+            try {
+                if (file.createNewFile()) {
+                    FileOutputStream fos = new FileOutputStream(file);
+                    BufferedWriter bw = new BufferedWriter(new OutputStreamWriter(fos));
+                    bw.write("Business studies - Fiona Davis, Another oneOfYourTeachers");
+                    bw.close();
+                }
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+        }
         try {
-            reader = new BufferedReader(new FileReader(fileName));
+            reader = new BufferedReader(new FileReader(file));
         } catch (FileNotFoundException e) {
-            e.printStackTrace();
         }
         while (true) {
 
@@ -162,8 +157,7 @@ public class TTrainParser {
     public static BufferedImage getNewImage(BufferedImage firstImage, int topLeftX, int topLeftY, int bottomRightX, int bottomRightY) {
         int subImageHeight = bottomRightY - topLeftY;
         int subImageWidth = bottomRightX - topLeftX;
-        BufferedImage newImage = firstImage.getSubimage(topLeftX, topLeftY, subImageWidth, subImageHeight);
-        return newImage;
+        return firstImage.getSubimage(topLeftX, topLeftY, subImageWidth, subImageHeight);
     }
 
     public static ITesseract getTesseractInstance() {
@@ -178,6 +172,7 @@ public class TTrainParser {
         TablePart tableType = TablePart.UNKNOWN;
         int[] rgbArray = new int[3];
         String[] split = rgbString.split(", ");
+
         for (int i = 0; i < split.length; i++) rgbArray[i] = Integer.parseInt(split[i]);
 
         if (wb(rgbArray[0], 211, 10) && wb(rgbArray[1], 211, 10) && wb(rgbArray[2], 211, 10)) {
@@ -217,11 +212,10 @@ public class TTrainParser {
             reader = new YamlReader(new FileReader(USER_DIRECTORY + File.separator + "data.yml"));
             info = reader.read(DataFileInfo.class);
         } catch (FileNotFoundException | YamlException e) {
-            displayError("An error occurred whilst reading from data.yml file!");
+
             e.printStackTrace();
         }
-        if (reader == null) {
-            displayError("There's no data.yml file");
+        if (reader == null || info == null) {
             return null;
         }
 
@@ -236,11 +230,9 @@ public class TTrainParser {
             reader = new YamlReader(new FileReader(USER_DIRECTORY + File.separator + "data.yml"));
             info = reader.read(DataFileInfo.class);
         } catch (FileNotFoundException | YamlException e) {
-            displayError("An error occurred whilst reading from data.yml file!");
             e.printStackTrace();
         }
         if (reader == null) {
-            displayError("There's no data.yml file");
             return null;
         }
 
@@ -248,35 +240,23 @@ public class TTrainParser {
     }
 
     public boolean hasCroppedTimetableFileAlready(boolean trueForPNG) {
-        YamlReader reader = null;
-        DataFileInfo info = null;
+        YamlReader reader;
+        DataFileInfo info;
         try {
             reader = new YamlReader(new FileReader(USER_DIRECTORY + File.separator + "data.yml"));
             info = reader.read(DataFileInfo.class);
         } catch (FileNotFoundException | YamlException e) {
-            displayError("An error occurred whilst reading from data.yml file!");
-            e.printStackTrace();
-        }
-        if (reader == null) {
-            displayError("There's no data.yml file");
             return false;
         }
 
         String setFilenameInDataFile = (trueForPNG ? info.timetableCroppedPngFileName : info.timetableCroppedPdfFileName);
 
-//        System.out.println("PDF FILE NAME APAPRENTLY STORED = " + info.timetableCroppedPdfFileName);
-//        System.out.println("FILE checker = " + setFilenameInDataFile);
         File[] files = new File(USER_DIRECTORY).listFiles();
 
         for (File aFile : files) {
-            if (aFile.getName().equals(setFilenameInDataFile)) {
-//                System.out.println("equal");
-                return true;
-            } else {
-//                System.out.println(aFile.getName() + " != " + setFilenameInDataFile);
-            }
+            if (aFile.getName().equals(setFilenameInDataFile)) return true;
         }
-//        No set filename, pdf file has been relocated
+        //No set filename, pdf file has been relocated
         return false;
     }
 
@@ -292,10 +272,4 @@ public class TTrainParser {
         IMPORTANT_WRITING,
         EXTERIOR_OR_INTERIOR
     }
-
-
-    public TTrainParser gI() {
-        return mainInstance;
-    }
-
 }

@@ -44,11 +44,9 @@ public class LoginRegisterForm {
                         reader = new YamlReader(new FileReader(TTrainParser.USER_DIRECTORY + File.separator + "data.yml"));
                         info = reader.read(DataFileInfo.class);
                     } catch (FileNotFoundException | YamlException exception) {
-                        mainInstance.displayError("An error occurred whilst reading from data.yml file!");
                         exception.printStackTrace();
                     }
                     if (reader == null) {
-                        mainInstance.displayError("There's no data.yml file");
                         return;
                     }
                     info.setEmail(emailTextField.getText());
@@ -62,7 +60,7 @@ public class LoginRegisterForm {
                     } catch (IOException | YamlException e1) {
                         e1.printStackTrace();
                     }
-                    mainInstance.coreForm = new CoreForm(mainInstance);
+                    mainInstance.coreForm = new CoreForm(mainInstance); //referencing main instance that had outdated all day image
                     mainInstance.corePanel = mainInstance.coreForm.getWelcomePanel();
                     mainInstance.cards.add(mainInstance.corePanel, mainInstance.CORE_PANEL);
                     mainInstance.openPanel(mainInstance.CORE_PANEL);

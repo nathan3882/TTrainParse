@@ -37,41 +37,30 @@ public class ParsedTimetable {
         int height = firstImage.getHeight();
         int width = firstImage.getWidth();
 
-        /*
-         * small algorithm that quickly crops everything above the green bar out of the photo
-         */
-        for (int i = 0; i < height; i++) {
-            String colourString = main.pixelRGBToString(new Color(firstImage.getRGB(0, i)));
-            if (colourString.equals("154, 202, 60")) { //Green bar at the top
-                //x = 0, i=top left y
-                firstImage = TTrainParser.getNewImage(firstImage, 0, i, width, height);
-                break;
-            }
-        }
-
         /**
          * Following code is to determine left and right side coordinates of the table
          */
+
         System.out.println("Determining left & right border coordinates...");
         List<String> currentYPixelsStoredOnXPixel = new ArrayList<>();
         List<String> currentXPixelsStoredOnYPixel = new ArrayList<>();
         Map<Integer, Integer> borderCoordinates = new HashMap<>();
 
         for (int currentXPixel = 0; currentXPixel < width; currentXPixel++) { //going from left to right
-            for (int currentYPixel = 0; currentYPixel < height; currentYPixel++) {  //going from bottom to top
+            for (int currentYPixel = 0; currentYPixel < height; currentYPixel++) {  //then going from bottom to top
                 String currentPixelString = main.pixelRGBToString(new Color(firstImage.getRGB(currentXPixel, currentYPixel)));
-                if (currentPixelString.equals("211, 211, 211")) borderCoordinates.put(currentXPixel, currentYPixel);
 
+                if (currentPixelString.equals("211, 211, 211"))
+                    borderCoordinates.put(currentXPixel, currentYPixel); //Is a border
 
-                if (currentYPixelsStoredOnXPixel.size() == height) {
+                if (currentYPixelsStoredOnXPixel.size() == height) { //Reached bottom of the pixels, iteration is top -> bottom
                     XYPixels.put(currentXPixel, new ArrayList<>(currentYPixelsStoredOnXPixel));
                     currentYPixelsStoredOnXPixel.clear();
                 }
                 currentYPixelsStoredOnXPixel.add(currentPixelString);
-
                 if (getCondition(XYPixels.size(), width - 2)) { //analyses third of all pixels for left and right border
                     ComparisonOutput.leftRightInstantiations++;
-                    /**New comparison output for previous 1/3rd of pixel data*/
+                    //New comparison output for previous 1/3rd of pixel data
                     comparisonOutputs.add(new ComparisonOutput(main, this, new HashMap<Integer, List<String>>(XYPixels), true, new HashMap<Integer, Integer>(borderCoordinates)));
                     XYPixels.clear(); //Clears previous 1/3 of pixel data
                 }
@@ -80,9 +69,11 @@ public class ParsedTimetable {
         borderCoordinates.clear();
         XYPixels.clear();
         for (int currentYPixel = 0; currentYPixel < height; currentYPixel++) {  //going from bottom to top
-            for (int currentXPixel = 0; currentXPixel < width; currentXPixel++) { //going from left to right
+            for (int currentXPixel = 0; currentXPixel < width; currentXPixel++) { //then going from left to right
                 String currentPixelString = main.pixelRGBToString(new Color(firstImage.getRGB(currentXPixel, currentYPixel)));
-                if (currentPixelString.equals("211, 211, 211")) borderCoordinates.put(currentXPixel, currentYPixel);
+
+                if (currentPixelString.equals("211, 211, 211"))
+                    borderCoordinates.put(currentXPixel, currentYPixel); //Is a border
 
                 if (currentXPixelsStoredOnYPixel.size() == width) {
                     XYPixels.put(currentYPixel, new ArrayList<>(currentXPixelsStoredOnYPixel));
@@ -92,25 +83,12 @@ public class ParsedTimetable {
 
                 if (getCondition(XYPixels.size(), height)) {
                     ComparisonOutput.topBottomInstantiations++;
-                    //System.out.println("to " + ComparisonOutput.topBottomInstantiations);
-                    /**New comparison output for previous 1/3rd of pixel data*/
+                    //New comparison output for previous 1/3rd of pixel data
                     comparisonOutputs.add(new ComparisonOutput(main, this, new HashMap<Integer, List<String>>(XYPixels), false, new HashMap<Integer, Integer>(borderCoordinates)));
                     XYPixels.clear(); //Clears previous 1/3 of pixel data
                 }
             }
         }
-    }
-
-    private boolean getCondition(int size, int hOrW) {
-        return size >= (hOrW / 3) - 1; //Dividing integers gives absolout value, ie 9.9 will be 9 so just take 1 away to be accurate
-    }
-
-    public boolean successfullyParsed() {
-        return getResponses().size() == 4;
-    }
-
-    public BufferedImage getStartingImage() {
-        return this.firstImage;
     }
 
     public BufferedImage getSuccessfullyParsedImage() {
@@ -135,11 +113,26 @@ public class ParsedTimetable {
                 }
             }
         }
-        if (this.newImage == null) {
-            this.newImage = TTrainParser.getNewImage(firstImage, xValueLeftBorder, yValueTopBorder, xValueRightBorder, yValueBottomBorder);
-        }
-        return this.newImage;
+        return this.newImage != null ? this.newImage :
+                TTrainParser.getNewImage(firstImage,
+                        xValueLeftBorder,
+                        yValueTopBorder,
+                        xValueRightBorder,
+                        yValueBottomBorder);
     }
+
+    private boolean getCondition(int size, int hOrW) {
+        return size >= (hOrW / 3) - 1; //Dividing integers gives absolout value, ie 9.9 will be 9 so just take 1 away to be accurate
+    }
+
+    public boolean successfullyParsed() {
+        return getResponses().size() == 4;
+    }
+
+    public BufferedImage getStartingImage() {
+        return this.firstImage;
+    }
+
 
     public List<Response> getResponses() {
         return responsesSoFar;
@@ -148,10 +141,5 @@ public class ParsedTimetable {
     public void addNewResponse(Response response) {
         responsesSoFar.add(response);
     }
-
-    public TTrainParser getMain() {
-        return this.main;
-    }
-
 
 }

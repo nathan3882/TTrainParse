@@ -11,10 +11,6 @@ import java.util.Map;
 public class Segmentation {
 
     private final BufferedImage allDayImage;
-    //go to bottom left, count up two pixels then go accross
-    int bottomLeftX = 0;
-    int bottomLeftY;
-    int iterativeY;
 
     private LinkedHashMap<Integer, Integer> leftsAndRights;
     private Map<DayOfWeek, BufferedImage> images = new HashMap<>();
@@ -24,8 +20,7 @@ public class Segmentation {
         for (int i = 1; i <= 5; i++) images.put(DayOfWeek.of(i), null);
 
         this.allDayImage = main.allDayCroppedImage;
-        this.bottomLeftY = allDayImage.getHeight();
-        this.iterativeY = 5; //just above bottom, there are never any lesson blocks here
+        int iterativeY = 5;
         LinkedHashMap<Integer, Integer> leftsAndRightXValues = new LinkedHashMap<>(); //Left most x value and then right most x value
         int previouslyRetainedRight = 0;
         int previousLeftGot = -1;
@@ -56,9 +51,7 @@ public class Segmentation {
         /**1 before is right, 2 before is left*/
         try {
             rightMostBound = keys.get(day.getValue() - 1);
-            if (day == DayOfWeek.MONDAY) {
-                leftMostBound = 0;
-            } else {
+            if (day != DayOfWeek.MONDAY) {
                 leftMostBound = keys.get(day.getValue() - 2);
             }
         } catch (IndexOutOfBoundsException e) {

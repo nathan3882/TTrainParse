@@ -25,8 +25,8 @@ public class ComparisonOutput {
         this.calculatingLeftRightBorder = calculatingLeftRightBorder;
         this.quantitiesOfBorder = new HashMap<Integer, Integer>();
         this.xOrYPixels = previousXYPixels;
-
         this.quantitiesOfBorder = getBorderQuantities(xOrYPixels);
+
         /*
          * Following code determines whether a high % of the analysed pixel's colour is the same as the table's border colour
          * if it is, there is 99% probability of this xOrYValue being the border of the table
@@ -34,47 +34,38 @@ public class ComparisonOutput {
         for (int xOrYValue : xOrYPixels.keySet()) {
             int upperBound = 0;
             BufferedImage startImage = timetable.getStartingImage();
-            if (calculatingLeftRightBorder) {
+            if (isCalculatingLeftRightBorder()) {
                 int oneThird = startImage.getWidth() / 3;
-                int lowerBound = oneThird * leftRightInstantiations;
-                upperBound = lowerBound + oneThird;
+                upperBound = (oneThird * leftRightInstantiations) + oneThird; //Lower bound + one third of height
             } else {
                 int oneThird = startImage.getHeight() / 3;
-                int lowerBound = oneThird * topBottomInstantiations;
-                upperBound = lowerBound + oneThird;
+                upperBound = (oneThird * topBottomInstantiations) + oneThird; //Lower bound + one third of height
             }
-            if (xOrYValue >= upperBound) {
-                System.out.println("Going above what this instance is meant to (new instance every third width or height)");
-                break;
-            }
+            if (xOrYValue >= upperBound)
+                break; //Going above what this instance is meant to (new instance every third width or height)");
+
             Map<Integer, Integer> sortedQuantities = sortQuantitiesOfBorder(quantitiesOfBorder);
 
-            for (Integer xOrY : sortedQuantities.keySet()) { //to get the "first" entry in the map
+            for (Integer xOrY : sortedQuantities.keySet()) { //to get the first entry in the map
                 int occurences = sortedQuantities.get(xOrY);
-                //System.out.println("First most common XY is " + xOrY + " with " + occurrences + " occurrences");
                 if (occurences <= 300) {
                     this.setResponse(Response.MIDDLE_NOT_A_BORDER);
-                    //System.out.println(xOrY + "   <= 300  its " + occurrences);
                     return;
                 }
+
                 Response first = calculatingLeftRightBorder ? Response.VALID_LEFT_BORDER : Response.VALID_TOP_BORDER;
                 Response last = calculatingLeftRightBorder ? Response.VALID_RIGHT_BORDER : Response.VALID_BOTTOM_BORDER;
 
                 if (!timetable.getResponses().contains(first)) { //doesnt contain left or top border, hasnt been found yet
                     timetable.addNewResponse(first);
-                    //System.out.println("Adding new response first " + xOrY + ". lr = " + calculatingLeftRightBorder);
                     this.setResponse(first);
                     setValue(xOrY);
-                    return;
                 } else if (!timetable.getResponses().contains(last)) { //is left-right or top-bottom so else is equivalent to the right/bottom border
                     timetable.addNewResponse(last);
-                    //System.out.println("Adding new response last " + xOrY + ". lr = " + calculatingLeftRightBorder);
                     this.setResponse(last);
                     setValue(xOrY);
-                    return;
                 }
-                return; //terminate on first iteration because we only want the first
-
+                return; //terminate on first iteration because we only want the first / most common
             }
         }
     }

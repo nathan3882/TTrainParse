@@ -101,7 +101,7 @@ public class WelcomeForm {
                         successfullyParsed = timetable.successfullyParsed();
                         System.out.println("SUCCESSFULLY PARSED = " + successfullyParsed);
                         allDayCroppedImage = timetable.getSuccessfullyParsedImage(); //variable equal to cropped image now
-
+                        main.allDayCroppedImage = allDayCroppedImage;
 
                         String nesPngPath = selectedFile.getName().split("\\.")[0] + ".png";
                         info.setTimetableCroppedPngFileName(nesPngPath);

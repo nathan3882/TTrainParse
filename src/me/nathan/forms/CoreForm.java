@@ -40,7 +40,7 @@ public class CoreForm {
         //TODO in writeup mention it was between storing all days once, or doing a new segmentation object each time and just extracting one day
 
         if (main.hasCroppedTimetableFileAlready(true)) { //true = check for png
-//           valid cropped pdf, isn't just an ordinary pdf with loads of weird info"
+//           valid cropped png, isn't just an ordinary pdf with loads of weird info"
 //            Has a valid cropped jpg file already, set ImageIO allDayCroppedImage
 
             Segmentation segmentation = new Segmentation(main);
@@ -65,6 +65,7 @@ public class CoreForm {
                 if (ocrText.length() < 30) {
                     continue; /*No Lessons*/
                 }
+
                 ocrText = depleteFutileInfo(ocrText, true).replace("Thursday A2 Tutorial in M01 09:00 - 10:05", "Thursday");
 //TODO
                 List<String> words = new LinkedList<>(Arrays.asList(ocrText.split(" ")));
@@ -117,8 +118,7 @@ public class CoreForm {
                 for (String wordInOcr : words) {
                     for (String teacherFirstOrLastName : teacher.split(" ")) {
                         if (teacherFirstOrLastName.equalsIgnoreCase("UNKNOWN")) continue;
-                        int totalEditsNeeded = calculateDistance(wordInOcr, teacherFirstOrLastName);
-                        if (totalEditsNeeded < 3) { //less than two characters changed
+                        if (calculateDistance(wordInOcr, teacherFirstOrLastName) < 3) { //less than two characters changed
                             removeStrings.add(wordInOcr);
                         }
                     }
