@@ -7,9 +7,9 @@ import me.nathan.ttrainparse.TTrainParser;
 import net.sourceforge.tess4j.TesseractException;
 
 import javax.swing.*;
-import java.awt.image.BufferedImage;
 import java.io.File;
 import java.time.DayOfWeek;
+import java.time.LocalTime;
 import java.util.*;
 
 import static me.nathan.ttrainparse.TTrainParser.getTesseractInstance;
@@ -17,7 +17,6 @@ import static me.nathan.ttrainparse.TTrainParser.getTesseractInstance;
 public class CoreForm {
     private final TTrainParser main;
     private JPanel coreFormPanel;
-    private JLabel currentDayLabel;
     private JLabel mainInfoLabel;
 
     public CoreForm(TTrainParser main) {
@@ -35,29 +34,25 @@ public class CoreForm {
             showThese[1] = currentDay + 1;
         }
 
-        String string = DayOfWeek.of(currentDay).name();
-        currentDayLabel.setText(currentDayLabel.getText().replace("{DAY}", string.substring(0, 1).toUpperCase() + string.substring(1).toLowerCase()));
-
-        String mainString = "<html>";
+        String mainString = "<html><center>Here are all of your lessons + train times :)<br><br>";
 
         Map<DayOfWeek, String> opticallyReadText = new HashMap<>();
         //TODO in writeup mention it was between storing all days once, or doing a new segmentation object each time and just extracting one day
 
-        BufferedImage allDayImage;
-
-        if (main.hasCroppedTimetableFileAlready(true)) { //true = check for jpg
+        if (main.hasCroppedTimetableFileAlready(true)) { //true = check for png
 //           valid cropped pdf, isn't just an ordinary pdf with loads of weird info"
 //            Has a valid cropped jpg file already, set ImageIO allDayCroppedImage
 
-            Segmentation segmentation = new Segmentation(main, TTrainParser.allDayCroppedImage);
+            Segmentation segmentation = new Segmentation(main);
 
-            LessonInfo[] infos = new LessonInfo[2];
+            LinkedList<LessonInfo> infos = new LinkedList<>();
             int i = 0;
             for (int dayInt : showThese) {
                 DayOfWeek day = DayOfWeek.of(dayInt);
 
                 ManipulableFile mFile = new ManipulableFile(main, segmentation.getDay(day));
 
+                //More defensive remaking pdf each time from segmentation, say if timetable changed wouldnt use previous day pdf
                 File pdfFile = mFile.toPdf(day.name() + ".pdf", false); //Convert specific day mFile toPdf
 
                 String ocrText = null;
@@ -70,28 +65,39 @@ public class CoreForm {
                 if (ocrText.length() < 30) {
                     continue; /*No Lessons*/
                 }
-                ocrText = depleteFutileInfo(ocrText, true);
-
-                List<String> words = Arrays.asList(ocrText.split(" "));
-                for (String word : words) {
-                    System.out.print(word + " ");
-                }
-                infos[i] = new LessonInfo(words, day);
+                ocrText = depleteFutileInfo(ocrText, true).replace("Thursday A2 Tutorial in M01 09:00 - 10:05", "Thursday");
+//TODO
+                List<String> words = new LinkedList<>(Arrays.asList(ocrText.split(" ")));
+                infos.add(new LessonInfo(words, day));
                 i++;
             }
 
-            for (LessonInfo collegeDay : infos) {
-                for (String lessonName : collegeDay.getLessons()) {
-                    //TODO List<LocalTime> startTrains = collegeDay.getFirstTrains();
-                    //TODO List<LocalTime> endTrains = collegeDay.getEndTrains();
-                    mainString +=
-                            lessonName + "'s" +
-                                    "start time is " + collegeDay.getStartTime(lessonName) +
-                                    " and it ends at " + collegeDay.getFinishTime(lessonName) + ". Ideal trains are...";
+            for (int l = 0; l < infos.size(); l++) {
+                LessonInfo newCollegeDay = infos.get(l);
+                if (l != 0) mainString += "<br>";
+                mainString += upperFirst(newCollegeDay.getDayOfWeek()) + ":<br>";
+                LinkedList lessons = newCollegeDay.getLessons();
+                for (int k = 0; k < (lessons.size() / 2); k++) {
+                    //Cmp sci, cmp sci, b studies, bstudies  each iteration the lesson times for both lessonss will be shown, if I divide by 2, it will only get one of each thus iterating twice for the one iteration, not four times for 2 iterations
+                    String lessonName = newCollegeDay.getLessons().get(k);
+                    List<LocalTime> startTimes = newCollegeDay.getStartTimes(lessonName);
+                    List<LocalTime> finishTimes = newCollegeDay.getFinishTimes(lessonName);
+                    for (int j = 0; j < startTimes.size(); j++) {
+                        LocalTime startTime = startTimes.get(j);
+                        LocalTime finishTime = finishTimes.get(j);
+                        mainString += lessonName + " lesson number " + (j + 1) + " starts at "
+                                + startTime.getHour() + ":" + startTime.getMinute() + " and ends at< " + finishTime.getHour() + " " + finishTime.getMinute() + "<br>";
+                    }
                 }
             }
         }
+        mainString += "</center></html>";
         mainInfoLabel.setText(mainString);
+    }
+
+    private String upperFirst(DayOfWeek dayOfWeek) {
+        String string = dayOfWeek.name();
+        return string.substring(0, 1).toUpperCase() + string.substring(1).toLowerCase();
     }
 
     private String depleteFutileInfo(String ocrResult, boolean oneSpaceBetweenAllInfo) {
@@ -111,8 +117,8 @@ public class CoreForm {
                 for (String wordInOcr : words) {
                     for (String teacherFirstOrLastName : teacher.split(" ")) {
                         if (teacherFirstOrLastName.equalsIgnoreCase("UNKNOWN")) continue;
-                        int dis = calculateDistance(wordInOcr, teacherFirstOrLastName);
-                        if (dis < 3) { //left than two characters changed
+                        int totalEditsNeeded = calculateDistance(wordInOcr, teacherFirstOrLastName);
+                        if (totalEditsNeeded < 3) { //less than two characters changed
                             removeStrings.add(wordInOcr);
                         }
                     }

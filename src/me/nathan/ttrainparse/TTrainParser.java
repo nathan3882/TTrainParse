@@ -28,7 +28,7 @@ public class TTrainParser {
 
     public static final String USER_DIRECTORY = System.getProperty("user.dir");
 
-    public static BufferedImage allDayCroppedImage;
+    public BufferedImage allDayCroppedImage;
 
     public static TTrainParser mainInstance;
     public static JFrame frame;
@@ -55,7 +55,7 @@ public class TTrainParser {
         frame = new JFrame("TTrainParser");
         try {
             for (UIManager.LookAndFeelInfo info : UIManager.getInstalledLookAndFeels()) {
-                if ("Nimbus".equals(info.getName())) {
+                if ("Liquidlnf".equals(info.getName())) {
                     UIManager.setLookAndFeel(info.getClassName());
                     break;
                 }
@@ -88,7 +88,8 @@ public class TTrainParser {
              *
              *
              */
-            allDayCroppedImage = ImageIO.read(new File(path));
+            FileInputStream fis = new FileInputStream(mainInstance.getCroppedTimetableFileName(true));
+            mainInstance.allDayCroppedImage = ImageIO.read(fis);
 
             if (mainInstance.getCurrentEmail() != null) {
                 mainInstance.coreForm = new CoreForm(mainInstance);
@@ -227,7 +228,7 @@ public class TTrainParser {
         return info.email;
     }
 
-    public File getCroppedTimetableFileName(boolean trueForJPG) {
+    public File getCroppedTimetableFileName(boolean trueForPNG) {
 
         YamlReader reader = null;
         DataFileInfo info = null;
@@ -243,10 +244,10 @@ public class TTrainParser {
             return null;
         }
 
-        return new File(USER_DIRECTORY + File.separator + (trueForJPG ? info.timetableCroppedJpgFileName : info.timetableCroppedPdfFileName));
+        return new File(USER_DIRECTORY + File.separator + (trueForPNG ? info.timetableCroppedPngFileName : info.timetableCroppedPdfFileName));
     }
 
-    public boolean hasCroppedTimetableFileAlready(boolean trueForJPG) {
+    public boolean hasCroppedTimetableFileAlready(boolean trueForPNG) {
         YamlReader reader = null;
         DataFileInfo info = null;
         try {
@@ -261,8 +262,7 @@ public class TTrainParser {
             return false;
         }
 
-        String pdfOrJpg = trueForJPG ? "Jpg" : "Pdf";
-        String setFilenameInDataFile = (trueForJPG ? info.timetableCroppedJpgFileName : info.timetableCroppedPdfFileName);
+        String setFilenameInDataFile = (trueForPNG ? info.timetableCroppedPngFileName : info.timetableCroppedPdfFileName);
 
 //        System.out.println("PDF FILE NAME APAPRENTLY STORED = " + info.timetableCroppedPdfFileName);
 //        System.out.println("FILE checker = " + setFilenameInDataFile);

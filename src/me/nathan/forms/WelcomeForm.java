@@ -7,9 +7,6 @@ import net.sourceforge.yamlbeans.YamlException;
 import net.sourceforge.yamlbeans.YamlWriter;
 
 import javax.imageio.ImageIO;
-import javax.imageio.ImageWriteParam;
-import javax.imageio.ImageWriter;
-import javax.imageio.stream.FileImageOutputStream;
 import javax.swing.*;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
@@ -53,7 +50,7 @@ public class WelcomeForm {
                 int value = timetableFileChooser.showOpenDialog(welcomePanel); //When clicked, open dialog on the welcomePanel JPanel
                 selectedFile = timetableFileChooser.getSelectedFile();
                 if (value == JFileChooser.APPROVE_OPTION) {
-                    isValidFile = main.getFileSuffix(selectedFile).equalsIgnoreCase("jpg");
+                    isValidFile = main.getFileSuffix(selectedFile).equalsIgnoreCase("jpg") || main.getFileSuffix(selectedFile).equalsIgnoreCase("png");
                     if (isValidFile) {
                         confirmValidTimetable.setEnabled(true);
                         return;
@@ -102,26 +99,14 @@ public class WelcomeForm {
                     if (!main.hasCroppedTimetableFileAlready(false)) { //hasn't got a pdf
                         ParsedTimetable timetable = new ParsedTimetable(main, selectedFileImage); //parses jpg
                         successfullyParsed = timetable.successfullyParsed();
-
+                        System.out.println("SUCCESSFULLY PARSED = " + successfullyParsed);
                         allDayCroppedImage = timetable.getSuccessfullyParsedImage(); //variable equal to cropped image now
-                        TTrainParser.allDayCroppedImage = allDayCroppedImage;
-                        info.setTimetableCroppepJpgFileName(selectedFile.getName());
-                        try {
-                            /** TODO
-                             * ImageWriter writer1 = writerSpi.createWriterInstance();
-                             * BufferedImage b2=buffered.getSubimage(buffered.getWidth()/2, 0, buffered.getWidth()/2, buffered.getHeight());
-                             * writer1.setOutput(new FileImageOutputStream(new File("2.jpg")));
-                             *
-                             * writer1.write(null, new IIOImage((RenderedImage) b2, null, null), jpegParams);
-                             */
-                            ImageWriter writer = ImageIO.getImageWritersByFormatName("jpeg").next();
-                            writer.setOutput(new FileImageOutputStream(selectedFile));
 
-                            ImageWriteParam param = writer.getDefaultWriteParam();
-                            param.setCompressionMode(ImageWriteParam.MODE_EXPLICIT); // Needed see javadoc
-                            param.setCompressionQuality(1.0F); // Highest quality
-                            writer.write(allDayCroppedImage);
-                            //ImageIO.write(allDayCroppedImage, "jpg", selectedFile); //overwrites the uncropped jpg to cropped
+
+                        String nesPngPath = selectedFile.getName().split("\\.")[0] + ".png";
+                        info.setTimetableCroppedPngFileName(nesPngPath);
+                        try {
+                            ImageIO.write(allDayCroppedImage, "png", new File(TTrainParser.USER_DIRECTORY + File.separator + nesPngPath)); //overwrites the uncropped jpg/png to cropped png
                         } catch (IOException e) {
                             e.printStackTrace();
                         }

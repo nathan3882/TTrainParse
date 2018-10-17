@@ -117,7 +117,6 @@ public class ParsedTimetable {
         if (successfullyParsed()) { //Top, bottom, left AND right sides of border all found
             for (ComparisonOutput comparisonOutput : comparisonOutputs) {
                 Response response = comparisonOutput.getResponse();
-
                 switch (response) {
                     case VALID_TOP_BORDER:
                         this.yValueTopBorder = comparisonOutput.getValue();

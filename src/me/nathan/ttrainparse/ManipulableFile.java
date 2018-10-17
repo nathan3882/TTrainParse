@@ -39,32 +39,17 @@ public class ManipulableFile {
         File file = null;
         if (getInitialUpload() instanceof BufferedImage) {
 
-            File jpgFile = new File(TTrainParser.USER_DIRECTORY + File.separator + newName.split("\\.")[0] + ".jpg");
-            System.out.println("outputting jpg to " + jpgFile.getName());
+            File pngOutputFile = new File(TTrainParser.USER_DIRECTORY + File.separator + newName.split("\\.")[0] + ".png");
+            System.out.println("outputting png to " + pngOutputFile.getName());
             try {
-                /**TODO
-                 * ImageWriter writer1 = writerSpi.createWriterInstance();
-                 * BufferedImage b2=buffered.getSubimage(buffered.getWidth()/2, 0, buffered.getWidth()/2, buffered.getHeight());
-                 * writer1.setOutput(new FileImageOutputStream(new File("2.jpg")));
-                 *
-                 * writer1.write(null, new IIOImage((RenderedImage) b2, null, null), jpegParams);
-                 */
-                ImageWriter writer = ImageIO.getImageWritersByFormatName("jpeg").next();
-                writer.setOutput(new FileImageOutputStream(jpgFile));
-
-                ImageWriteParam param = writer.getDefaultWriteParam();
-                param.setCompressionMode(ImageWriteParam.MODE_EXPLICIT); // Needed see javadoc
-                param.setCompressionQuality(1.0F); // Highest quality
-                writer.write((BufferedImage) getInitialUpload());
-
-                //ImageIO.write((BufferedImage) getInitialUpload(), "jpg", jpgFile);
+                ImageIO.write((BufferedImage) getInitialUpload(), "png", pngOutputFile);
             } catch (IOException e) {
                 e.printStackTrace();
             }
 
             String newOne = newName.split("\\.")[0] + ".pdf";
 
-            jpgToPdf(jpgFile, newOne, deleteJpgIfMade);
+            jpgToPdf(pngOutputFile, newOne, deleteJpgIfMade);
 
             file = new File(TTrainParser.USER_DIRECTORY + File.separator + newOne);
         } else if (getInitialUpload() instanceof File) {
@@ -96,7 +81,7 @@ public class ManipulableFile {
     private File toFile(BufferedImage image, String newName, String extension) {
         File file = new File(newName + "." + extension);
         try {
-            ImageWriter writer = ImageIO.getImageWritersByFormatName("jpeg").next();
+            ImageWriter writer = ImageIO.getImageWritersByFormatName("jpg").next();
             writer.setOutput(new FileImageOutputStream(file));
 
             ImageWriteParam param = writer.getDefaultWriteParam();

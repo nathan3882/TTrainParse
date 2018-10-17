@@ -52,7 +52,7 @@ public class LoginRegisterForm {
                         return;
                     }
                     info.setEmail(emailTextField.getText());
-                    info.setTimetableCroppepJpgFileName(info.timetableCroppedJpgFileName);
+                    info.setTimetableCroppedPngFileName(info.timetableCroppedPngFileName);
                     YamlWriter writer = null;
                     try {
                         //TODO Store System current millis for the time which the user had first timetable parsed

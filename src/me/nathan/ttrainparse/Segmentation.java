@@ -20,10 +20,10 @@ public class Segmentation {
     private Map<DayOfWeek, BufferedImage> images = new HashMap<>();
 
 
-    public Segmentation(TTrainParser main, BufferedImage allDayCroppedImage) {
+    public Segmentation(TTrainParser main) {
         for (int i = 1; i <= 5; i++) images.put(DayOfWeek.of(i), null);
 
-        this.allDayImage = allDayCroppedImage;
+        this.allDayImage = main.allDayCroppedImage;
         this.bottomLeftY = allDayImage.getHeight();
         this.iterativeY = 5; //just above bottom, there are never any lesson blocks here
         LinkedHashMap<Integer, Integer> leftsAndRightXValues = new LinkedHashMap<>(); //Left most x value and then right most x value
