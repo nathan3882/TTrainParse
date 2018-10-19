@@ -50,6 +50,19 @@ public class TTrainParser {
     private static String pathBefore = USER_DIRECTORY + File.separator + "Parsed Timetable Data" + File.separator;
     private static ITesseract instance = new Tesseract();
 
+    /**
+     * GetDepBoardWithDetails returns a StationBoardWithDetails.
+     * StationBoardWithDetails object member 'trainServices' can be used to get a list of ServiceItemWithCallingPoints
+     * <p>
+     * List of ServiceItemWithCallingPoints can be used to check whether object "currentDestinations" contains required train station,
+     * if it does, parse the object "serviceID" to to GetServiceDetails
+     * <p>
+     * GetServiceDetails returns a ServiceDetails object.
+     * ServiceDetails can be used to get subsequentCallingPoints
+     * <p>
+     * Have embedded web browser in side
+     */
+
     public static void main(String[] args) throws IOException {
         mainInstance = new TTrainParser();
         frame = new JFrame("TTrainParser");
@@ -164,10 +177,6 @@ public class TTrainParser {
         return instance;
     }
 
-    public void displayError(String string) {
-        JOptionPane.showMessageDialog(welcomeForm.getWelcomePanel(), string);
-    }
-
     public TablePart getTableType(String rgbString) {
         TablePart tableType = TablePart.UNKNOWN;
         int[] rgbArray = new int[3];
@@ -271,5 +280,10 @@ public class TTrainParser {
         UNKNOWN,
         IMPORTANT_WRITING,
         EXTERIOR_OR_INTERIOR
+    }
+
+    public interface MessageDisplay {
+        void displayMessage(String message);
+
     }
 }

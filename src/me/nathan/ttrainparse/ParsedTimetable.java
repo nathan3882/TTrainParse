@@ -41,7 +41,6 @@ public class ParsedTimetable {
          * Following code is to determine left and right side coordinates of the table
          */
 
-        System.out.println("Determining left & right border coordinates...");
         List<String> currentYPixelsStoredOnXPixel = new ArrayList<>();
         List<String> currentXPixelsStoredOnYPixel = new ArrayList<>();
         Map<Integer, Integer> borderCoordinates = new HashMap<>();
@@ -103,10 +102,12 @@ public class ParsedTimetable {
                         this.yValueBottomBorder = comparisonOutput.getValue();
                         break;
                     case VALID_LEFT_BORDER:
-                        this.xValueLeftBorder = comparisonOutput.getValue();
+                        this.xValueLeftBorder = comparisonOutput.getValue() + 10; // take five away so in segmentation
                         break;
                     case VALID_RIGHT_BORDER:
                         this.xValueRightBorder = comparisonOutput.getValue();
+                        break;
+                    case MIDDLE_NOT_A_BORDER:
                         break;
                     default:
                         break;
@@ -122,7 +123,7 @@ public class ParsedTimetable {
     }
 
     private boolean getCondition(int size, int hOrW) {
-        return size >= (hOrW / 3) - 1; //Dividing integers gives absolout value, ie 9.9 will be 9 so just take 1 away to be accurate
+        return size >= (hOrW / 3) - 1; //Dividing integers gives absoloute value, ie 9.9 will be 9 so just take 1 away to be accurate
     }
 
     public boolean successfullyParsed() {

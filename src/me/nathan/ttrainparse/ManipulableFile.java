@@ -40,7 +40,6 @@ public class ManipulableFile {
         if (getInitialUpload() instanceof BufferedImage) {
 
             File pngOutputFile = new File(TTrainParser.USER_DIRECTORY + File.separator + newName.split("\\.")[0] + ".png");
-            System.out.println("outputting png to " + pngOutputFile.getName());
             try {
                 ImageIO.write((BufferedImage) getInitialUpload(), "png", pngOutputFile);
             } catch (IOException e) {

@@ -86,7 +86,9 @@ public class ComparisonOutput {
     }
 
     /**
-     * Bubble Sort
+     * Algorithm is a modified mergesort
+     * in which the merge is omitted if the highest element in the low sublist is less than the lowest element in the high sublist
+     * This algorithm offers guaranteed n log(n) performance.
      */
     private LinkedHashMap<Integer, Integer> sortQuantitiesOfBorder(Map<Integer, Integer> toSort) {
         List<Entry<Integer, Integer>> list = new LinkedList<Entry<Integer, Integer>>(toSort.entrySet());
@@ -95,7 +97,7 @@ public class ComparisonOutput {
                 return entryTwo.getValue().compareTo(entryOne.getValue()); //highest -> lowest
             }
         });
-        LinkedHashMap<Integer, Integer> sorted = new LinkedHashMap<Integer, Integer>();
+        LinkedHashMap<Integer, Integer> sorted = new LinkedHashMap<>();
 
         for (Entry<Integer, Integer> singularEntry : list) sorted.put(singularEntry.getKey(), singularEntry.getValue());
 

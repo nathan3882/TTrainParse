@@ -18,7 +18,7 @@ import java.io.FileWriter;
 import java.io.IOException;
 
 
-public class WelcomeForm {
+public class WelcomeForm implements TTrainParser.MessageDisplay {
 
     public JPanel welcomePanel;
     public JLabel welcomeLabel;
@@ -50,13 +50,13 @@ public class WelcomeForm {
                 int value = timetableFileChooser.showOpenDialog(welcomePanel); //When clicked, open dialog on the welcomePanel JPanel
                 selectedFile = timetableFileChooser.getSelectedFile();
                 if (value == JFileChooser.APPROVE_OPTION) {
-                    isValidFile = main.getFileSuffix(selectedFile).equalsIgnoreCase("jpg") || main.getFileSuffix(selectedFile).equalsIgnoreCase("png");
+                    isValidFile = main.getFileSuffix(selectedFile).equalsIgnoreCase("jpg");
                     if (isValidFile) {
                         confirmValidTimetable.setEnabled(true);
                         return;
                     }
-                    main.displayError("We've detected that's an invalid file!");
-                    //When click Submit, use isValidFile to condition whether to advance
+                    resetWelcomeButtons();
+                    displayMessage("We've detected that's an invalid file!");
                 }
             }
         });
@@ -86,7 +86,7 @@ public class WelcomeForm {
                         selectedFileImage = ImageIO.read(selectedFile); //Get BufferedImage object from previously selected file
                     } catch (Exception e) {
                         e.printStackTrace();
-                        main.displayError("Your selected file has been relocated since you selected it! Please reselect");
+                        displayMessage("Your selected file has been relocated since you selected it! Please reselect");
                         resetWelcomeButtons();
                         return;
                     }
@@ -99,7 +99,12 @@ public class WelcomeForm {
                     if (!main.hasCroppedTimetableFileAlready(false)) { //hasn't got a pdf
                         ParsedTimetable timetable = new ParsedTimetable(main, selectedFileImage); //parses jpg
                         successfullyParsed = timetable.successfullyParsed();
-                        System.out.println("SUCCESSFULLY PARSED = " + successfullyParsed);
+                        if (!successfullyParsed) {
+                            resetWelcomeButtons();
+                            displayMessage("We've detected that's an invalid file!");
+                            return;
+                        }
+                        displayMessage("Timetable has been successfully stored!");
                         allDayCroppedImage = timetable.getSuccessfullyParsedImage(); //variable equal to cropped image now
                         main.allDayCroppedImage = allDayCroppedImage;
 
@@ -117,7 +122,7 @@ public class WelcomeForm {
                     }
 
                     if (!successfullyParsed) { //Terminate
-                        main.displayError("Parsing was not successful! Does the provided image contain timetable borders?");
+                        displayMessage("Parsing was not successful! Does the provided image contain timetable borders?");
                         return;
                     } else { //Update data file
                         YamlWriter writer = null;
@@ -130,7 +135,7 @@ public class WelcomeForm {
                             e.printStackTrace();
                         }
                     }
-                    System.out.println("Timetable parsed successfully in " + (System.currentTimeMillis() - now) + "ms");
+                    displayMessage("Timetable parsed successfully!\nThis took" + (System.currentTimeMillis() - now) + "ms");
                 }
             }
         });
@@ -140,7 +145,7 @@ public class WelcomeForm {
         advanceToLoginButton.setEnabled(false);
         confirmValidTimetable.setSelected(false);
         confirmValidTimetable.setEnabled(false);
-        timetableFileChooser.setCurrentDirectory(new File(TTrainParser.USER_DIRECTORY)); //TODO Make all instantiations of File with parameter TTrainParser.USER_DIRECTORY equal to a const in TTrainParser
+
         isValidFile = false;
     }
 
@@ -148,7 +153,8 @@ public class WelcomeForm {
         return welcomePanel;
     }
 
-    public File getSelectedFile() {
-        return selectedFile;
+    @Override
+    public void displayMessage(String message) {
+        JOptionPane.showMessageDialog(getWelcomePanel(), message);
     }
 }

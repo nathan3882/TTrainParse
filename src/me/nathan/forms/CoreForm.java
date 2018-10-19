@@ -26,10 +26,10 @@ public class CoreForm {
         /* Allow user configuration */
         if (currentDay == 6 || currentDay == 7) { //Weekend, show monday
             showThese[0] = 1;
-        } else if (currentDay == 5) {
+        } else if (currentDay == 5) { //Friday, show friday and monday
             showThese[0] = 5;
             showThese[1] = 1;
-        } else {
+        } else { //Show today and tomorrow
             showThese[0] = currentDay;
             showThese[1] = currentDay + 1;
         }
@@ -65,9 +65,13 @@ public class CoreForm {
                 if (ocrText.length() < 30) {
                     continue; /*No Lessons*/
                 }
-
+                ocrText = ocrText.replaceAll("/", "");
                 ocrText = depleteFutileInfo(ocrText, true).replace("Thursday A2 Tutorial in M01 09:00 - 10:05", "Thursday");
-//TODO
+
+                /**TODO - will need to add support for including tutor in the displayment of times
+                 * however reference to some more timetables to allow compatibility with all users will be required
+                 */
+
                 List<String> words = new LinkedList<>(Arrays.asList(ocrText.split(" ")));
                 infos.add(new LessonInfo(words, day));
                 i++;
@@ -79,7 +83,10 @@ public class CoreForm {
                 mainString += upperFirst(newCollegeDay.getDayOfWeek()) + ":<br>";
                 LinkedList lessons = newCollegeDay.getLessons();
                 for (int k = 0; k < (lessons.size() / 2); k++) {
-                    //Cmp sci, cmp sci, b studies, bstudies  each iteration the lesson times for both lessonss will be shown, if I divide by 2, it will only get one of each thus iterating twice for the one iteration, not four times for 2 iterations
+                    //Cmp sci, cmp sci, b studies, bstudies
+                    //each iteration the lesson times for both lessons will be shown,
+                    // if I divide by 2, it will only get one of each thus
+                    // iterating twice for the one iteration, not four times for 2 iterations
                     String lessonName = newCollegeDay.getLessons().get(k);
                     List<LocalTime> startTimes = newCollegeDay.getStartTimes(lessonName);
                     List<LocalTime> finishTimes = newCollegeDay.getFinishTimes(lessonName);
@@ -102,10 +109,11 @@ public class CoreForm {
     }
 
     private String depleteFutileInfo(String ocrResult, boolean oneSpaceBetweenAllInfo) {
-
         /**Following Code removes teacher names from OCR string**/
         ocrResult = ocrResult/**class names or numbers**/
                 .replaceAll("\\(.*\\)", "")
+                .replaceAll("/", "")
+                .replaceAll("\\.", ":") //Has been a time where string has contained this "Computer Science Yr2 in 818 09.00 - 10:05"
                 /**A Level or BTEC?**/
                 .replace("A Level", "")
                 .replaceAll("A level", ""); //Computer science is lower case l for some reason? Charlie??
@@ -146,9 +154,7 @@ public class CoreForm {
                 ocrResult = ocrResult.substring(0, beforeYr) + ocrResult.substring(beforeColon);
             }
         }
-        ocrResult = ocrResult.replace("?", "").replace("/", "");
         if (oneSpaceBetweenAllInfo) ocrResult = ocrResult.replaceAll("\\s{2,}", " ").trim();
-
         return ocrResult;
     }
 
@@ -180,4 +186,5 @@ public class CoreForm {
     public JPanel getWelcomePanel() {
         return this.coreFormPanel;
     }
+
 }
