@@ -10,10 +10,6 @@ public class DataFileInfo {
     public String email;
     public String timetableCroppedPngFileName;
 
-    public DataFileInfo() {
-
-    }
-
     public void setEmail(String email) {
         this.email = email;
     }

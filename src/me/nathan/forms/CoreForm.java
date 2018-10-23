@@ -14,7 +14,8 @@ import java.util.*;
 
 import static me.nathan.ttrainparse.TTrainParser.getTesseractInstance;
 
-public class CoreForm {
+public class CoreForm implements TTrainParser.IMessageDisplay {
+
     private final TTrainParser main;
     private JPanel coreFormPanel;
     private JLabel mainInfoLabel;
@@ -45,7 +46,7 @@ public class CoreForm {
 
             Segmentation segmentation = new Segmentation(main);
 
-            LinkedList<LessonInfo> infos = new LinkedList<>();
+            List<LessonInfo> infos = new LinkedList<>();
             int i = 0;
             for (int dayInt : showThese) {
                 DayOfWeek day = DayOfWeek.of(dayInt);
@@ -63,6 +64,7 @@ public class CoreForm {
                 }
 
                 if (ocrText.length() < 30) {
+                    displayMessage(getPanel(), "You don't have any lessons on " + upperFirst(day));
                     continue; /*No Lessons*/
                 }
                 ocrText = ocrText.replaceAll("/", "");
@@ -118,6 +120,7 @@ public class CoreForm {
                 .replace("A Level", "")
                 .replaceAll("A level", ""); //Computer science is lower case l for some reason? Charlie??
         String[] words = ocrResult.split("\\s+");
+
         List<String> removeStrings = new ArrayList<>();
 
         for (String[] teachers : TTrainParser.getSubjectNamesWithMultipleTeachers().values()) {
@@ -183,8 +186,13 @@ public class CoreForm {
         return Arrays.stream(numbers).min().orElse(Integer.MAX_VALUE);
     }
 
-    public JPanel getWelcomePanel() {
-        return this.coreFormPanel;
+    @Override
+    public void displayMessage(JPanel panel, String message) {
+        JOptionPane.showMessageDialog(panel, message);
     }
 
+    @Override
+    public JPanel getPanel() {
+        return this.coreFormPanel;
+    }
 }

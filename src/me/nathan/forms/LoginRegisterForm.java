@@ -17,7 +17,7 @@ import java.io.*;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-public class LoginRegisterForm implements TTrainParser.MessageDisplay {
+public class LoginRegisterForm implements TTrainParser.IMessageDisplay {
     private final TTrainParser mainInstance;
     private JPanel loginRegisterPanel;
     private JTextField emailTextField;
@@ -89,23 +89,24 @@ public class LoginRegisterForm implements TTrainParser.MessageDisplay {
                         e1.printStackTrace();
                     }
                     mainInstance.coreForm = new CoreForm(mainInstance); //referencing main instance that had outdated all day image
-                    mainInstance.corePanel = mainInstance.coreForm.getWelcomePanel();
+                    mainInstance.corePanel = mainInstance.coreForm.getPanel();
                     mainInstance.cards.add(mainInstance.corePanel, mainInstance.CORE_PANEL);
                     mainInstance.openPanel(mainInstance.CORE_PANEL);
                 } else {
-                    displayMessage("'" + emailText + "'\nis not a valid email!");
+                    displayMessage(getPanel(), "'" + emailText + "'\nis not a valid email!");
                 }
             }
         });
     }
 
     @Override
-    public void displayMessage(String message) {
-        JOptionPane.showMessageDialog(getLoginRegisterPanel(), message);
+    public void displayMessage(JPanel panel, String message) {
+        JOptionPane.showMessageDialog(panel, message);
     }
 
-    public JPanel getLoginRegisterPanel() {
-        return loginRegisterPanel;
+    @Override
+    public JPanel getPanel() {
+        return this.loginRegisterPanel;
     }
 
     public boolean isValidEmailAddress(String email) {

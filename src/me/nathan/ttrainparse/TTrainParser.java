@@ -51,15 +51,23 @@ public class TTrainParser {
     private static ITesseract instance = new Tesseract();
 
     /**
-     * GetDepBoardWithDetails returns a StationBoardWithDetails.
-     * StationBoardWithDetails object member 'trainServices' can be used to get a list of ServiceItemWithCallingPoints
-     * <p>
-     * List of ServiceItemWithCallingPoints can be used to check whether object "currentDestinations" contains required train station,
-     * if it does, parse the object "serviceID" to to GetServiceDetails
-     * <p>
-     * GetServiceDetails returns a ServiceDetails object.
-     * ServiceDetails can be used to get subsequentCallingPoints
-     * <p>
+     * GetNextDeparturesWithDetails() returns DeparturesBoardWithDetails  which closest thing is "getDepBoardWithDetails"
+     * getDepBoardWithDetails returns StationBoardWithDetails which could potentnailly be what it returns in the first place
+     *
+     * StationBoardWithDetails object member 'trainServices'
+     * returns a list of "ServiceItemWithLocations"
+     *
+     * ServiceItemWithLocations could be list of ServiceItem
+     *
+     * ServiceItem list can be used to check whether "currentDestinations"
+     * contains required train station, brock
+     * if it does, get object "rid" to getServiceDetailsByRID
+     *
+     * getServiceDetailsByRID returns ServiceDetails
+     *
+     * ServiceDetails can be used to get 'locations' which returns
+     * a list of "ServiceLocation" objects
+     *
      * Have embedded web browser in side
      */
 
@@ -71,11 +79,11 @@ public class TTrainParser {
 
         WelcomeForm wForm = new WelcomeForm(mainInstance);
         mainInstance.welcomeForm = wForm;
-        mainInstance.welcomePanel = wForm.getWelcomePanel();
+        mainInstance.welcomePanel = wForm.getPanel();
 
         LoginRegisterForm reg = new LoginRegisterForm(mainInstance);
         mainInstance.loginRegisterForm = reg;
-        mainInstance.loginRegisterPanel = reg.getLoginRegisterPanel();
+        mainInstance.loginRegisterPanel = reg.getPanel();
 
         mainInstance.cards.add(mainInstance.welcomePanel, WELCOME_PANEL);
         mainInstance.cards.add(mainInstance.loginRegisterPanel, LOGIN_REGISTER_PANEL);
@@ -282,8 +290,9 @@ public class TTrainParser {
         EXTERIOR_OR_INTERIOR
     }
 
-    public interface MessageDisplay {
-        void displayMessage(String message);
+    public interface IMessageDisplay {
+        void displayMessage(JPanel panel, String message);
 
+        JPanel getPanel();
     }
 }
