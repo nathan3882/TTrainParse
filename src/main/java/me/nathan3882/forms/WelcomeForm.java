@@ -1,8 +1,8 @@
-package me.nathan.forms;
+package me.nathan3882.forms;
 
-import me.nathan.ttrainparse.DataFileInfo;
-import me.nathan.ttrainparse.ParsedTimetable;
-import me.nathan.ttrainparse.TTrainParser;
+import me.nathan3882.ttrainparse.DataFileInfo;
+import me.nathan3882.ttrainparse.ParsedTimetable;
+import me.nathan3882.ttrainparse.TTrainParser;
 import net.sourceforge.yamlbeans.YamlException;
 import net.sourceforge.yamlbeans.YamlWriter;
 
@@ -72,8 +72,6 @@ public class WelcomeForm implements TTrainParser.IMessageDisplay {
                 }
             }
         });
-
-        long now = System.currentTimeMillis();
         /**
          * This listener below handles advance button when it's clicked.
          * It generates a new cropped PDF file if doesnt already exist
@@ -81,6 +79,7 @@ public class WelcomeForm implements TTrainParser.IMessageDisplay {
         advanceToLoginButton.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent event) {
+                long start = 0;
                 if (advanceToLoginButton.isEnabled() && isValidFile) {
                     try {
                         selectedFileImage = ImageIO.read(selectedFile); //Get BufferedImage object from previously selected file
@@ -97,6 +96,7 @@ public class WelcomeForm implements TTrainParser.IMessageDisplay {
                     /**TODO potentially jump straight into getting cropped days from big file?
                      Instead of cropping to get all days then cropping again, will stop image equality reducing*/
                     if (!main.hasCroppedTimetableFileAlready(false)) { //hasn't got a pdf
+                        start = System.currentTimeMillis();
                         ParsedTimetable timetable = new ParsedTimetable(main, selectedFileImage); //parses jpg
                         successfullyParsed = timetable.successfullyParsed();
                         if (!successfullyParsed) {
@@ -111,7 +111,7 @@ public class WelcomeForm implements TTrainParser.IMessageDisplay {
                         String nesPngPath = selectedFile.getName().split("\\.")[0] + ".png";
                         info.setTimetableCroppedPngFileName(nesPngPath);
                         try {
-                            ImageIO.write(allDayCroppedImage, "png", new File(TTrainParser.USER_DIRECTORY + File.separator + nesPngPath)); //overwrites the uncropped jpg/png to cropped png
+                            ImageIO.write(allDayCroppedImage, "png", new File(TTrainParser.USER_DIRECTORY_FILE_SEP + nesPngPath)); //overwrites the uncropped jpg/png to cropped png
                         } catch (IOException e) {
                             e.printStackTrace();
                         }
@@ -128,14 +128,14 @@ public class WelcomeForm implements TTrainParser.IMessageDisplay {
                         YamlWriter writer = null;
                         try {
                             //TODO Store System current millis for the time which the user had first timetable parsed
-                            writer = new YamlWriter(new FileWriter(main.USER_DIRECTORY + File.separator + "data.yml"));
+                            writer = new YamlWriter(new FileWriter(main.USER_DIRECTORY_FILE_SEP + "data.yml"));
                             writer.write(info); //writes previously collected data about jpg & pdf file names
                             writer.close();
                         } catch (IOException | YamlException e) {
                             e.printStackTrace();
                         }
                     }
-                    displayMessage(getPanel(), "Timetable parsed successfully!\nThis took" + (System.currentTimeMillis() - now) + "ms");
+                    displayMessage(getPanel(), "Timetable parsed successfully!\nThis took" + (System.currentTimeMillis() - start) + "ms");
                 }
             }
         });

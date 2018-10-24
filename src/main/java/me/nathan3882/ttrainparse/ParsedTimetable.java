@@ -1,6 +1,4 @@
-package me.nathan.ttrainparse;
-
-import me.nathan.ttrainparse.ComparisonOutput.Response;
+package me.nathan3882.ttrainparse;
 
 import java.awt.*;
 import java.awt.image.BufferedImage;
@@ -21,7 +19,7 @@ public class ParsedTimetable {
     //Integer = X Coordinate of the correlating list of pixels
     private Map<Integer, List<String>> XYPixels = new HashMap<>();
     private List<ComparisonOutput> comparisonOutputs = new ArrayList<>();
-    private static List<Response> responsesSoFar = new ArrayList<>(); //I could just iterate through previously stored comparison outputs and
+    private static List<ComparisonOutput.Response> responsesSoFar = new ArrayList<>(); //I could just iterate through previously stored comparison outputs and
 
     private int yValueBottomBorder = -1;
     private int yValueTopBorder = -1;
@@ -93,7 +91,7 @@ public class ParsedTimetable {
     public BufferedImage getSuccessfullyParsedImage() {
         if (successfullyParsed()) { //Top, bottom, left AND right sides of border all found
             for (ComparisonOutput comparisonOutput : comparisonOutputs) {
-                Response response = comparisonOutput.getResponse();
+                ComparisonOutput.Response response = comparisonOutput.getResponse();
                 switch (response) {
                     case VALID_TOP_BORDER:
                         this.yValueTopBorder = comparisonOutput.getValue();
@@ -135,11 +133,11 @@ public class ParsedTimetable {
     }
 
 
-    public List<Response> getResponses() {
+    public List<ComparisonOutput.Response> getResponses() {
         return responsesSoFar;
     }
 
-    public void addNewResponse(Response response) {
+    public void addNewResponse(ComparisonOutput.Response response) {
         responsesSoFar.add(response);
     }
 

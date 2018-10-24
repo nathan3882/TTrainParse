@@ -1,4 +1,4 @@
-package me.nathan.ttrainparse;
+package me.nathan3882.ttrainparse;
 
 
 public class DataFileInfo {

@@ -1,7 +1,7 @@
-package me.nathan.forms;
+package me.nathan3882.forms;
 
-import me.nathan.ttrainparse.DataFileInfo;
-import me.nathan.ttrainparse.TTrainParser;
+import me.nathan3882.ttrainparse.DataFileInfo;
+import me.nathan3882.ttrainparse.TTrainParser;
 import net.sourceforge.yamlbeans.YamlException;
 import net.sourceforge.yamlbeans.YamlReader;
 import net.sourceforge.yamlbeans.YamlWriter;
@@ -13,7 +13,10 @@ import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
-import java.io.*;
+import java.io.FileNotFoundException;
+import java.io.FileReader;
+import java.io.FileWriter;
+import java.io.IOException;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -69,7 +72,7 @@ public class LoginRegisterForm implements TTrainParser.IMessageDisplay {
                     DataFileInfo info = new DataFileInfo();
                     YamlReader reader = null;
                     try {
-                        reader = new YamlReader(new FileReader(TTrainParser.USER_DIRECTORY + File.separator + "data.yml"));
+                        reader = new YamlReader(new FileReader(TTrainParser.USER_DIRECTORY_FILE_SEP + "data.yml"));
                         info = reader.read(DataFileInfo.class);
                     } catch (FileNotFoundException | YamlException exception) {
                         exception.printStackTrace();
@@ -82,7 +85,7 @@ public class LoginRegisterForm implements TTrainParser.IMessageDisplay {
                     YamlWriter writer = null;
                     try {
                         //TODO Store System current millis for the time which the user had first timetable parsed
-                        writer = new YamlWriter(new FileWriter(mainInstance.USER_DIRECTORY + File.separator + "data.yml"));
+                        writer = new YamlWriter(new FileWriter(mainInstance.USER_DIRECTORY_FILE_SEP + "data.yml"));
                         writer.write(info); //writes previously collected data about jpg & pdf file names
                         writer.close();
                     } catch (IOException | YamlException e1) {

@@ -1,4 +1,4 @@
-package me.nathan.ttrainparse;
+package me.nathan3882.ttrainparse;
 
 import java.awt.*;
 import java.awt.image.BufferedImage;
@@ -61,7 +61,7 @@ public class Segmentation {
                 leftMostBound = keys.get(dayValue - 2); //For tuesday's left most bound = dayValue ie 2 - 2 so is first entry for tuesdays left most bound
             }
         } catch (IndexOutOfBoundsException e) {
-            System.out.println("Error getting bounds for day " + day.name() + "!");
+            //System.out.println("Error getting bounds for day " + day.name() + "!");
             e.printStackTrace();
         }
         images.put(day, TTrainParser.getNewImage(allDayImage, leftMostBound, 0, rightMostBound, allDayImage.getHeight()));

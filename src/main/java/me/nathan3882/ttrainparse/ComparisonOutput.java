@@ -1,4 +1,4 @@
-package me.nathan.ttrainparse;
+package me.nathan3882.ttrainparse;
 
 import java.awt.image.BufferedImage;
 import java.util.*;
