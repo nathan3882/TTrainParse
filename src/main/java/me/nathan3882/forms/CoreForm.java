@@ -1,9 +1,9 @@
-package me.nathan.forms;
+package me.nathan3882.forms;
 
-import me.nathan.ttrainparse.LessonInfo;
-import me.nathan.ttrainparse.ManipulableFile;
-import me.nathan.ttrainparse.Segmentation;
-import me.nathan.ttrainparse.TTrainParser;
+import me.nathan3882.ttrainparse.LessonInfo;
+import me.nathan3882.ttrainparse.ManipulableFile;
+import me.nathan3882.ttrainparse.Segmentation;
+import me.nathan3882.ttrainparse.TTrainParser;
 import net.sourceforge.tess4j.TesseractException;
 
 import javax.swing.*;
@@ -11,8 +11,6 @@ import java.io.File;
 import java.time.DayOfWeek;
 import java.time.LocalTime;
 import java.util.*;
-
-import static me.nathan.ttrainparse.TTrainParser.getTesseractInstance;
 
 public class CoreForm implements TTrainParser.IMessageDisplay {
 
@@ -58,7 +56,7 @@ public class CoreForm implements TTrainParser.IMessageDisplay {
 
                 String ocrText = null;
                 try {
-                    ocrText = getTesseractInstance().doOCR(pdfFile);
+                    ocrText = TTrainParser.getTesseractInstance().doOCR(pdfFile);
                 } catch (TesseractException e) {
                     e.printStackTrace();
                 }
@@ -77,6 +75,8 @@ public class CoreForm implements TTrainParser.IMessageDisplay {
                 List<String> words = new LinkedList<>(Arrays.asList(ocrText.split(" ")));
                 infos.add(new LessonInfo(words, day));
                 i++;
+
+                mFile.deleteAllMade();
             }
 
             for (int l = 0; l < infos.size(); l++) {
