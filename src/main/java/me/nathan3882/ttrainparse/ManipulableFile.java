@@ -1,4 +1,4 @@
-package me.nathan.ttrainparse;
+package me.nathan3882.ttrainparse;
 
 import com.lowagie.text.*;
 import com.lowagie.text.pdf.PdfWriter;
@@ -12,20 +12,23 @@ import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
+import java.util.ArrayList;
+import java.util.List;
 
 public class ManipulableFile {
 
     private final Object initialUpload;
+    private List<File> activeFiles;
     private final TTrainParser main;
 
     public ManipulableFile(TTrainParser main, Object initialUpload) {
         this.main = main;
         this.initialUpload = initialUpload;
-
+        this.activeFiles = new ArrayList<>();
     }
 
     /**
-     * @implNote Object version, could be BufferedImage, a file etc. Make sure to cast to file if you want to delete initially uploaded file
+     * Object version, could be BufferedImage, a file etc. Make sure to cast to file if you want to delete initially uploaded file
      */
     public Object getInitialUpload() {
         return initialUpload;
@@ -38,8 +41,7 @@ public class ManipulableFile {
     public File toPdf(String newName, boolean deleteJpgIfMade) { //day.name() + ".pdf";
         File file = null;
         if (getInitialUpload() instanceof BufferedImage) {
-
-            File pngOutputFile = new File(TTrainParser.USER_DIRECTORY + File.separator + newName.split("\\.")[0] + ".png");
+            File pngOutputFile = new File(TTrainParser.USER_DIRECTORY_FILE_SEP + newName.split("\\.")[0] + ".png");
             try {
                 ImageIO.write((BufferedImage) getInitialUpload(), "png", pngOutputFile);
             } catch (IOException e) {
@@ -47,16 +49,14 @@ public class ManipulableFile {
             }
 
             String newOne = newName.split("\\.")[0] + ".pdf";
-
             jpgToPdf(pngOutputFile, newOne, deleteJpgIfMade);
-
-            file = new File(TTrainParser.USER_DIRECTORY + File.separator + newOne);
+            file = new File(TTrainParser.USER_DIRECTORY_FILE_SEP + newOne);
         } else if (getInitialUpload() instanceof File) {
             File asFile = (File) getInitialUpload();
             String name = asFile.getName();
             String fileSuffix = name.split("\\.")[1];
             if (fileSuffix.equals(".pdf")) {
-                System.out.println("Tried to get a pdf file from a pdf file???");
+                //Tried to get a pdf file from a pdf file???
                 return asFile;
             } else if (fileSuffix.equals("jpg")) {
                 jpgToPdf(asFile, newName.split("\\.")[0] + ".pdf", deleteJpgIfMade);
@@ -73,7 +73,7 @@ public class ManipulableFile {
             String[] split = newName.split("\\.");
             return toFile(asBImage, split[0], split[1]);
         }
-        System.out.println("That is already a file, call another method to either convert or delete");
+        //That is already a file, call another method to either convert or delete"
         return null;
     }
 
@@ -87,6 +87,7 @@ public class ManipulableFile {
             param.setCompressionMode(ImageWriteParam.MODE_EXPLICIT); // Needed see javadoc
             param.setCompressionQuality(1.0F); // Highest quality
             writer.write(image);
+            activeFiles.add(file);
 //            ImageIO.write(image, extension, file);
         } catch (IOException e) {
             e.printStackTrace();
@@ -104,12 +105,15 @@ public class ManipulableFile {
             image = Image.getInstance(startImageFile.getName());
         } catch (BadElementException | IOException e) {
             e.printStackTrace();
+
         }
         Document document = new Document();
 
         PdfWriter writer = null;
         try {
-            writer = PdfWriter.getInstance(document, new FileOutputStream(outputFileName));
+            File outputFile = new File(outputFileName);
+            writer = PdfWriter.getInstance(document, new FileOutputStream(outputFile));
+            activeFiles.add(outputFile);
         } catch (FileNotFoundException | DocumentException e) {
             e.printStackTrace();
         }
@@ -126,21 +130,17 @@ public class ManipulableFile {
             e.printStackTrace();
         }
         writer.close();
-        if (deleteJpgs) startImageFile.delete();
+
+        if (deleteJpgs) {
+            startImageFile.delete();
+        } else {
+            activeFiles.add(startImageFile);
+        }
     }
 
-    public BufferedImage toBufferedImage() {
-        if (getInitialUpload() instanceof File) {
-            File asFile = (File) getInitialUpload();
-            String fileSuffix = asFile.getName().split("\\.")[1];
-            if (fileSuffix.equals("jpg")) {
-                try {
-                    return ImageIO.read(asFile);
-                } catch (IOException e) {
-                    e.printStackTrace();
-                }
-            }
+    public void deleteAllMade() {
+        for (File activeFile : activeFiles) {
+            activeFile.delete();
         }
-        return null;
     }
 }
