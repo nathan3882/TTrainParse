@@ -1,12 +1,13 @@
-package me.nathan.ttrainparse;
+package me.nathan3882.ttrainparse;
 
-import me.nathan.forms.CoreForm;
-import me.nathan.forms.LoginRegisterForm;
-import me.nathan.forms.WelcomeForm;
+import me.nathan3882.forms.CoreForm;
+import me.nathan3882.forms.LoginRegisterForm;
+import me.nathan3882.forms.WelcomeForm;
 import net.sourceforge.tess4j.ITesseract;
 import net.sourceforge.tess4j.Tesseract;
 import net.sourceforge.yamlbeans.YamlException;
 import net.sourceforge.yamlbeans.YamlReader;
+import org.apache.commons.io.IOUtils;
 
 import javax.imageio.ImageIO;
 import javax.swing.*;
@@ -47,31 +48,26 @@ public class TTrainParser {
 
     public CardLayout cardLayout;
 
-    private static String pathBefore = USER_DIRECTORY + File.separator + "Parsed Timetable Data" + File.separator;
+    public static final String USER_DIRECTORY_FILE_SEP = USER_DIRECTORY + File.separator;
     private static ITesseract instance = new Tesseract();
 
     /**
-     * GetNextDeparturesWithDetails() returns DeparturesBoardWithDetails  which closest thing is "getDepBoardWithDetails"
-     * getDepBoardWithDetails returns StationBoardWithDetails which could potentnailly be what it returns in the first place
-     *
-     * StationBoardWithDetails object member 'trainServices'
-     * returns a list of "ServiceItemWithLocations"
-     *
-     * ServiceItemWithLocations could be list of ServiceItem
-     *
-     * ServiceItem list can be used to check whether "currentDestinations"
-     * contains required train station, brock
-     * if it does, get object "rid" to getServiceDetailsByRID
-     *
-     * getServiceDetailsByRID returns ServiceDetails
-     *
-     * ServiceDetails can be used to get 'locations' which returns
-     * a list of "ServiceLocation" objects
-     *
      * Have embedded web browser in side
      */
 
     public static void main(String[] args) throws IOException {
+
+        String fileName = "Teacher Names.txt";
+        File file = new File(USER_DIRECTORY_FILE_SEP + fileName);
+        BufferedReader reader = null;
+        if (!file.exists()) {
+            try {
+                file = makeDefaultTeachersFile();
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+        }
+
         mainInstance = new TTrainParser();
         frame = new JFrame("TTrainParser");
 
@@ -97,7 +93,7 @@ public class TTrainParser {
             if (mainInstance.getCurrentEmail() != null) {
                 CoreForm cForm = new CoreForm(mainInstance);
                 mainInstance.coreForm = cForm;
-                mainInstance.corePanel = cForm.getWelcomePanel();
+                mainInstance.corePanel = cForm.getPanel();
                 mainInstance.cards.add(mainInstance.corePanel, TTrainParser.CORE_PANEL);
                 mainInstance.openPanel(CORE_PANEL);
             } else {
@@ -124,26 +120,15 @@ public class TTrainParser {
     public static Map<String, String[]> getSubjectNamesWithMultipleTeachers() {
         Map<String, String[]> subjectNamesWithMultipleTeachers = new HashMap<>();
         String fileName = "Teacher Names.txt";
-        File file = new File(fileName);
+        File file = new File(USER_DIRECTORY_FILE_SEP + fileName);
         BufferedReader reader = null;
-        if (!file.exists()) {
-            try {
-                if (file.createNewFile()) {
-                    FileOutputStream fos = new FileOutputStream(file);
-                    BufferedWriter bw = new BufferedWriter(new OutputStreamWriter(fos));
-                    bw.write("Business studies - Fiona Davis, Another oneOfYourTeachers");
-                    bw.close();
-                }
-            } catch (IOException e) {
-                e.printStackTrace();
-            }
-        }
+
         try {
             reader = new BufferedReader(new FileReader(file));
         } catch (FileNotFoundException e) {
         }
-        while (true) {
 
+        while (true) {
             String subjectWithTeachers = null; //Biology - name1, name2, name3
             try {
                 subjectWithTeachers = reader.readLine();
@@ -173,6 +158,18 @@ public class TTrainParser {
         }
 
         return subjectNamesWithMultipleTeachers;
+    }
+
+    private static File makeDefaultTeachersFile() throws IOException {
+        ClassLoader classLoader = TTrainParser.class.getClassLoader();
+        InputStream is = classLoader.getResourceAsStream("Teacher Names.txt");
+        File newTeacherFile = new File(USER_DIRECTORY_FILE_SEP + "Teacher Names.txt");
+
+        if (!newTeacherFile.exists()) newTeacherFile.createNewFile();
+
+        IOUtils.copy(is, new FileOutputStream(newTeacherFile));
+
+        return newTeacherFile;
     }
 
     public static BufferedImage getNewImage(BufferedImage firstImage, int topLeftX, int topLeftY, int bottomRightX, int bottomRightY) {
@@ -226,7 +223,7 @@ public class TTrainParser {
         YamlReader reader = null;
         DataFileInfo info = null;
         try {
-            reader = new YamlReader(new FileReader(USER_DIRECTORY + File.separator + "data.yml"));
+            reader = new YamlReader(new FileReader(USER_DIRECTORY_FILE_SEP + "data.yml"));
             info = reader.read(DataFileInfo.class);
         } catch (FileNotFoundException | YamlException e) {
 
@@ -244,7 +241,7 @@ public class TTrainParser {
         YamlReader reader = null;
         DataFileInfo info = null;
         try {
-            reader = new YamlReader(new FileReader(USER_DIRECTORY + File.separator + "data.yml"));
+            reader = new YamlReader(new FileReader(USER_DIRECTORY_FILE_SEP + "data.yml"));
             info = reader.read(DataFileInfo.class);
         } catch (FileNotFoundException | YamlException e) {
             e.printStackTrace();
@@ -253,14 +250,14 @@ public class TTrainParser {
             return null;
         }
 
-        return new File(USER_DIRECTORY + File.separator + (trueForPNG ? info.timetableCroppedPngFileName : info.timetableCroppedPdfFileName));
+        return new File(USER_DIRECTORY_FILE_SEP + (trueForPNG ? info.timetableCroppedPngFileName : info.timetableCroppedPdfFileName));
     }
 
     public boolean hasCroppedTimetableFileAlready(boolean trueForPNG) {
         YamlReader reader;
         DataFileInfo info;
         try {
-            reader = new YamlReader(new FileReader(USER_DIRECTORY + File.separator + "data.yml"));
+            reader = new YamlReader(new FileReader(USER_DIRECTORY_FILE_SEP + "data.yml"));
             info = reader.read(DataFileInfo.class);
         } catch (FileNotFoundException | YamlException e) {
             return false;
