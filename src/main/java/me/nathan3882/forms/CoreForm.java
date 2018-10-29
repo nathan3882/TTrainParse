@@ -35,7 +35,6 @@ public class CoreForm implements TTrainParser.IMessageDisplay {
 
         String mainString = "<html><center>Here are all of your lessons + train times :)<br><br>";
 
-        Map<DayOfWeek, String> opticallyReadText = new HashMap<>();
         //TODO in writeup mention it was between storing all days once, or doing a new segmentation object each time and just extracting one day
 
         if (main.hasCroppedTimetableFileAlready(true)) { //true = check for png
@@ -45,7 +44,7 @@ public class CoreForm implements TTrainParser.IMessageDisplay {
             Segmentation segmentation = new Segmentation(main);
 
             List<LessonInfo> infos = new LinkedList<>();
-            int i = 0;
+            int count = 0;
             for (int dayInt : showThese) {
                 DayOfWeek day = DayOfWeek.of(dayInt);
 
@@ -74,27 +73,26 @@ public class CoreForm implements TTrainParser.IMessageDisplay {
 
                 List<String> words = new LinkedList<>(Arrays.asList(ocrText.split(" ")));
                 infos.add(new LessonInfo(words, day));
-                i++;
-
+                count++;
                 mFile.deleteAllMade();
             }
 
-            for (int l = 0; l < infos.size(); l++) {
-                LessonInfo newCollegeDay = infos.get(l);
-                if (l != 0) mainString += "<br>";
+            for (int i = 0; i < infos.size(); i++) {
+                LessonInfo newCollegeDay = infos.get(i);
+                if (i != 0) mainString += "<br>";
                 mainString += upperFirst(newCollegeDay.getDayOfWeek()) + ":<br>";
-                LinkedList lessons = newCollegeDay.getLessons();
-                for (int k = 0; k < (lessons.size() / 2); k++) {
-                    //Cmp sci, cmp sci, b studies, bstudies
-                    //each iteration the lesson times for both lessons will be shown,
-                    // if I divide by 2, it will only get one of each thus
-                    // iterating twice for the one iteration, not four times for 2 iterations
-                    String lessonName = newCollegeDay.getLessons().get(k);
+                List<String> lessons = newCollegeDay.getLessons();
+                for (int j = 0; j < lessons.size(); j++) {
+                    //For example day i = 0 and lessons"Computer Science"
+                    String lessonName = lessons.get(j);
                     List<LocalTime> startTimes = newCollegeDay.getStartTimes(lessonName);
                     List<LocalTime> finishTimes = newCollegeDay.getFinishTimes(lessonName);
-                    for (int j = 0; j < startTimes.size(); j++) {
-                        LocalTime startTime = startTimes.get(j);
-                        LocalTime finishTime = finishTimes.get(j);
+
+                    //System.out.println("New lesson iteration j=" + j);
+                    for (int k = 0; k < startTimes.size(); k++) {
+                        //System.out.println("Start times size for " + lessonName + " is " + startTimes.size());
+                        LocalTime startTime = startTimes.get(k);
+                        LocalTime finishTime = finishTimes.get(k);
 
                         int startMinute = startTime.getMinute();
                         String startString = String.valueOf(startMinute);
@@ -105,7 +103,7 @@ public class CoreForm implements TTrainParser.IMessageDisplay {
                         if (endMinute < 10) endString = "0" + endMinute;
 
 
-                        mainString += lessonName + " lesson number " + (j + 1) + " starts at "
+                        mainString += lessonName + " lesson number " + (k + 1) + " starts at "
                                 + startTime.getHour() + ":" + startString + " and ends at< "
                                 + finishTime.getHour() + " " + endString + "<br>";
                     }

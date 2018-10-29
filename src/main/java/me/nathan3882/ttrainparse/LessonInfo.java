@@ -37,7 +37,6 @@ public class LessonInfo {
 
         for (int i = 0; i < words.size(); i++) {
             String currentWord = words.get(i);
-            System.out.print(currentWord + " ");
             for (String aSubject : TTrainParser.getSubjectNamesWithMultipleTeachers().keySet()) {
                 if (aSubject.contains(" ")) {
                     String firstWord = aSubject.split(" ")[0];
@@ -73,7 +72,13 @@ public class LessonInfo {
             List<String> allBounds = subjectAndBounds.get(subject);
 //            System.out.println(allBounds.size());
             for (String oneBound : allBounds) {
-                orderedLessons.add(subject);
+                /*
+                  Only have singular entries regardless of double lessons etc
+                  //LessonInfo|getStartTimes() & //LessonInfo|getFinishTimes() will handle multiple occurences
+                 */
+                if (!orderedLessons.contains(subject)) {
+                    orderedLessons.add(subject);
+                }
                 String[] valueSplit = oneBound.split(", ");
                 int lowerOrDifferenceBound = Integer.parseInt(valueSplit[0]);
                 if (previousLowerBound != -1) {

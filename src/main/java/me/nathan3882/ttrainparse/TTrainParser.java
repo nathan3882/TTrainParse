@@ -126,6 +126,7 @@ public class TTrainParser {
         try {
             reader = new BufferedReader(new FileReader(file));
         } catch (FileNotFoundException e) {
+            e.printStackTrace();
         }
 
         while (true) {
