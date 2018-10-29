@@ -216,7 +216,7 @@ public class TTrainParser {
     }
 
     /**
-     * //TODO For the following 2 methods-TODO can I call reader.read() to get latest version of file, or do I have to instantiate YamlReader each time?
+     * //TODO For the following 2 methods-TODO can I call reader.read() to get latest version of file? or do I have to instantiate YamlReader each time
      */
 
     public String getCurrentEmail() {
@@ -289,7 +289,6 @@ public class TTrainParser {
 
     public interface IMessageDisplay {
         void displayMessage(JPanel panel, String message);
-
         JPanel getPanel();
     }
 }

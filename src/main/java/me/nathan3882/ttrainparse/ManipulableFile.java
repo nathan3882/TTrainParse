@@ -15,6 +15,10 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 
+/**
+ * @author Nathan Allanson
+ * @purpose Allows easy manipulation of a BufferedImage, Pdf, Png or Jpeg file.
+ */
 public class ManipulableFile {
 
     private final Object initialUpload;
@@ -25,18 +29,20 @@ public class ManipulableFile {
         this.main = main;
         this.initialUpload = initialUpload;
         this.activeFiles = new ArrayList<>();
+
     }
 
     /**
-     * Object version, could be BufferedImage, a file etc. Make sure to cast to file if you want to delete initially uploaded file
+     * @returns initialUpload as an object
+     * @apiNote, Cast to java.io.File | java.awt.image.BufferedImage | another potential initialUpload to manipulate accordingly
      */
     public Object getInitialUpload() {
         return initialUpload;
     }
 
     /**
-     * @param newName disregard
-     * @return new Pdf as file
+     * @param newName is the name of the file to be generated from initialUpload
+     * @returns new Pdf as a file
      */
     public File toPdf(String newName, boolean deleteJpgIfMade) { //day.name() + ".pdf";
         File file = null;

@@ -1,6 +1,9 @@
 package me.nathan3882.ttrainparse;
 
-
+/**
+ * @author Nathan Allanson
+ * @purpose Allows data.yml to be manipulated in order to store user's email and current stored timetable file
+ */
 public class DataFileInfo {
 
     /**

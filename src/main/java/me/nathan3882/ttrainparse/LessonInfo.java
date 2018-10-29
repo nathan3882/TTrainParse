@@ -4,6 +4,12 @@ import java.time.DayOfWeek;
 import java.time.LocalTime;
 import java.util.*;
 
+/**
+ * @author Nathan Allanson
+ * @purpose Used to fetch information about a specific day of the week, called from
+ * @instantiatedBy CoreForm.java
+ */
+
 public class LessonInfo {
 
     private int textLength;
@@ -21,7 +27,6 @@ public class LessonInfo {
         Map<String, List<String>> subjectAndBounds = new LinkedHashMap<String, List<String>>();
 
         /**
-         * The point of this class is to get all lesson info for a specific day, called from CoreForm.java
          *
          * In subjectAndBounds map, first string is subject name,
          * The List is all the bounds of a subject if it's taught more than once that day
@@ -32,6 +37,7 @@ public class LessonInfo {
 
         for (int i = 0; i < words.size(); i++) {
             String currentWord = words.get(i);
+            System.out.print(currentWord + " ");
             for (String aSubject : TTrainParser.getSubjectNamesWithMultipleTeachers().keySet()) {
                 if (aSubject.contains(" ")) {
                     String firstWord = aSubject.split(" ")[0];
@@ -85,7 +91,7 @@ public class LessonInfo {
                 String timeString = "";
                 for (int i = lowerBoundForJustTimes; i <= upperBoundForJustTimes; i++) {
                     timeString += words.get(i);
-//                    System.out.println("timeString += words.get(" + i + ") which is " + words.get(i));
+//                   System.out.println("timeString += words.get(" + i + ") which is " + words.get(i));
                 }
                 String[] startFinish = timeString.split("-"); //"10:05-11:10" left is start, right is finish
                 LocalTime startTime = LocalTime.parse(startFinish[0]);
