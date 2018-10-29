@@ -95,8 +95,19 @@ public class CoreForm implements TTrainParser.IMessageDisplay {
                     for (int j = 0; j < startTimes.size(); j++) {
                         LocalTime startTime = startTimes.get(j);
                         LocalTime finishTime = finishTimes.get(j);
+
+                        int startMinute = startTime.getMinute();
+                        String startString = String.valueOf(startMinute);
+                        if (startMinute < 10) startString = "0" + startMinute;
+
+                        int endMinute = finishTime.getMinute();
+                        String endString = String.valueOf(endMinute);
+                        if (endMinute < 10) endString = "0" + endMinute;
+
+
                         mainString += lessonName + " lesson number " + (j + 1) + " starts at "
-                                + startTime.getHour() + ":" + startTime.getMinute() + " and ends at< " + finishTime.getHour() + " " + finishTime.getMinute() + "<br>";
+                                + startTime.getHour() + ":" + startString + " and ends at< "
+                                + finishTime.getHour() + " " + endString + "<br>";
                     }
                 }
             }
