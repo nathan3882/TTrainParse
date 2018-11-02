@@ -29,6 +29,7 @@ public class LoginRegisterForm implements TTrainParser.IMessageDisplay {
 
     public LoginRegisterForm(TTrainParser mainInstance) {
         this.mainInstance = mainInstance;
+        mainInstance.loginRegisterForm = this;
         advanceToTrainsButton.setEnabled(true);
         emailTextField.addMouseListener(new MouseAdapter() {
             @Override
@@ -66,8 +67,7 @@ public class LoginRegisterForm implements TTrainParser.IMessageDisplay {
                         e1.printStackTrace();
                     }
                     mainInstance.coreForm = new CoreForm(mainInstance); //referencing main instance that had outdated all day image
-                    mainInstance.corePanel = mainInstance.coreForm.getPanel();
-                    mainInstance.cards.add(mainInstance.corePanel, mainInstance.CORE_PANEL);
+                    mainInstance.cards.add(mainInstance.coreForm.getPanel(), mainInstance.CORE_PANEL);
                     mainInstance.openPanel(mainInstance.CORE_PANEL);
                 } else {
                     displayMessage(getPanel(), "'" + emailText + "'\nis not a valid email!");

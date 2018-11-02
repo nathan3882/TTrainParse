@@ -41,10 +41,7 @@ public class TTrainParser {
     public static final String CORE_PANEL = "corePanel";
     public static final String LOGIN_REGISTER_PANEL = "loginRegisterPanel";
 
-    public JPanel cards;
-    public JPanel welcomePanel;
-    public JPanel loginRegisterPanel;
-    public JPanel corePanel;
+    public JPanel cards = null;
 
     public CardLayout cardLayout;
 
@@ -57,13 +54,14 @@ public class TTrainParser {
 
     public static void main(String[] args) throws IOException {
 
-        String fileName = "Teacher Names.txt";
-        File file = new File(USER_DIRECTORY_FILE_SEP + fileName);
         BufferedReader reader = null;
-        if (!file.exists()) {
+        File teachersFile;
+
+        if (!teachersFileExists()) {
             try {
-                file = makeDefaultTeachersFile();
+                teachersFile = makeDefaultTeachersFile();
             } catch (IOException e) {
+
                 e.printStackTrace();
             }
         }
@@ -71,20 +69,14 @@ public class TTrainParser {
         mainInstance = new TTrainParser();
         frame = new JFrame("TTrainParser");
 
-        mainInstance.cards = new JPanel(new CardLayout());
-
         WelcomeForm wForm = new WelcomeForm(mainInstance);
-        mainInstance.welcomeForm = wForm;
-        mainInstance.welcomePanel = wForm.getPanel();
-
         LoginRegisterForm reg = new LoginRegisterForm(mainInstance);
-        mainInstance.loginRegisterForm = reg;
-        mainInstance.loginRegisterPanel = reg.getPanel();
+        addPanelToCard(wForm.getPanel(), WELCOME_PANEL);
+        addPanelToCard(reg.getPanel(), LOGIN_REGISTER_PANEL);
 
-        mainInstance.cards.add(mainInstance.welcomePanel, WELCOME_PANEL);
-        mainInstance.cards.add(mainInstance.loginRegisterPanel, LOGIN_REGISTER_PANEL);
 
         frame.setContentPane(mainInstance.cards);
+
         boolean hasStoredTimetable = mainInstance.hasCroppedTimetableFileAlready(true);
 
         if (hasStoredTimetable) { //have a png done already
@@ -92,9 +84,7 @@ public class TTrainParser {
             mainInstance.allDayCroppedImage = ImageIO.read(fis);
             if (mainInstance.getCurrentEmail() != null) {
                 CoreForm cForm = new CoreForm(mainInstance);
-                mainInstance.coreForm = cForm;
-                mainInstance.corePanel = cForm.getPanel();
-                mainInstance.cards.add(mainInstance.corePanel, TTrainParser.CORE_PANEL);
+                addPanelToCard(cForm.getPanel(), CORE_PANEL);
                 mainInstance.openPanel(CORE_PANEL);
             } else {
                 mainInstance.openPanel(LOGIN_REGISTER_PANEL);
@@ -114,6 +104,17 @@ public class TTrainParser {
         frame.pack();
         frame.setVisible(true);
 
+    }
+
+    private static boolean teachersFileExists() {
+        return new File(USER_DIRECTORY_FILE_SEP + "Teacher Names.txt").exists();
+    }
+
+    private static void addPanelToCard(JPanel panel, String welcomePanel) {
+        if (mainInstance.cards == null) {
+            mainInstance.cards = new JPanel(new CardLayout());
+        }
+        mainInstance.cards.add(panel, welcomePanel);
     }
 
 
@@ -279,13 +280,6 @@ public class TTrainParser {
         CardLayout cardLayout = (CardLayout) (cards.getLayout());
         cardLayout.show(cards, panelName);
         cards.revalidate();
-    }
-
-    public enum TablePart {
-        BORDER,
-        UNKNOWN,
-        IMPORTANT_WRITING,
-        EXTERIOR_OR_INTERIOR
     }
 
     public interface IMessageDisplay {

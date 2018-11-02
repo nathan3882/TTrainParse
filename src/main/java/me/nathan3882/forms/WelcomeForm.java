@@ -26,7 +26,7 @@ public class WelcomeForm implements TTrainParser.IMessageDisplay {
     private JButton selectFile;
     private JCheckBox confirmValidTimetable;
     private JButton advanceToLoginButton;
-    private TTrainParser main;
+    private TTrainParser mainInstance;
 
     private File selectedFile;
     private BufferedImage selectedFileImage;
@@ -37,7 +37,9 @@ public class WelcomeForm implements TTrainParser.IMessageDisplay {
     private boolean isValidFile = false;
 
     public WelcomeForm(TTrainParser main) {
-        this.main = main;
+        this.mainInstance = main;
+        mainInstance.welcomeForm = this;
+
         advanceToLoginButton.setEnabled(false);
         confirmValidTimetable.setEnabled(false);
 

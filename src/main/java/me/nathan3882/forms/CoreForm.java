@@ -16,12 +16,13 @@ import java.util.regex.Pattern;
 
 public class CoreForm implements TTrainParser.IMessageDisplay {
 
-    private final TTrainParser main;
+    private final TTrainParser mainInstance;
     private JPanel coreFormPanel;
     private JLabel mainInfoLabel;
 
     public CoreForm(TTrainParser main) {
-        this.main = main;
+        this.mainInstance = main;
+        mainInstance.coreForm = this;
         int currentDay = new Date().getDay();
         int[] showThese = new int[2];
         /* Allow user configuration */
