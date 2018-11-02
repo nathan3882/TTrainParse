@@ -76,7 +76,7 @@ public class ComparisonOutput {
         for (int xOrYValue : map.keySet()) {
             int amount = 0;
             for (String aColour : map.get(xOrYValue)) {
-                if (main.getTableType(aColour) == TTrainParser.TablePart.BORDER) {
+                if (main.getTableType(aColour) == TablePart.BORDER) {
                     amount++;
                 }
             }
