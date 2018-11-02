@@ -7,8 +7,6 @@ import net.sourceforge.yamlbeans.YamlReader;
 import net.sourceforge.yamlbeans.YamlWriter;
 
 import javax.swing.*;
-import javax.swing.event.DocumentEvent;
-import javax.swing.event.DocumentListener;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.awt.event.MouseAdapter;
@@ -28,34 +26,10 @@ public class LoginRegisterForm implements TTrainParser.IMessageDisplay {
     private JLabel aboveEverythingLabel;
     private JButton advanceToTrainsButton;
 
+
     public LoginRegisterForm(TTrainParser mainInstance) {
         this.mainInstance = mainInstance;
-        emailTextField.getDocument().addDocumentListener(new DocumentListener() {
-            public void changedUpdate(DocumentEvent e) {
-                check();
-            }
-
-            public void removeUpdate(DocumentEvent e) {
-                check();
-            }
-
-            public void insertUpdate(DocumentEvent e) {
-                check();
-            }
-
-            public void check() {
-                String text = emailTextField.getText();
-                if (isValidEmailAddress(text)) {
-                    if (!advanceToTrainsButton.isEnabled()) {
-                        advanceToTrainsButton.setEnabled(true);
-                    }
-                } else {
-                    if (advanceToTrainsButton.isEnabled()) {
-                        advanceToTrainsButton.setEnabled(false);
-                    }
-                }
-            }
-        });
+        advanceToTrainsButton.setEnabled(true);
         emailTextField.addMouseListener(new MouseAdapter() {
             @Override
             public void mouseClicked(MouseEvent e) {

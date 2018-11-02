@@ -127,8 +127,7 @@ public class ManipulableFile {
         document.setPageSize(rec);
         document.open();
 
-
-        image.setAbsolutePosition(0, 0);
+        image.setAbsolutePosition(0, 0); //top lefet
         try {
             document.add(image);
             document.close();
@@ -145,8 +144,6 @@ public class ManipulableFile {
     }
 
     public void deleteAllMade() {
-        for (File activeFile : activeFiles) {
-            activeFile.delete();
-        }
+        for (File activeFile : activeFiles) activeFile.delete();
     }
 }

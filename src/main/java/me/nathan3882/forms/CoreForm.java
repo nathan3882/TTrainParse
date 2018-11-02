@@ -11,6 +11,8 @@ import java.io.File;
 import java.time.DayOfWeek;
 import java.time.LocalTime;
 import java.util.*;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 public class CoreForm implements TTrainParser.IMessageDisplay {
 
@@ -26,14 +28,15 @@ public class CoreForm implements TTrainParser.IMessageDisplay {
         if (currentDay == 6 || currentDay == 7) { //Weekend, show monday
             showThese[0] = 1;
         } else if (currentDay == 5) { //Friday, show friday and monday
-            showThese[0] = 5;
-            showThese[1] = 1;
+//            showThese[0] = 5;
+            showThese[0] = 4;
+            showThese[1] = 5;
         } else { //Show today and tomorrow
             showThese[0] = currentDay;
             showThese[1] = currentDay + 1;
         }
 
-        String mainString = "<html><center>Here are all of your lessons + train times :)<br><br>";
+        StringBuilder mainString = new StringBuilder("<html><center>Here are all of your lessons + train times :)<br><br>");
 
         //TODO in writeup mention it was between storing all days once, or doing a new segmentation object each time and just extracting one day
 
@@ -43,7 +46,7 @@ public class CoreForm implements TTrainParser.IMessageDisplay {
 
             Segmentation segmentation = new Segmentation(main);
 
-            List<LessonInfo> infos = new LinkedList<>();
+            List<LessonInfo> info = new LinkedList<>();
             int count = 0;
             for (int dayInt : showThese) {
                 DayOfWeek day = DayOfWeek.of(dayInt);
@@ -60,27 +63,29 @@ public class CoreForm implements TTrainParser.IMessageDisplay {
                     e.printStackTrace();
                 }
 
+                assert ocrText != null;
+
                 if (ocrText.length() < 30) {
                     displayMessage(getPanel(), "You don't have any lessons on " + upperFirst(day));
                     continue; /*No Lessons*/
                 }
                 ocrText = ocrText.replaceAll("/", "");
-                ocrText = depleteFutileInfo(ocrText, true).replace("Thursday A2 Tutorial in M01 09:00 - 10:05", "Thursday");
+                ocrText = depleteFutileInfo(ocrText, true);
 
                 /**TODO - will need to add support for including tutor in the displayment of times
                  * however reference to some more timetables to allow compatibility with all users will be required
                  */
 
                 List<String> words = new LinkedList<>(Arrays.asList(ocrText.split(" ")));
-                infos.add(new LessonInfo(words, day));
+                info.add(new LessonInfo(words, day));
                 count++;
                 mFile.deleteAllMade();
             }
 
-            for (int i = 0; i < infos.size(); i++) {
-                LessonInfo newCollegeDay = infos.get(i);
-                if (i != 0) mainString += "<br>";
-                mainString += upperFirst(newCollegeDay.getDayOfWeek()) + ":<br>";
+            for (int i = 0; i < info.size(); i++) {
+                LessonInfo newCollegeDay = info.get(i);
+                if (i != 0) mainString.append("<br>");
+                mainString.append(upperFirst(newCollegeDay.getDayOfWeek())).append(":<br>");
                 List<String> lessons = newCollegeDay.getLessons();
                 for (int j = 0; j < lessons.size(); j++) {
                     //For example day i = 0 and lessons"Computer Science"
@@ -103,15 +108,13 @@ public class CoreForm implements TTrainParser.IMessageDisplay {
                         if (endMinute < 10) endString = "0" + endMinute;
 
 
-                        mainString += lessonName + " lesson number " + (k + 1) + " starts at "
-                                + startTime.getHour() + ":" + startString + " and ends at< "
-                                + finishTime.getHour() + " " + endString + "<br>";
+                        mainString.append(lessonName).append(" lesson number ").append(k + 1).append(" starts at ").append(startTime.getHour()).append(":").append(startString).append(" and ends at< ").append(finishTime.getHour()).append(" ").append(endString).append("<br>");
                     }
                 }
             }
         }
-        mainString += "</center></html>";
-        mainInfoLabel.setText(mainString);
+        mainString.append("</center></html>");
+        mainInfoLabel.setText(mainString.toString());
     }
 
     private String upperFirst(DayOfWeek dayOfWeek) {
@@ -122,14 +125,17 @@ public class CoreForm implements TTrainParser.IMessageDisplay {
     private String depleteFutileInfo(String ocrResult, boolean oneSpaceBetweenAllInfo) {
         /**Following Code removes teacher names from OCR string**/
         ocrResult = ocrResult/**class names or numbers**/
-                .replaceAll("\\(.*\\)", "")
+                .replaceAll("[\\[\\(].*[\\]\\)]", "") //"\\(.*\\)"
                 .replaceAll("/", "")
                 .replaceAll("\\.", ":") //Has been a time where string has contained this "Computer Science Yr2 in 818 09.00 - 10:05"
                 /**A Level or BTEC?**/
                 .replace("A Level", "")
                 .replaceAll("A level", ""); //Computer science is lower case l for some reason? Charlie??
-        String[] words = ocrResult.split("\\s+");
-
+        if (oneSpaceBetweenAllInfo) ocrResult = ocrResult.replaceAll("\\s{2,}", " ").trim();
+        String[] words = ocrResult.split("\\s+"); //one or more spaces
+        for (String str : words) {
+            System.out.print(str + " ");
+        }
         List<String> removeStrings = new ArrayList<>();
 
         for (String[] teachers : TTrainParser.getSubjectNamesWithMultipleTeachers().values()) {
@@ -149,24 +155,37 @@ public class CoreForm implements TTrainParser.IMessageDisplay {
         for (String wordToRemove : removeStrings) {
             ocrResult = ocrResult.replace(wordToRemove, "");
         }
-
         /**Following code gets rid of "Yr2 in XXX"*/
-        String pastThree = "   ";
+        String pastSeven = "       "; //7 spaces
         int beforeYr = -1;
-        int beforeColon; //No need to initialise & waste memory
-        for (int i1 = 0; i1 < ocrResult.length(); i1++) {
-            char charAt = ocrResult.charAt(i1);
-            pastThree = pastThree.substring(1) + charAt;
+        int beforeColon;
+        boolean tutorialCondition = false;
+        boolean setTutorBound = false;
+        for (int j = 0; j < ocrResult.length(); j++) {
+            char charAt = ocrResult.charAt(j);
+            pastSeven = pastSeven.substring(1) + charAt;
+            String pastThree = pastSeven.substring(4);
 
-            if (pastThree.startsWith("Yr"))
-                beforeYr = i1 - 2;
+            if (!setTutorBound) { //false, dont potentially update to false when waiting for the colon
+                Matcher m = Pattern.compile("\\s(in)\\s").matcher(pastSeven);
+                tutorialCondition = !pastSeven.contains("Yr") && m.find() && pastThree.startsWith("in");
+            }
+            if (pastThree.startsWith("Yr")) { //will only begin with in if it's tutor
+                beforeYr = j - 2;
+            } else if (tutorialCondition && !setTutorBound) {
+                beforeYr = j - 3;
+                setTutorBound = true;
+            }
 
             if (charAt == ':' && beforeYr != -1) { //will be -1 when it doesnt contain Yr, disregard & continue search
-                beforeColon = i1 - 2;
-                ocrResult = ocrResult.substring(0, beforeYr) + ocrResult.substring(beforeColon);
+                beforeColon = j - 2;
+                ocrResult = ocrResult.substring(0, beforeYr) + (tutorialCondition ? " " : "") + ocrResult.substring(beforeColon);
+                if (tutorialCondition) {
+                    beforeYr = -1;
+                    tutorialCondition = false;
+                }
             }
         }
-        if (oneSpaceBetweenAllInfo) ocrResult = ocrResult.replaceAll("\\s{2,}", " ").trim();
         return ocrResult;
     }
 

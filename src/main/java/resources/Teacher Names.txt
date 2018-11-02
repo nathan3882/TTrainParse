@@ -1,5 +1,7 @@
 Business studies - Fiona Davies
 Computer Science - Charlie Brown
+Biology - Rachel Hughes
+A2 Tutorial - Catrin Williams
 //If a line starts with two slashes, it will be ignored
 //In order to get the program showing you the trains you need to get, you must
 //configure lines like the last line in this file except without the //
