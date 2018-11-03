@@ -1,8 +1,5 @@
 package me.nathan3882.ttrainparse;
 
-import me.nathan3882.forms.CoreForm;
-import me.nathan3882.forms.LoginRegisterForm;
-import me.nathan3882.forms.WelcomeForm;
 import net.sourceforge.tess4j.ITesseract;
 import net.sourceforge.tess4j.Tesseract;
 import net.sourceforge.yamlbeans.YamlException;
@@ -17,7 +14,7 @@ import java.io.*;
 import java.util.HashMap;
 import java.util.Map;
 
-public class TTrainParser {
+public class TTrainParser extends MessageDisplay {
 
     /*
      * display live departure board via digital screens, where the information is self-refreshing;
@@ -42,6 +39,8 @@ public class TTrainParser {
     public static final String LOGIN_REGISTER_PANEL = "loginRegisterPanel";
 
     public JPanel cards = null;
+
+    private static JPanel activePanel;
 
     public CardLayout cardLayout;
 
@@ -145,7 +144,6 @@ public class TTrainParser {
             String subjectName = subjectWithTeachers;
             String[] value = new String[3];
             if (subjectWithTeachers.contains(" - ")) {
-
                 String[] mainSplit = subjectWithTeachers.split(" - ");
                 subjectName = mainSplit[0];
                 String potentialTeachers = mainSplit[1];
@@ -190,12 +188,14 @@ public class TTrainParser {
         String[] split = rgbString.split(", ");
 
         for (int i = 0; i < split.length; i++) rgbArray[i] = Integer.parseInt(split[i]);
-
-        if (wb(rgbArray[0], 211, 10) && wb(rgbArray[1], 211, 10) && wb(rgbArray[2], 211, 10)) {
+        int red = rgbArray[0];
+        int green = rgbArray[1];
+        int blue = rgbArray[2];
+        if (wb(red, 211, 10) && wb(green, 211, 10) && wb(blue, 211, 10)) {
             return TablePart.BORDER; //light grey
-        } else if (wb(rgbArray[0], (255 + 249) / 2, 5) && wb(rgbArray[1], (255 + 249) / 2, 5) && wb(rgbArray[2], (255 + 249) / 2, 5)) {
+        } else if (wb(red, (255 + 249) / 2, 5) && wb(green, (255 + 249) / 2, 5) && wb(blue, (255 + 249) / 2, 5)) {
             return TablePart.EXTERIOR_OR_INTERIOR;
-        } else if (wb(rgbArray[0], 51, 5) && wb(rgbArray[1], 51, 5) && wb(rgbArray[2], 51, 5)) {
+        } else if (wb(red, 51, 5) && wb(green, 51, 5) && wb(blue, 51, 5)) {
             return TablePart.IMPORTANT_WRITING;
         }
         return tableType;
@@ -216,10 +216,6 @@ public class TTrainParser {
     public String getFileSuffix(File selected) {
         return selected.getName().split("\\.")[1];
     }
-
-    /**
-     * //TODO For the following 2 methods-TODO can I call reader.read() to get latest version of file? or do I have to instantiate YamlReader each time
-     */
 
     public String getCurrentEmail() {
         YamlReader reader = null;
@@ -276,14 +272,13 @@ public class TTrainParser {
         return false;
     }
 
+    public static JPanel getActivePanel() {
+        return activePanel;
+    }
+
     public void openPanel(String panelName) {
         CardLayout cardLayout = (CardLayout) (cards.getLayout());
         cardLayout.show(cards, panelName);
         cards.revalidate();
-    }
-
-    public interface IMessageDisplay {
-        void displayMessage(JPanel panel, String message);
-        JPanel getPanel();
     }
 }
