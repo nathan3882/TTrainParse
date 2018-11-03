@@ -1,8 +1,5 @@
-package me.nathan3882.forms;
+package me.nathan3882.ttrainparse;
 
-import me.nathan3882.ttrainparse.DataFileInfo;
-import me.nathan3882.ttrainparse.ParsedTimetable;
-import me.nathan3882.ttrainparse.TTrainParser;
 import net.sourceforge.yamlbeans.YamlException;
 import net.sourceforge.yamlbeans.YamlWriter;
 
@@ -18,7 +15,7 @@ import java.io.FileWriter;
 import java.io.IOException;
 
 
-public class WelcomeForm implements TTrainParser.IMessageDisplay {
+public class WelcomeForm extends MessageDisplay {
 
     public JPanel welcomePanel;
     public JLabel welcomeLabel;
@@ -58,7 +55,7 @@ public class WelcomeForm implements TTrainParser.IMessageDisplay {
                         return;
                     }
                     resetWelcomeButtons();
-                    displayMessage(getPanel(), "We've detected that's an invalid file!");
+                    displayMessage("We've detected that's an invalid file!");
                 }
             }
         });
@@ -87,7 +84,7 @@ public class WelcomeForm implements TTrainParser.IMessageDisplay {
                         selectedFileImage = ImageIO.read(selectedFile); //Get BufferedImage object from previously selected file
                     } catch (Exception e) {
                         e.printStackTrace();
-                        displayMessage(getPanel(), "Your selected file has been relocated since you selected it! Please reselect");
+                        displayMessage("Your selected file has been relocated since you selected it! Please reselect");
                         resetWelcomeButtons();
                         return;
                     }
@@ -103,10 +100,9 @@ public class WelcomeForm implements TTrainParser.IMessageDisplay {
                         successfullyParsed = timetable.successfullyParsed();
                         if (!successfullyParsed) {
                             resetWelcomeButtons();
-                            displayMessage(getPanel(), "We've detected that's an invalid file!");
+                            displayMessage("We've detected that's an invalid file!");
                             return;
                         }
-                        displayMessage(getPanel(), "Timetable has been successfully stored!");
                         allDayCroppedImage = timetable.getSuccessfullyParsedImage(); //variable equal to cropped image now
                         main.allDayCroppedImage = allDayCroppedImage;
 
@@ -124,7 +120,7 @@ public class WelcomeForm implements TTrainParser.IMessageDisplay {
                     }
 
                     if (!successfullyParsed) { //Terminate
-                        displayMessage(getPanel(), "Parsing was not successful! Does the provided image contain timetable borders?");
+                        displayMessage("Parsing was not successful! Does the provided image contain timetable borders?");
                         return;
                     } else { //Update data file
                         YamlWriter writer = null;
@@ -137,7 +133,7 @@ public class WelcomeForm implements TTrainParser.IMessageDisplay {
                             e.printStackTrace();
                         }
                     }
-                    displayMessage(getPanel(), "Timetable parsed successfully!\nThis took" + (System.currentTimeMillis() - start) + "ms");
+                    displayMessage("Timetable parsed successfully!\nThis took" + (System.currentTimeMillis() - start) + "ms");
                 }
             }
         });
@@ -147,13 +143,7 @@ public class WelcomeForm implements TTrainParser.IMessageDisplay {
         advanceToLoginButton.setEnabled(false);
         confirmValidTimetable.setSelected(false);
         confirmValidTimetable.setEnabled(false);
-
         isValidFile = false;
-    }
-
-    @Override
-    public void displayMessage(JPanel panel, String message) {
-        JOptionPane.showMessageDialog(panel, message);
     }
 
     @Override

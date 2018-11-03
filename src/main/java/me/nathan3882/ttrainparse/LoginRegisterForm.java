@@ -1,7 +1,5 @@
-package me.nathan3882.forms;
+package me.nathan3882.ttrainparse;
 
-import me.nathan3882.ttrainparse.DataFileInfo;
-import me.nathan3882.ttrainparse.TTrainParser;
 import net.sourceforge.yamlbeans.YamlException;
 import net.sourceforge.yamlbeans.YamlReader;
 import net.sourceforge.yamlbeans.YamlWriter;
@@ -18,7 +16,7 @@ import java.io.IOException;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-public class LoginRegisterForm implements TTrainParser.IMessageDisplay {
+public class LoginRegisterForm extends MessageDisplay {
     private final TTrainParser mainInstance;
     private JPanel loginRegisterPanel;
     private JTextField emailTextField;
@@ -70,15 +68,10 @@ public class LoginRegisterForm implements TTrainParser.IMessageDisplay {
                     mainInstance.cards.add(mainInstance.coreForm.getPanel(), mainInstance.CORE_PANEL);
                     mainInstance.openPanel(mainInstance.CORE_PANEL);
                 } else {
-                    displayMessage(getPanel(), "'" + emailText + "'\nis not a valid email!");
+                    displayMessage("'" + emailText + "'\nis not a valid email!");
                 }
             }
         });
-    }
-
-    @Override
-    public void displayMessage(JPanel panel, String message) {
-        JOptionPane.showMessageDialog(panel, message);
     }
 
     @Override

@@ -1,9 +1,5 @@
-package me.nathan3882.forms;
+package me.nathan3882.ttrainparse;
 
-import me.nathan3882.ttrainparse.LessonInfo;
-import me.nathan3882.ttrainparse.ManipulableFile;
-import me.nathan3882.ttrainparse.Segmentation;
-import me.nathan3882.ttrainparse.TTrainParser;
 import net.sourceforge.tess4j.TesseractException;
 
 import javax.swing.*;
@@ -14,7 +10,7 @@ import java.util.*;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-public class CoreForm implements TTrainParser.IMessageDisplay {
+public class CoreForm extends MessageDisplay {
 
     private final TTrainParser mainInstance;
     private JPanel coreFormPanel;
@@ -28,6 +24,7 @@ public class CoreForm implements TTrainParser.IMessageDisplay {
         /* Allow user configuration */
         if (currentDay == 6 || currentDay == 7) { //Weekend, show monday
             showThese[0] = 1;
+            showThese[1] = 2;
         } else if (currentDay == 5) { //Friday, show friday and monday
 //            showThese[0] = 5;
             showThese[0] = 4;
@@ -67,7 +64,7 @@ public class CoreForm implements TTrainParser.IMessageDisplay {
                 assert ocrText != null;
 
                 if (ocrText.length() < 30) {
-                    displayMessage(getPanel(), "You don't have any lessons on " + upperFirst(day));
+                    displayMessage("You don't have any lessons on " + upperFirst(day));
                     continue; /*No Lessons*/
                 }
                 ocrText = ocrText.replaceAll("/", "");
@@ -213,11 +210,6 @@ public class CoreForm implements TTrainParser.IMessageDisplay {
 
     private int min(int... numbers) {
         return Arrays.stream(numbers).min().orElse(Integer.MAX_VALUE);
-    }
-
-    @Override
-    public void displayMessage(JPanel panel, String message) {
-        JOptionPane.showMessageDialog(panel, message);
     }
 
     @Override
