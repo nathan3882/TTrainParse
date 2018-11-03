@@ -19,17 +19,19 @@ import java.util.List;
  * @author Nathan Allanson
  * @purpose Allows easy manipulation of a BufferedImage, Pdf, Png or Jpeg file.
  */
-public class ManipulableFile {
+public class ManipulableObject<T> {
 
-    private final Object initialUpload;
+    private Object initialUpload;
+    private final Class<T> clazz;
     private List<File> activeFiles;
-    private final TTrainParser main;
 
-    public ManipulableFile(TTrainParser main, Object initialUpload) {
-        this.main = main;
-        this.initialUpload = initialUpload;
+    public ManipulableObject(Class<T> clazz) {
+        this.clazz = clazz;
         this.activeFiles = new ArrayList<>();
+    }
 
+    public void setInitialUpload(Object initialUpload) {
+        this.initialUpload = initialUpload;
     }
 
     /**
@@ -46,7 +48,7 @@ public class ManipulableFile {
      */
     public File toPdf(String newName, boolean deleteJpgIfMade) { //day.name() + ".pdf";
         File file = null;
-        if (getInitialUpload() instanceof BufferedImage) {
+        if (uploadCastableTo(BufferedImage.class)) {
             File pngOutputFile = new File(TTrainParser.USER_DIRECTORY_FILE_SEP + newName.split("\\.")[0] + ".png");
             try {
                 ImageIO.write((BufferedImage) getInitialUpload(), "png", pngOutputFile);
@@ -57,7 +59,7 @@ public class ManipulableFile {
             String newOne = newName.split("\\.")[0] + ".pdf";
             jpgToPdf(pngOutputFile, newOne, deleteJpgIfMade);
             file = new File(TTrainParser.USER_DIRECTORY_FILE_SEP + newOne);
-        } else if (getInitialUpload() instanceof File) {
+        } else if (uploadCastableTo(File.class)) {
             File asFile = (File) getInitialUpload();
             String name = asFile.getName();
             String fileSuffix = name.split("\\.")[1];
@@ -72,9 +74,8 @@ public class ManipulableFile {
         return file;
     }
 
-
     public File toFile(String newName) {
-        if (getInitialUpload() instanceof BufferedImage) {
+        if (uploadCastableTo(BufferedImage.class)) {
             BufferedImage asBImage = (BufferedImage) getInitialUpload();
             String[] split = newName.split("\\.");
             return toFile(asBImage, split[0], split[1]);
@@ -141,6 +142,14 @@ public class ManipulableFile {
         } else {
             activeFiles.add(startImageFile);
         }
+    }
+
+    private boolean uploadCastableTo(Class clazz) {
+        return this.clazz == clazz;
+    }
+
+    private boolean instanceOf(Object ob, Class clazz) {
+        return clazz.isInstance(ob);
     }
 
     public void deleteAllMade() {

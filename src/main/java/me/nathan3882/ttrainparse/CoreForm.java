@@ -3,6 +3,7 @@ package me.nathan3882.ttrainparse;
 import net.sourceforge.tess4j.TesseractException;
 
 import javax.swing.*;
+import java.awt.image.BufferedImage;
 import java.io.File;
 import java.time.DayOfWeek;
 import java.time.LocalTime;
@@ -49,7 +50,9 @@ public class CoreForm extends MessageDisplay {
             for (int dayInt : showThese) {
                 DayOfWeek day = DayOfWeek.of(dayInt);
 
-                ManipulableFile mFile = new ManipulableFile(main, segmentation.getDay(day));
+                ManipulableObject<BufferedImage> mFile = new ManipulableObject<>(BufferedImage.class);
+
+                mFile.setInitialUpload(segmentation.getDay(day));
 
                 //More defensive remaking pdf each time from segmentation, say if timetable changed wouldnt use previous day pdf
                 File pdfFile = mFile.toPdf(day.name() + ".pdf", false); //Convert specific day mFile toPdf
@@ -125,6 +128,7 @@ public class CoreForm extends MessageDisplay {
         ocrResult = ocrResult/**class names or numbers**/
                 .replaceAll("[\\[\\(].*[\\]\\)]", "") //"\\(.*\\)"
                 .replaceAll("/", "")
+                .replaceAll("\\?", "")
                 .replaceAll("\\.", ":") //Has been a time where string has contained this "Computer Science Yr2 in 818 09.00 - 10:05"
                 /**A Level or BTEC?**/
                 .replace("A Level", "")
