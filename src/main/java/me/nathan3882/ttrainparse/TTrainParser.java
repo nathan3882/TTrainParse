@@ -28,7 +28,7 @@ public class TTrainParser extends MessageDisplay {
 
     public BufferedImage allDayCroppedImage;
 
-    public static TTrainParser mainInstance;
+    public static TTrainParser mainInst;
     public static JFrame frame;
     public WelcomeForm welcomeForm;
     public LoginRegisterForm loginRegisterForm;
@@ -65,31 +65,31 @@ public class TTrainParser extends MessageDisplay {
             }
         }
 
-        mainInstance = new TTrainParser();
+        mainInst = new TTrainParser();
         frame = new JFrame("TTrainParser");
 
-        WelcomeForm wForm = new WelcomeForm(mainInstance);
-        LoginRegisterForm reg = new LoginRegisterForm(mainInstance);
+        WelcomeForm wForm = new WelcomeForm(mainInst);
+        LoginRegisterForm reg = new LoginRegisterForm(mainInst);
         addPanelToCard(wForm.getPanel(), WELCOME_PANEL);
         addPanelToCard(reg.getPanel(), LOGIN_REGISTER_PANEL);
 
 
-        frame.setContentPane(mainInstance.cards);
+        frame.setContentPane(mainInst.cards);
 
-        boolean hasStoredTimetable = mainInstance.hasCroppedTimetableFileAlready(true);
+        boolean hasStoredTimetable = mainInst.hasCroppedTimetableFileAlready(true);
 
         if (hasStoredTimetable) { //have a png done already
-            FileInputStream fis = new FileInputStream(mainInstance.getCroppedTimetableFileName(true));
-            mainInstance.allDayCroppedImage = ImageIO.read(fis);
-            if (mainInstance.getCurrentEmail() != null) {
-                CoreForm cForm = new CoreForm(mainInstance);
+            FileInputStream fis = new FileInputStream(mainInst.getCroppedTimetableFileName(true));
+            mainInst.allDayCroppedImage = ImageIO.read(fis);
+            if (mainInst.getCurrentEmail() != null) {
+                CoreForm cForm = new CoreForm(mainInst);
                 addPanelToCard(cForm.getPanel(), CORE_PANEL);
-                mainInstance.openPanel(CORE_PANEL);
+                mainInst.openPanel(CORE_PANEL);
             } else {
-                mainInstance.openPanel(LOGIN_REGISTER_PANEL);
+                mainInst.openPanel(LOGIN_REGISTER_PANEL);
             }
         } else {
-            mainInstance.openPanel(WELCOME_PANEL);
+            mainInst.openPanel(WELCOME_PANEL);
         }
 
         DisplayMode mode = GraphicsEnvironment.getLocalGraphicsEnvironment().getDefaultScreenDevice().getDisplayMode();
@@ -110,10 +110,10 @@ public class TTrainParser extends MessageDisplay {
     }
 
     private static void addPanelToCard(JPanel panel, String welcomePanel) {
-        if (mainInstance.cards == null) {
-            mainInstance.cards = new JPanel(new CardLayout());
+        if (mainInst.cards == null) {
+            mainInst.cards = new JPanel(new CardLayout());
         }
-        mainInstance.cards.add(panel, welcomePanel);
+        mainInst.cards.add(panel, welcomePanel);
     }
 
 
@@ -217,16 +217,21 @@ public class TTrainParser extends MessageDisplay {
         return selected.getName().split("\\.")[1];
     }
 
-    public String getCurrentEmail() {
-        YamlReader reader = null;
-        DataFileInfo info = null;
+    public void readInfo(YamlReader reader, DataFileInfo info) {
         try {
             reader = new YamlReader(new FileReader(USER_DIRECTORY_FILE_SEP + "data.yml"));
             info = reader.read(DataFileInfo.class);
         } catch (FileNotFoundException | YamlException e) {
-
             e.printStackTrace();
         }
+    }
+
+    public String getCurrentEmail() {
+        YamlReader reader = null;
+        DataFileInfo info = null;
+
+        readInfo(reader, info);
+
         if (reader == null || info == null) {
             return null;
         }
@@ -238,12 +243,9 @@ public class TTrainParser extends MessageDisplay {
 
         YamlReader reader = null;
         DataFileInfo info = null;
-        try {
-            reader = new YamlReader(new FileReader(USER_DIRECTORY_FILE_SEP + "data.yml"));
-            info = reader.read(DataFileInfo.class);
-        } catch (FileNotFoundException | YamlException e) {
-            e.printStackTrace();
-        }
+
+        readInfo(reader, info);
+
         if (reader == null) {
             return null;
         }

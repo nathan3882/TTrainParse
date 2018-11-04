@@ -10,6 +10,14 @@ import java.util.Map.Entry;
  */
 public class ComparisonOutput {
 
+    public enum Response {
+        VALID_LEFT_BORDER,
+        VALID_RIGHT_BORDER,
+        VALID_TOP_BORDER,
+        VALID_BOTTOM_BORDER,
+        MIDDLE_NOT_A_BORDER
+    }
+
     public static int leftRightInstantiations = 0;
     public static int topBottomInstantiations = 0;
 
@@ -114,14 +122,6 @@ public class ComparisonOutput {
 
     public Response getResponse() {
         return this.response;
-    }
-
-    public enum Response {
-        VALID_LEFT_BORDER,
-        VALID_RIGHT_BORDER,
-        VALID_TOP_BORDER,
-        VALID_BOTTOM_BORDER,
-        MIDDLE_NOT_A_BORDER
     }
 
     public void setValue(int value) {

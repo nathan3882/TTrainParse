@@ -20,6 +20,7 @@ public class LoginRegisterForm extends MessageDisplay {
     private final TTrainParser mainInstance;
     private JPanel loginRegisterPanel;
     private JTextField emailTextField;
+
     private String startingEmailTextFieldText;
     private JLabel aboveEverythingLabel;
     private JButton advanceToTrainsButton;

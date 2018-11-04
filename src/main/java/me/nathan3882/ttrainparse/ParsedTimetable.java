@@ -7,17 +7,21 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+
 /**
  * @author Nathan Allanson
  * @purpose Gets a timetable/buffered image that's able to be parsed by OCR, cancelling out every piece of futile external information.
  */
 public class ParsedTimetable {
 
+    private enum AnalysisType {
+        LEFT_RIGHT_TOP_BOTTOM,
+        TOP_BOTTOM_LEFT_RIGHT
+    }
+
     private BufferedImage firstImage;
     private TTrainParser main;
 
-    //Integer = X Coordinate of the correlating list of pixels
-    private Map<Integer, List<String>> XYPixels = new HashMap<>();
     private List<ComparisonOutput> comparisonOutputs = new ArrayList<>();
     private static List<ComparisonOutput.Response> responsesSoFar = new ArrayList<>(); //I could just iterate through previously stored comparison outputs and
 
@@ -30,59 +34,72 @@ public class ParsedTimetable {
 
     public ParsedTimetable(TTrainParser main, BufferedImage firstImage) {
         this.main = main;
-
         this.firstImage = firstImage;
+
         int height = firstImage.getHeight();
         int width = firstImage.getWidth();
 
-        /**
-         * Following code is to determine left and right side coordinates of the table
-         */
-
-        List<String> currentYPixelsStoredOnXPixel = new ArrayList<>();
-        List<String> currentXPixelsStoredOnYPixel = new ArrayList<>();
+        List<String> storedPixels = new ArrayList<>();
         Map<Integer, Integer> borderCoordinates = new HashMap<>();
+        Map<Integer, List<String>> XYPixels = new HashMap<>(); //Integer = X Coordinate of the correlating list of pixels
 
-        for (int currentXPixel = 0; currentXPixel < width; currentXPixel++) { //going from left to right
-            for (int currentYPixel = 0; currentYPixel < height; currentYPixel++) {  //then going from bottom to top
-                String currentPixelString = main.pixelRGBToString(new Color(firstImage.getRGB(currentXPixel, currentYPixel)));
+        doTimetableAnalysis(AnalysisType.LEFT_RIGHT_TOP_BOTTOM,
+                width, height, storedPixels, borderCoordinates, XYPixels);
 
-                if (currentPixelString.equals("211, 211, 211"))
-                    borderCoordinates.put(currentXPixel, currentYPixel); //Is a border
-
-                if (currentYPixelsStoredOnXPixel.size() == height) { //Reached bottom of the pixels, iteration is top -> bottom
-                    XYPixels.put(currentXPixel, new ArrayList<>(currentYPixelsStoredOnXPixel));
-                    currentYPixelsStoredOnXPixel.clear();
-                }
-                currentYPixelsStoredOnXPixel.add(currentPixelString);
-                if (getCondition(XYPixels.size(), width - 2)) { //analyses third of all pixels for left and right border
-                    ComparisonOutput.leftRightInstantiations++;
-                    //New comparison output for previous 1/3rd of pixel data
-                    comparisonOutputs.add(new ComparisonOutput(main, this, new HashMap<Integer, List<String>>(XYPixels), true, new HashMap<Integer, Integer>(borderCoordinates)));
-                    XYPixels.clear(); //Clears previous 1/3 of pixel data
-                }
-            }
-        }
+        storedPixels.clear();
         borderCoordinates.clear();
         XYPixels.clear();
-        for (int currentYPixel = 0; currentYPixel < height; currentYPixel++) {  //going from bottom to top
-            for (int currentXPixel = 0; currentXPixel < width; currentXPixel++) { //then going from left to right
-                String currentPixelString = main.pixelRGBToString(new Color(firstImage.getRGB(currentXPixel, currentYPixel)));
 
-                if (currentPixelString.equals("211, 211, 211"))
-                    borderCoordinates.put(currentXPixel, currentYPixel); //Is a border
+        doTimetableAnalysis(AnalysisType.TOP_BOTTOM_LEFT_RIGHT,
+                width, height, storedPixels, borderCoordinates, XYPixels);
+    }
 
-                if (currentXPixelsStoredOnYPixel.size() == width) {
-                    XYPixels.put(currentYPixel, new ArrayList<>(currentXPixelsStoredOnYPixel));
-                    currentXPixelsStoredOnYPixel.clear();
+
+    /**
+     * Following code determines left and right side border coordinates of the timetable
+     */
+    private void doTimetableAnalysis(AnalysisType analysisType, int width, int height, List<String> storedXorYPixels, Map<Integer, Integer> borderCoordinates, Map<Integer, List<String>> XYPixels) {
+        if (analysisType.equals(AnalysisType.LEFT_RIGHT_TOP_BOTTOM)) {
+            for (int currentXPixel = 0; currentXPixel < width; currentXPixel++) { //going from left to right
+                for (int currentYPixel = 0; currentYPixel < height; currentYPixel++) {  //then going from bottom to top
+                    String currentPixelString = main.pixelRGBToString(new Color(firstImage.getRGB(currentXPixel, currentYPixel)));
+
+                    if (main.getTableType(currentPixelString).equals(TablePart.BORDER))
+                        borderCoordinates.put(currentXPixel, currentYPixel);
+
+                    if (storedXorYPixels.size() == height) { //Reached bottom of the pixels, iteration is top -> bottom
+                        XYPixels.put(currentXPixel, new ArrayList<>(storedXorYPixels));
+                        storedXorYPixels.clear();
+                    }
+                    storedXorYPixels.add(currentPixelString);
+                    if (getCondition(XYPixels.size(), width - 2)) { //analyses third of all pixels for left and right border
+                        ComparisonOutput.leftRightInstantiations++;
+                        comparisonOutputs.add( //New comparison output for previous 1/3rd of pixel data
+                                new ComparisonOutput(main, this, new HashMap<Integer, List<String>>(XYPixels), true, new HashMap<Integer, Integer>(borderCoordinates)));
+                        XYPixels.clear(); //Clears previous 1/3 of pixel data
+                    }
                 }
-                currentXPixelsStoredOnYPixel.add(currentPixelString);
+            }
+        } else if (analysisType.equals(AnalysisType.TOP_BOTTOM_LEFT_RIGHT)) {
+            for (int currentYPixel = 0; currentYPixel < height; currentYPixel++) {  //going from bottom to top
+                for (int currentXPixel = 0; currentXPixel < width; currentXPixel++) { //then going from left to right
+                    String currentPixelString = main.pixelRGBToString(new Color(firstImage.getRGB(currentXPixel, currentYPixel)));
 
-                if (getCondition(XYPixels.size(), height)) {
-                    ComparisonOutput.topBottomInstantiations++;
-                    //New comparison output for previous 1/3rd of pixel data
-                    comparisonOutputs.add(new ComparisonOutput(main, this, new HashMap<Integer, List<String>>(XYPixels), false, new HashMap<Integer, Integer>(borderCoordinates)));
-                    XYPixels.clear(); //Clears previous 1/3 of pixel data
+                    if (currentPixelString.equals("211, 211, 211"))
+                        borderCoordinates.put(currentXPixel, currentYPixel); //Is a border
+
+                    if (storedXorYPixels.size() == width) {
+                        XYPixels.put(currentYPixel, new ArrayList<>(storedXorYPixels));
+                        storedXorYPixels.clear();
+                    }
+                    storedXorYPixels.add(currentPixelString);
+
+                    if (getCondition(XYPixels.size(), height)) {
+                        ComparisonOutput.topBottomInstantiations++;
+                        //New comparison output for previous 1/3rd of pixel data
+                        comparisonOutputs.add(new ComparisonOutput(main, this, new HashMap<Integer, List<String>>(XYPixels), false, new HashMap<Integer, Integer>(borderCoordinates)));
+                        XYPixels.clear(); //Clears previous 1/3 of pixel data
+                    }
                 }
             }
         }

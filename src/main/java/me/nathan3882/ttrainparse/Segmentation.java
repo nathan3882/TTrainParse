@@ -22,9 +22,12 @@ public class Segmentation {
     public Segmentation(TTrainParser main) {
         this.main = main;
         for (int i = 1; i <= 5; i++) images.put(DayOfWeek.of(i), null);
-
         this.allDayImage = main.allDayCroppedImage;
         this.iterativeY = 5;
+        this.leftsAndRights = getLeftsAndRights();
+    }
+
+    private LinkedHashMap<Integer, Integer> getLeftsAndRights() {
         LinkedHashMap<Integer, Integer> leftsAndRightXValues = new LinkedHashMap<>(); //Left most x value and then right most x value
         int previouslyRetainedRight = -1;
         int previousLeftGot = -1;
@@ -35,18 +38,16 @@ public class Segmentation {
                 if (previousLeftGot == -1) {
                     previousLeftGot = xValue; //previousLeftGot is now first occurrence of border (to the left of monday)
                     this.mondayLeft = previousLeftGot;
-                } else {
-                    if (xValue < (previousLeftGot + 25)) {
-                        previouslyRetainedRight = xValue;
-                    } else { //came across new border
-                        previousLeftGot = xValue;
-                        previouslyRetainedRight = xValue; //Make the right pixel same as left incase xValue is never smaller than previousLeftGot + 25
-                    }
-                    leftsAndRightXValues.put(previousLeftGot, previouslyRetainedRight);
+                } else if (xValue < (previousLeftGot + 25)) { //pixel belonging to same border position, a thick border
+                    previouslyRetainedRight = xValue;
+                } else { //came across new border
+                    previousLeftGot = xValue;
+                    previouslyRetainedRight = xValue; //Make the right pixel same as left incase xValue is never smaller than previousLeftGot + 25
                 }
+                leftsAndRightXValues.put(previousLeftGot, previouslyRetainedRight);
             }
         }
-        this.leftsAndRights = leftsAndRightXValues;
+        return leftsAndRightXValues;
     }
 
     public BufferedImage getDay(DayOfWeek day) {

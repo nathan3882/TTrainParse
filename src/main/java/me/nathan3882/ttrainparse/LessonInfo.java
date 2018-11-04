@@ -12,7 +12,6 @@ import java.util.*;
 
 public class LessonInfo {
 
-    private int textLength;
     private DayOfWeek dayOfWeek;
     private int lessonCount;
 
@@ -24,17 +23,70 @@ public class LessonInfo {
 
     public LessonInfo(List<String> words, DayOfWeek dayOfWeek) {
         this.dayOfWeek = dayOfWeek;
+
+        Map<String, List<String>> subjectAndBounds = getBoundsForSubjects(words);
+
+        for (String subject : subjectAndBounds.keySet()) {
+            storeStartEndTimes(subject, words, subjectAndBounds,
+                    orderedSubjectStartTimes, orderedSubjectFinishTimes);
+        }
+
+        try {
+            lastLesson = orderedLessons.get(orderedLessons.size() - 1);
+            firstLesson = orderedLessons.get(0);
+            lessonCount = orderedLessons.size();
+        } catch (IndexOutOfBoundsException e) {
+            e.printStackTrace();
+        }
+    }
+
+    private void storeStartEndTimes(String subject, List<String> words, Map<String, List<String>> subjectAndBounds, Map<String, LinkedList<LocalTime>> orderedSubjectStartTimes, Map<String, LinkedList<LocalTime>> orderedSubjectFinishTimes) {
+        int previousLowerBound = -1;
+        String[] split = subject.split(" ");
+        List<String> allBounds = subjectAndBounds.get(subject);
+        for (String oneBound : allBounds) {
+            if (!orderedLessons.contains(subject)) {
+                orderedLessons.add(subject);
+            }
+            String[] valueSplit = oneBound.split(", ");
+            int lowerOrDifferenceBound = prs(valueSplit[0]);
+            if (previousLowerBound != -1) {
+                lowerOrDifferenceBound = previousLowerBound + lowerOrDifferenceBound;
+            } else {
+                previousLowerBound = lowerOrDifferenceBound - 1;
+            }
+
+            int subjectNameLowerBound = lowerOrDifferenceBound;
+            int subjectNameUpperBound = subjectNameLowerBound + (split.length - 1);
+
+            int lowerBoundForJustTimes = subjectNameUpperBound + 1;
+            int upperBoundForJustTimes = subjectNameUpperBound + 3;
+
+            String timeString = "";
+            for (int i = lowerBoundForJustTimes; i <= upperBoundForJustTimes; i++) {
+                timeString += words.get(i);
+            }
+            String[] startFinish = timeString.split("-"); //"10:05-11:10" left is start, right is finish
+            LocalTime startTime = LocalTime.parse(startFinish[0]);
+            LocalTime finishTime = LocalTime.parse(startFinish[1]);
+
+            LinkedList<LocalTime> startTimes = orderedSubjectStartTimes.containsKey(subject) ? new LinkedList<>(orderedSubjectStartTimes.get(subject)) : new LinkedList<>();
+            if (subjectAndBounds.containsKey(subject)) startTimes.add(startTime);
+
+            orderedSubjectStartTimes.put(subject, startTimes);
+
+            LinkedList<LocalTime> finishTimes = orderedSubjectFinishTimes.containsKey(subject) ? new LinkedList<>(orderedSubjectFinishTimes.get(subject)) : new LinkedList<>();
+            if (subjectAndBounds.containsKey(subject)) {
+                finishTimes.add(finishTime);
+            }
+
+            orderedSubjectFinishTimes.put(subject, finishTimes);
+        }
+    }
+
+    private Map<String, List<String>> getBoundsForSubjects(List<String> words) {
         Map<String, List<String>> subjectAndBounds = new LinkedHashMap<String, List<String>>();
-
-        /**
-         *
-         * In subjectAndBounds map, first string is subject name,
-         * The List is all the bounds of a subject if it's taught more than once that day
-         * For example Business Studies, | "1-2", "6-7"
-         */
-
         int endBoundIndex = 0;
-
         for (int i = 0; i < words.size(); i++) {
             String currentWord = words.get(i);
             for (String aSubject : TTrainParser.getSubjectNamesWithMultipleTeachers().keySet()) {
@@ -66,65 +118,8 @@ public class LessonInfo {
                 }
             }
         }
-        int previousLowerBound = -1;
-        for (String subject : subjectAndBounds.keySet()) {
-            String[] split = subject.split(" ");
-            List<String> allBounds = subjectAndBounds.get(subject);
-//            System.out.println(allBounds.size());
-            for (String oneBound : allBounds) {
-                /*
-                  Only have singular entries regardless of double lessons etc
-                  //LessonInfo|getStartTimes() & //LessonInfo|getFinishTimes() will handle multiple occurences
-                 */
-                if (!orderedLessons.contains(subject)) {
-                    orderedLessons.add(subject);
-                }
-                String[] valueSplit = oneBound.split(", ");
-                int lowerOrDifferenceBound = Integer.parseInt(valueSplit[0]);
-                if (previousLowerBound != -1) {
-                    lowerOrDifferenceBound = previousLowerBound + lowerOrDifferenceBound;
-                } else {
-                    previousLowerBound = lowerOrDifferenceBound - 1;
-                }
 
-                int subjectNameLowerBound = lowerOrDifferenceBound;
-                int subjectNameUpperBound = subjectNameLowerBound + (split.length - 1);
-
-                int lowerBoundForJustTimes = subjectNameUpperBound + 1;
-                int upperBoundForJustTimes = subjectNameUpperBound + 3;
-
-                String timeString = "";
-                for (int i = lowerBoundForJustTimes; i <= upperBoundForJustTimes; i++) {
-                    timeString += words.get(i);
-//                   System.out.println("timeString += words.get(" + i + ") which is " + words.get(i));
-                }
-                String[] startFinish = timeString.split("-"); //"10:05-11:10" left is start, right is finish
-                LocalTime startTime = LocalTime.parse(startFinish[0]);
-                LocalTime finishTime = LocalTime.parse(startFinish[1]);
-//              System.out.println("time string = " + timeString);
-//              System.out.println("Start time for " + subject + " is " + startTime.getHour() + " and " + startTime.getMinute());
-//              System.out.println("finish time for " + subject + " is " + finishTime.getHour() + " and " + finishTime.getMinute());
-
-                LinkedList<LocalTime> startTimes = orderedSubjectStartTimes.containsKey(subject) ? new LinkedList<>(orderedSubjectStartTimes.get(subject)) : new LinkedList<>();
-                if (subjectAndBounds.containsKey(subject)) startTimes.add(startTime);
-
-                orderedSubjectStartTimes.put(subject, startTimes);
-
-                LinkedList<LocalTime> finishTimes = orderedSubjectFinishTimes.containsKey(subject) ? new LinkedList<>(orderedSubjectFinishTimes.get(subject)) : new LinkedList<>();
-                if (subjectAndBounds.containsKey(subject)) {
-                    finishTimes.add(finishTime);
-                }
-
-                orderedSubjectFinishTimes.put(subject, finishTimes);
-            }
-        }
-        try {
-            lastLesson = orderedLessons.get(orderedLessons.size() - 1);
-            firstLesson = orderedLessons.get(0);
-            lessonCount = orderedLessons.size();
-        } catch (IndexOutOfBoundsException e) {
-            e.printStackTrace();
-        }
+        return subjectAndBounds;
     }
 
     private int prs(String s) {
@@ -136,7 +131,6 @@ public class LessonInfo {
     }
 
     public LinkedList<LocalTime> getFinishTimes(String lesson) {
-
         return this.orderedSubjectFinishTimes.get(lesson);
     }
 
@@ -158,10 +152,6 @@ public class LessonInfo {
 
     public DayOfWeek getDayOfWeek() {
         return this.dayOfWeek;
-    }
-
-    public int getTextLength() {
-        return textLength;
     }
 
 }

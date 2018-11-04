@@ -19,65 +19,40 @@ public class WelcomeForm extends MessageDisplay {
 
     public JPanel welcomePanel;
     public JLabel welcomeLabel;
-    public JFileChooser timetableFileChooser;
+
+    private JFileChooser timetableFileChooser;
     private JButton selectFile;
     private JCheckBox confirmValidTimetable;
     private JButton advanceToLoginButton;
     private TTrainParser mainInstance;
 
     private File selectedFile;
-    private BufferedImage selectedFileImage;
-
-    public BufferedImage allDayCroppedImage = null;
-    boolean successfullyParsed = false;
 
     private boolean isValidFile = false;
 
     public WelcomeForm(TTrainParser main) {
         this.mainInstance = main;
         mainInstance.welcomeForm = this;
-
         advanceToLoginButton.setEnabled(false);
         confirmValidTimetable.setEnabled(false);
 
-        selectFile.addActionListener(new ActionListener() {
+        selectFile.addActionListener(getSelectFileListener());
 
-            @Override
-            public void actionPerformed(ActionEvent e) {
-                timetableFileChooser = new JFileChooser(TTrainParser.USER_DIRECTORY); //opens current directory it's being run in
-                timetableFileChooser.setMultiSelectionEnabled(false); //must select one timetable
-                int value = timetableFileChooser.showOpenDialog(welcomePanel); //When clicked, open dialog on the welcomePanel JPanel
-                selectedFile = timetableFileChooser.getSelectedFile();
-                if (value == JFileChooser.APPROVE_OPTION) {
-                    isValidFile = main.getFileSuffix(selectedFile).equalsIgnoreCase("jpg");
-                    if (isValidFile) {
-                        confirmValidTimetable.setEnabled(true);
-                        return;
-                    }
-                    resetWelcomeButtons();
-                    displayMessage("We've detected that's an invalid file!");
-                }
-            }
-        });
-        //when checkbox for clarifying entered file is checked, advanceToTrainButton.setEnabled(true)
-        confirmValidTimetable.addItemListener(new ItemListener() {
-            @Override
-            public void itemStateChanged(ItemEvent e) {
+        confirmValidTimetable.addItemListener(createConfirmValidTimetableListener());
 
-                //open register / login screen
-                if (isValidFile) {
-                    advanceToLoginButton.setEnabled(confirmValidTimetable.isSelected());
+        advanceToLoginButton.addActionListener(createAdvanceToLoginListener(main));
+    }
 
-                }
-            }
-        });
-        /**
-         * This listener below handles advance button when it's clicked.
-         * It generates a new cropped PDF file if doesnt already exist
-         */
-        advanceToLoginButton.addActionListener(new ActionListener() {
+
+    /**
+     * generates a new cropped PDF file if doesnt already exist
+     */
+    private ActionListener createAdvanceToLoginListener(TTrainParser main) {
+        return new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent event) {
+                boolean successfullyParsed = false;
+                BufferedImage selectedFileImage;
                 long start = 0;
                 if (advanceToLoginButton.isEnabled() && isValidFile) {
                     try {
@@ -103,7 +78,7 @@ public class WelcomeForm extends MessageDisplay {
                             displayMessage("We've detected that's an invalid file!");
                             return;
                         }
-                        allDayCroppedImage = timetable.getSuccessfullyParsedImage(); //variable equal to cropped image now
+                        BufferedImage allDayCroppedImage = timetable.getSuccessfullyParsedImage(); //variable equal to cropped image now
                         main.allDayCroppedImage = allDayCroppedImage;
 
                         String nesPngPath = selectedFile.getName().split("\\.")[0] + ".png";
@@ -136,7 +111,42 @@ public class WelcomeForm extends MessageDisplay {
                     displayMessage("Timetable parsed successfully!\nThis took" + (System.currentTimeMillis() - start) + "ms");
                 }
             }
-        });
+        };
+    }
+
+    private ItemListener createConfirmValidTimetableListener() {
+        return new ItemListener() {
+            @Override
+            public void itemStateChanged(ItemEvent e) {
+
+                //open register / login screen
+                if (isValidFile) {
+                    advanceToLoginButton.setEnabled(confirmValidTimetable.isSelected());
+
+                }
+            }
+        };
+    }
+
+    private ActionListener getSelectFileListener() {
+        return new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                timetableFileChooser = new JFileChooser(TTrainParser.USER_DIRECTORY); //opens current directory it's being run in
+                timetableFileChooser.setMultiSelectionEnabled(false); //must select one timetable
+                int value = timetableFileChooser.showOpenDialog(welcomePanel); //When clicked, open dialog on the welcomePanel JPanel
+                selectedFile = timetableFileChooser.getSelectedFile();
+                if (value == JFileChooser.APPROVE_OPTION) {
+                    isValidFile = mainInstance.getFileSuffix(selectedFile).equalsIgnoreCase("jpg");
+                    if (isValidFile) {
+                        confirmValidTimetable.setEnabled(true);
+                        return;
+                    }
+                    resetWelcomeButtons();
+                    displayMessage("We've detected that's an invalid file!");
+                }
+            }
+        };
     }
 
     private void resetWelcomeButtons() {
