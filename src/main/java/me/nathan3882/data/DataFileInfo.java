@@ -1,4 +1,4 @@
-package me.nathan3882.ttrainparse;
+package me.nathan3882.data;
 
 /**
  * @author Nathan Allanson

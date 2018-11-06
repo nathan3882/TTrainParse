@@ -1,5 +1,9 @@
-package me.nathan3882.ttrainparse;
+package me.nathan3882.gui.management;
 
+import me.nathan3882.data.DataFileInfo;
+import me.nathan3882.ttrainparse.MessageDisplay;
+import me.nathan3882.ttrainparse.ParsedTimetable;
+import me.nathan3882.ttrainparse.TTrainParser;
 import net.sourceforge.yamlbeans.YamlException;
 import net.sourceforge.yamlbeans.YamlWriter;
 
@@ -32,6 +36,9 @@ public class WelcomeForm extends MessageDisplay {
 
     public WelcomeForm(TTrainParser main) {
         this.mainInstance = main;
+
+        setHeaderText(WelcomeForm.getDefaultHeaderText());
+
         mainInstance.welcomeForm = this;
         advanceToLoginButton.setEnabled(false);
         confirmValidTimetable.setEnabled(false);
@@ -41,6 +48,10 @@ public class WelcomeForm extends MessageDisplay {
         confirmValidTimetable.addItemListener(createConfirmValidTimetableListener());
 
         advanceToLoginButton.addActionListener(createAdvanceToLoginListener(main));
+    }
+
+    public void setHeaderText(String string) {
+        this.welcomeLabel.setText(string);
     }
 
 
@@ -78,6 +89,7 @@ public class WelcomeForm extends MessageDisplay {
                             displayMessage("We've detected that's an invalid file!");
                             return;
                         }
+
                         BufferedImage allDayCroppedImage = timetable.getSuccessfullyParsedImage(); //variable equal to cropped image now
                         main.allDayCroppedImage = allDayCroppedImage;
 
@@ -155,9 +167,21 @@ public class WelcomeForm extends MessageDisplay {
         confirmValidTimetable.setEnabled(false);
         isValidFile = false;
     }
-
     @Override
     public JPanel getPanel() {
         return this.welcomePanel;
+    }
+
+    @Override
+    public String toString() {
+        return "welcomePanel";
+    }
+
+    public static String getDefaultHeaderText() {
+        return "<html><center>Welcome!<br>We've sensed you haven't got a timetable stored already...<br>Click the button below to do so!</center></html>";
+    }
+
+    public static String getUpdatingHeaderText() {
+        return "<html><center>Welcome!<br>We've sensed you've had previously had a timetable...<br>But would like to update it!<br>Click the button below to do so!</center></html>";
     }
 }

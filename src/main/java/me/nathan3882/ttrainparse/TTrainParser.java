@@ -1,5 +1,10 @@
 package me.nathan3882.ttrainparse;
 
+import me.nathan3882.data.DataFileInfo;
+import me.nathan3882.data.MySQLFactory;
+import me.nathan3882.gui.management.CoreForm;
+import me.nathan3882.gui.management.LoginRegisterForm;
+import me.nathan3882.gui.management.WelcomeForm;
 import net.sourceforge.tess4j.ITesseract;
 import net.sourceforge.tess4j.Tesseract;
 import net.sourceforge.yamlbeans.YamlException;
@@ -29,7 +34,8 @@ public class TTrainParser extends MessageDisplay {
     public BufferedImage allDayCroppedImage;
 
     public static TTrainParser mainInst;
-    public static JFrame frame;
+    private static JFrame frame;
+
     public WelcomeForm welcomeForm;
     public LoginRegisterForm loginRegisterForm;
     public CoreForm coreForm;
@@ -40,32 +46,27 @@ public class TTrainParser extends MessageDisplay {
 
     public JPanel cards = null;
 
-    private static JPanel activePanel;
+    private static String activePanel;
 
     public CardLayout cardLayout;
 
     public static final String USER_DIRECTORY_FILE_SEP = USER_DIRECTORY + File.separator;
     private static ITesseract instance = new Tesseract();
 
+    private String userIp;
+
+
     /**
      * Have embedded web browser in side
      */
 
+    private MySQLFactory sqlFactory;
+
     public static void main(String[] args) throws IOException {
 
-        BufferedReader reader = null;
-        File teachersFile;
-
-        if (!teachersFileExists()) {
-            try {
-                teachersFile = makeDefaultTeachersFile();
-            } catch (IOException e) {
-
-                e.printStackTrace();
-            }
-        }
-
         mainInst = new TTrainParser();
+        mainInst.sqlFactory = new MySQLFactory();
+
         frame = new JFrame("TTrainParser");
 
         WelcomeForm wForm = new WelcomeForm(mainInst);
@@ -73,8 +74,6 @@ public class TTrainParser extends MessageDisplay {
         addPanelToCard(wForm.getPanel(), WELCOME_PANEL);
         addPanelToCard(reg.getPanel(), LOGIN_REGISTER_PANEL);
 
-
-        frame.setContentPane(mainInst.cards);
 
         boolean hasStoredTimetable = mainInst.hasCroppedTimetableFileAlready(true);
 
@@ -89,24 +88,20 @@ public class TTrainParser extends MessageDisplay {
                 mainInst.openPanel(LOGIN_REGISTER_PANEL);
             }
         } else {
+            System.out.println("no stored");
             mainInst.openPanel(WELCOME_PANEL);
         }
+
+        frame.setContentPane(mainInst.cards);
 
         DisplayMode mode = GraphicsEnvironment.getLocalGraphicsEnvironment().getDefaultScreenDevice().getDisplayMode();
         int frameHeight = 500;
         int frameWidth = 500;
         frame.setLocation(new Point(mode.getWidth() / 2 - (frameWidth / 2), mode.getHeight() / 2 - (frameHeight / 2)));
         frame.setPreferredSize(new Dimension(frameWidth, frameHeight));
-
         frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
-
         frame.pack();
         frame.setVisible(true);
-
-    }
-
-    private static boolean teachersFileExists() {
-        return new File(USER_DIRECTORY_FILE_SEP + "Teacher Names.txt").exists();
     }
 
     private static void addPanelToCard(JPanel panel, String welcomePanel) {
@@ -217,20 +212,16 @@ public class TTrainParser extends MessageDisplay {
         return selected.getName().split("\\.")[1];
     }
 
-    public void readInfo(YamlReader reader, DataFileInfo info) {
+    public String getCurrentEmail() {
+        YamlReader reader = null;
+        DataFileInfo info = null;
+
         try {
             reader = new YamlReader(new FileReader(USER_DIRECTORY_FILE_SEP + "data.yml"));
             info = reader.read(DataFileInfo.class);
         } catch (FileNotFoundException | YamlException e) {
             e.printStackTrace();
         }
-    }
-
-    public String getCurrentEmail() {
-        YamlReader reader = null;
-        DataFileInfo info = null;
-
-        readInfo(reader, info);
 
         if (reader == null || info == null) {
             return null;
@@ -244,7 +235,12 @@ public class TTrainParser extends MessageDisplay {
         YamlReader reader = null;
         DataFileInfo info = null;
 
-        readInfo(reader, info);
+        try {
+            reader = new YamlReader(new FileReader(USER_DIRECTORY_FILE_SEP + "data.yml"));
+            info = reader.read(DataFileInfo.class);
+        } catch (FileNotFoundException | YamlException e) {
+            e.printStackTrace();
+        }
 
         if (reader == null) {
             return null;
@@ -260,6 +256,7 @@ public class TTrainParser extends MessageDisplay {
             reader = new YamlReader(new FileReader(USER_DIRECTORY_FILE_SEP + "data.yml"));
             info = reader.read(DataFileInfo.class);
         } catch (FileNotFoundException | YamlException e) {
+            e.printStackTrace();
             return false;
         }
 
@@ -268,19 +265,33 @@ public class TTrainParser extends MessageDisplay {
         File[] files = new File(USER_DIRECTORY).listFiles();
 
         for (File aFile : files) {
+            System.out.println(aFile + " equals " + setFilenameInDataFile);
             if (aFile.getName().equals(setFilenameInDataFile)) return true;
         }
         //No set filename, pdf file has been relocated
         return false;
     }
 
-    public static JPanel getActivePanel() {
+    public static String getActivePanel() {
         return activePanel;
     }
 
     public void openPanel(String panelName) {
         CardLayout cardLayout = (CardLayout) (cards.getLayout());
         cardLayout.show(cards, panelName);
+        setActivePanel(panelName);
         cards.revalidate();
+    }
+
+    private void setActivePanel(String panelName) {
+        activePanel = panelName;
+    }
+
+    public String getUserIp() {
+        return userIp;
+    }
+
+    public MySQLFactory getSqlFactory() {
+        return sqlFactory;
     }
 }
