@@ -1,24 +1,34 @@
-package me.nathan3882.ttrainparse;
+package me.nathan3882.gui.management;
 
+import me.nathan3882.data.SqlConnection;
+import me.nathan3882.ttrainparse.*;
 import net.sourceforge.tess4j.TesseractException;
 
 import javax.swing.*;
+import java.awt.event.ActionEvent;
+import java.awt.event.ActionListener;
 import java.awt.image.BufferedImage;
 import java.io.File;
 import java.time.DayOfWeek;
 import java.time.LocalTime;
 import java.util.*;
+import java.util.concurrent.TimeUnit;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 public class CoreForm extends MessageDisplay {
 
     private final TTrainParser mainInstance;
+    private final User user;
     private JPanel coreFormPanel;
     private JLabel mainInfoLabel;
+    private JButton updateTimetableButton;
+
+    private static final int DEFAULT_FORCE_UPDATE_QUANTITY = 3;
 
     public CoreForm(TTrainParser main) {
         this.mainInstance = main;
+        this.user = mainInstance.getUser();
         mainInstance.coreForm = this;
         Calendar calendar = Calendar.getInstance();
         Date now = new Date();
@@ -26,48 +36,99 @@ public class CoreForm extends MessageDisplay {
         int currentDay = calendar.get(Calendar.DAY_OF_WEEK);
         int[] showThese = getDaysToShow(currentDay);
 
+
+        //on click button
+        updateTimetableButton.addActionListener(getUpdateTimetableListener(main));
+
+
         StringBuilder mainString = new StringBuilder("<html><center>Here are all of your lessons + train times :)<br><br>");
         //TODO in writeup mention it was between storing all days once, or doing a new segmentation object each time and just extracting one day
 
         if (main.hasCroppedTimetableFileAlready(true)) { //true = check for png, has a valid cropped jpg file already
+            if (!hasSentencesStored(showThese)) {
 
-            Segmentation segmentation = new Segmentation(main);
+                //TODO store sentences
 
-            List<LessonInfo> info = getLessonInformation(segmentation, showThese);
+                Segmentation segmentation = new Segmentation(main);
 
+                List<LessonInfo> info = getLessonInformation(segmentation, showThese);
 
-            for (int i = 0; i < info.size(); i++) {
-                LessonInfo newCollegeDay = info.get(i);
-                if (i != 0) mainString.append("<br>");
-                mainString.append(upperFirst(newCollegeDay.getDayOfWeek())).append(":<br>");
-                List<String> lessons = newCollegeDay.getLessons();
-                for (int j = 0; j < lessons.size(); j++) {
-                    String lessonName = lessons.get(j);
-                    List<LocalTime> startTimes = newCollegeDay.getStartTimes(lessonName);
-                    List<LocalTime> finishTimes = newCollegeDay.getFinishTimes(lessonName);
-                    for (int k = 0; k < startTimes.size(); k++) {
+                for (int i = 0; i < info.size(); i++) {
 
-                        LocalTime startTime = startTimes.get(k);
-                        LocalTime finishTime = finishTimes.get(k);
+                    LessonInfo newCollegeDay = info.get(i);
+                    if (i != 0) mainString.append("<br>");
+                    mainString.append(upperFirst(newCollegeDay.getDayOfWeek())).append(":<br>");
 
-                        int startMinute = startTime.getMinute();
-                        String startString = String.valueOf(startMinute);
+                    newCollegeDay.getLessons().forEach(lessonName -> {
 
-                        int endMinute = finishTime.getMinute();
-                        String endString = getPrettyMinute(endMinute);
+                        List<LocalTime> startTimes = newCollegeDay.getStartTimes(lessonName);
+                        List<LocalTime> finishTimes = newCollegeDay.getFinishTimes(lessonName);
+                        for (int k = 0; k < startTimes.size(); k++) {
 
-                        mainString.append(lessonName).append(" lesson number ").append(k + 1).append(" starts at ").append(startTime.getHour()).append(":").append(startString).append(" and ends at< ").append(finishTime.getHour()).append(" ").append(endString).append("<br>");
-                    }
+                            LocalTime startTime = startTimes.get(k);
+                            LocalTime finishTime = finishTimes.get(k);
+
+                            String startString = getPrettyMinute(startTime.getMinute());
+                            String endString = getPrettyMinute(finishTime.getMinute());
+
+                            mainString.append(lessonName).append(" lesson number ").append(k + 1).append(" starts at ").append(startTime.getHour()).append(":").append(startString).append(" and ends at< ").append(finishTime.getHour()).append(" ").append(endString).append("<br>");
+                        }
+                    });
                 }
+            } else {
+                //TODO get stored sentences
             }
         }
         mainString.append("</center></html>");
         mainInfoLabel.setText(mainString.toString());
     }
 
+    private boolean hasSentencesStored(int[] showThese) {
+        return false;
+    }
+
+    private ActionListener getUpdateTimetableListener(TTrainParser main) {
+        return new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent event) {
+                SqlConnection sqlCon = main.getSqlConnection();
+
+                sqlCon.openConnection();
+
+                long currentTime = System.currentTimeMillis();
+
+                long previousUploadTime = user.getPreviousUploadTime();
+
+                long difference = currentTime - previousUploadTime;
+
+                long updateAfterThisTime = TimeUnit.DAYS.toMillis(7);
+
+
+                if (user.hasSqlEntry()) { //just incase
+                    int forceableUpdatesLeft = user.getTableUpdatesLeft();
+
+                    if (difference >= updateAfterThisTime) {//7 day period, reset force timetable update number.
+                        user.setTableUpdatesLeft(DEFAULT_FORCE_UPDATE_QUANTITY);
+                    } else if (forceableUpdatesLeft > 0) {
+                        //user.setTableUpdatesLeft(sqlCon, forceableUpdatesLeft - 1);
+                    } else {
+                        displayMessage("Sorry, you've run out of timetable updates for this period!");
+                        return;
+                    }
+
+                    main.welcomeForm.setUpdating(true);
+                    main.openPanel(TTrainParser.WELCOME_PANEL);
+                } else {
+                    displayMessage("Are you on a different IP?!");
+                }
+                sqlCon.closeConnection();
+            }
+        };
+    }
+
+
     private List<LessonInfo> getLessonInformation(Segmentation segmentation, int[] showThese) {
         List<LessonInfo> info = new LinkedList<>();
-        int count = 0;
         for (int dayInt : showThese) {
             DayOfWeek day = DayOfWeek.of(dayInt);
 
@@ -103,7 +164,6 @@ public class CoreForm extends MessageDisplay {
     private int[] getDaysToShow(int currentDay) {
         int[] showThese = new int[2];
         // TODO Allow user configuration
-        System.out.println(currentDay);
         if (currentDay == 6 || currentDay == 7) { //Weekend, show monday
             showThese[0] = 1;
             showThese[1] = 2;
@@ -136,7 +196,7 @@ public class CoreForm extends MessageDisplay {
      * - room names with support for tutorial sessions for example "Yr2 in SO1" or A2 Tutorial "in MO1"
      */
     private String depleteFutileInfo(String ocrResult, boolean oneSpaceBetweenAllInfo) {
-        ocrResult = ocrResult/**class names or numbers**/
+        ocrResult = ocrResult/*class names or numbers**/
                 .replaceAll("[\\[\\(].*[\\]\\)]", "") //"\\(.*\\)"
                 .replaceAll("/", "")
                 .replaceAll("\\?", "") //If you don't turn up to lesson, '?' appears

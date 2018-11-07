@@ -62,8 +62,6 @@ public class LoginRegisterForm extends MessageDisplay {
                     } catch (IOException | YamlException e1) {
                         e1.printStackTrace();
                     }
-                    mainInstance.coreForm = new CoreForm(mainInstance); //referencing main instance that had outdated all day image
-                    mainInstance.cards.add(mainInstance.coreForm.getPanel(), TTrainParser.CORE_PANEL);
                     mainInstance.openPanel(TTrainParser.CORE_PANEL);
                 } else {
                     displayMessage("'" + emailText + "'\nis not a valid email!");

@@ -4,6 +4,7 @@ import me.nathan3882.data.DataFileInfo;
 import me.nathan3882.ttrainparse.MessageDisplay;
 import me.nathan3882.ttrainparse.ParsedTimetable;
 import me.nathan3882.ttrainparse.TTrainParser;
+import me.nathan3882.ttrainparse.User;
 import net.sourceforge.yamlbeans.YamlException;
 import net.sourceforge.yamlbeans.YamlWriter;
 
@@ -21,6 +22,7 @@ import java.io.IOException;
 
 public class WelcomeForm extends MessageDisplay {
 
+    private boolean isUpdating;
     public JPanel welcomePanel;
     public JLabel welcomeLabel;
 
@@ -34,10 +36,9 @@ public class WelcomeForm extends MessageDisplay {
 
     private boolean isValidFile = false;
 
-    public WelcomeForm(TTrainParser main) {
+    public WelcomeForm(TTrainParser main, boolean isUpdating) {
         this.mainInstance = main;
-
-        setHeaderText(WelcomeForm.getDefaultHeaderText());
+        this.isUpdating = isUpdating;
 
         mainInstance.welcomeForm = this;
         advanceToLoginButton.setEnabled(false);
@@ -78,9 +79,7 @@ public class WelcomeForm extends MessageDisplay {
 
                     DataFileInfo info = new DataFileInfo();
 
-                    /**TODO potentially jump straight into getting cropped days from big file?
-                     Instead of cropping to get all days then cropping again, will stop image equality reducing*/
-                    if (!main.hasCroppedTimetableFileAlready(false)) { //hasn't got a pdf
+                    if (isUpdating() || !main.hasCroppedTimetableFileAlready(false)) { //hasn't got a pdf
                         start = System.currentTimeMillis();
                         ParsedTimetable timetable = new ParsedTimetable(main, selectedFileImage); //parses jpg
                         successfullyParsed = timetable.successfullyParsed();
@@ -100,8 +99,11 @@ public class WelcomeForm extends MessageDisplay {
                         } catch (IOException e) {
                             e.printStackTrace();
                         }
-                        main.openPanel(main.LOGIN_REGISTER_PANEL);
-
+                        if (isUpdating()) {
+                            main.openPanel(TTrainParser.CORE_PANEL);
+                        } else {
+                            main.openPanel(TTrainParser.LOGIN_REGISTER_PANEL);
+                        }
                     } else {
                         successfullyParsed = true;
                     }
@@ -110,9 +112,18 @@ public class WelcomeForm extends MessageDisplay {
                         displayMessage("Parsing was not successful! Does the provided image contain timetable borders?");
                         return;
                     } else { //Update data file
+                        User user = main.getUser();
+
+                        main.getSqlConnection().openConnection();
+                        if (!user.hasSqlEntry()) {
+                            user.generateDefaultValues();
+                        }
+                        user.setTableUpdatesLeft(user.getTableUpdatesLeft() - 1);
+                        user.setPreviousUploadTime(System.currentTimeMillis());
+                        main.getSqlConnection().closeConnection();
+
                         YamlWriter writer = null;
                         try {
-                            //TODO Store System current millis for the time which the user had first timetable parsed
                             writer = new YamlWriter(new FileWriter(main.USER_DIRECTORY_FILE_SEP + "data.yml"));
                             writer.write(info); //writes previously collected data about jpg & pdf file names
                             writer.close();
@@ -183,5 +194,18 @@ public class WelcomeForm extends MessageDisplay {
 
     public static String getUpdatingHeaderText() {
         return "<html><center>Welcome!<br>We've sensed you've had previously had a timetable...<br>But would like to update it!<br>Click the button below to do so!</center></html>";
+    }
+
+    public boolean isUpdating() {
+        return isUpdating;
+    }
+
+    public void setUpdating(boolean isUpdating) {
+        this.isUpdating = isUpdating;
+        if (isUpdating) {
+            setHeaderText(getUpdatingHeaderText());
+        } else {
+            setHeaderText(getDefaultHeaderText());
+        }
     }
 }

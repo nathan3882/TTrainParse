@@ -1,7 +1,7 @@
 package me.nathan3882.ttrainparse;
 
 import me.nathan3882.data.DataFileInfo;
-import me.nathan3882.data.MySQLFactory;
+import me.nathan3882.data.SqlConnection;
 import me.nathan3882.gui.management.CoreForm;
 import me.nathan3882.gui.management.LoginRegisterForm;
 import me.nathan3882.gui.management.WelcomeForm;
@@ -16,6 +16,7 @@ import javax.swing.*;
 import java.awt.*;
 import java.awt.image.BufferedImage;
 import java.io.*;
+import java.net.URL;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -60,37 +61,44 @@ public class TTrainParser extends MessageDisplay {
      * Have embedded web browser in side
      */
 
-    private MySQLFactory sqlFactory;
+    private SqlConnection sqlConnection;
+    private User user;
 
     public static void main(String[] args) throws IOException {
 
         mainInst = new TTrainParser();
-        mainInst.sqlFactory = new MySQLFactory();
+
+        mainInst.sqlConnection = new SqlConnection();
+
+        URL amazonWS = new URL("http://checkip.amazonaws.com");
+        BufferedReader reader = new BufferedReader(new InputStreamReader(
+                amazonWS.openStream()));
+
+        mainInst.user = new User(mainInst, reader.readLine());
 
         frame = new JFrame("TTrainParser");
 
-        WelcomeForm wForm = new WelcomeForm(mainInst);
+        WelcomeForm wForm = new WelcomeForm(mainInst, false);
+        wForm.setUpdating(false);
         LoginRegisterForm reg = new LoginRegisterForm(mainInst);
         addPanelToCard(wForm.getPanel(), WELCOME_PANEL);
         addPanelToCard(reg.getPanel(), LOGIN_REGISTER_PANEL);
 
 
         boolean hasStoredTimetable = mainInst.hasCroppedTimetableFileAlready(true);
-
-        if (hasStoredTimetable) { //have a png done already
+        mainInst.getSqlConnection().openConnection();
+        if (mainInst.user.hasSqlEntry() && hasStoredTimetable) { //have sql entry and png done already
             FileInputStream fis = new FileInputStream(mainInst.getCroppedTimetableFileName(true));
             mainInst.allDayCroppedImage = ImageIO.read(fis);
-            if (mainInst.getCurrentEmail() != null) {
-                CoreForm cForm = new CoreForm(mainInst);
-                addPanelToCard(cForm.getPanel(), CORE_PANEL);
+            if (mainInst.getUser().hasSqlEntry() || mainInst.getCurrentEmail() != null) {
                 mainInst.openPanel(CORE_PANEL);
             } else {
                 mainInst.openPanel(LOGIN_REGISTER_PANEL);
             }
         } else {
-            System.out.println("no stored");
             mainInst.openPanel(WELCOME_PANEL);
         }
+        mainInst.getSqlConnection().closeConnection();
 
         frame.setContentPane(mainInst.cards);
 
@@ -265,7 +273,6 @@ public class TTrainParser extends MessageDisplay {
         File[] files = new File(USER_DIRECTORY).listFiles();
 
         for (File aFile : files) {
-            System.out.println(aFile + " equals " + setFilenameInDataFile);
             if (aFile.getName().equals(setFilenameInDataFile)) return true;
         }
         //No set filename, pdf file has been relocated
@@ -277,6 +284,10 @@ public class TTrainParser extends MessageDisplay {
     }
 
     public void openPanel(String panelName) {
+        if (panelName == CORE_PANEL) {
+            coreForm = new CoreForm(mainInst); //referencing main instance that had outdated all day image
+            addPanelToCard(coreForm.getPanel(), TTrainParser.CORE_PANEL);
+        }
         CardLayout cardLayout = (CardLayout) (cards.getLayout());
         cardLayout.show(cards, panelName);
         setActivePanel(panelName);
@@ -291,7 +302,11 @@ public class TTrainParser extends MessageDisplay {
         return userIp;
     }
 
-    public MySQLFactory getSqlFactory() {
-        return sqlFactory;
+    public SqlConnection getSqlConnection() {
+        return sqlConnection;
+    }
+
+    public User getUser() {
+        return this.user;
     }
 }
