@@ -9,6 +9,6 @@ public class MessageDisplay {
     }
 
     public JPanel getPanel() {
-        return TTrainParser.getActivePanel();
+        return null;
     }
 }
