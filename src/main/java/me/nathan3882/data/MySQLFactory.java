@@ -28,72 +28,78 @@ public class MySQLFactory {
      *
      * @return success or not
      */
-    public void openConnection() throws ClassNotFoundException, SQLException {
-        Class.forName("com.mysql.jdbc.Driver");
-        this.connection = DriverManager.getConnection("jdbc:mysql://" + host + ":" + port + "/" + name + "?allowMultiQueries=true", username, password);
-    }
-
-    public boolean isConnected() throws SQLException {
-        return !connection.isClosed();
-    }
-
-    public void closeConnection() throws SQLException {
+    public void openConnection() {
         if (isConnected()) {
-            this.connection.close();
+            return;
+        }
+        try {
+            Class.forName("com.mysql.jdbc.Driver");
+            this.connection = DriverManager.getConnection("jdbc:mysql://" + host + ":" + port + "/" + name + "?allowMultiQueries=true", username, password);
+        } catch (Exception e) {
+            e.printStackTrace();
         }
     }
 
-    public boolean executeQuery(String sql) {
+    public boolean isConnected() {
+        try {
+            return !connection.isClosed();
+        } catch (SQLException e) {
+            e.printStackTrace();
+            return false;
+        }
+    }
+
+    public void closeConnection() {
+        if (isConnected()) {
+            close(connection);
+        }
+    }
+
+    public ResultSet executeQuery(String sql) {
         Connection connection = getConnection();
         ResultSet resultSet = null;
         PreparedStatement preparedStatement = null;
         try {
             preparedStatement = connection.prepareStatement(sql);
             resultSet = preparedStatement.executeQuery();
+
+            close(resultSet);
+            close(preparedStatement);
         } catch (SQLException e) {
-            return false;
-        } finally {
-            closeResource(resultSet);
-            closeResource(preparedStatement);
+            return null;
         }
-        return true;
+        return resultSet;
     }
 
     /**
      * used for insert, delete and update
      * executeUpdate("INSERT INTO table (UserName) VALUES (5)");
-     *
      * @return success or not
      */
-    private void executeUpdate(String sql) {
-        ResultSet resultSet = null;
+    private boolean executeUpdate(String sql) {
         PreparedStatement preparedStatement = null;
         try {
             connection.setAutoCommit(true);
             preparedStatement = connection.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS);
             preparedStatement.executeUpdate();
+
+            close(preparedStatement);
         } catch (SQLException e) {
             e.printStackTrace();
-        } finally {
-            closeResource(resultSet);
-            closeResource(preparedStatement);
+            return false;
         }
+        return true;
     }
 
     private Connection getConnection() {
         return connection;
     }
 
-    private boolean closeResource(AutoCloseable resource) {
-        if (resource != null) {
-            try {
-                resource.close();
-            } catch (Exception e) {
-                e.printStackTrace();
-                return false;
-            }
-            return true;
+    private void close(AutoCloseable resource) {
+        try {
+            resource.close();
+        } catch (Exception e) {
+            e.printStackTrace();
         }
-        return false;
     }
 }
