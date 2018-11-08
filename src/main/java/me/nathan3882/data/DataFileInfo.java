@@ -24,4 +24,10 @@ public class DataFileInfo {
     public void setTimetableCroppedPngFileName(String fileNameWithExtension) {
         this.timetableCroppedPngFileName = fileNameWithExtension;
     }
+
+    public void setDefaults() {
+        setTimetableCroppedPngFileName("");
+        setEmail("");
+        setTimetableCroppedPdfFileName("");
+    }
 }
