@@ -13,78 +13,84 @@ import java.time.DayOfWeek;
 import java.time.LocalTime;
 import java.util.*;
 import java.util.concurrent.TimeUnit;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
 
 public class CoreForm extends MessageDisplay {
 
     private final TTrainParser mainInstance;
-    private final User user;
+    private User user;
     private JPanel coreFormPanel;
     private JLabel mainInfoLabel;
     private JButton updateTimetableButton;
+    private JLabel updateTimetableInfoLabel;
 
-    private static final int DEFAULT_FORCE_UPDATE_QUANTITY = 3;
+    public static final int DEFAULT_FORCE_UPDATE_QUANTITY = 3;
 
     public CoreForm(TTrainParser main) {
         this.mainInstance = main;
         this.user = mainInstance.getUser();
+
+        mainInstance.getSqlConnection().openConnection();
+        int left = getUser().getTableUpdatesLeft();
+        Date renewDate = getUser().getTableRenewDate(false);
+        updateTimetableInfoLabel.setText("<html><center>" + left + " timetable update/s available until...<br><br>" + renewDate + "...<br><br>when it will refresh :)</center></html>");
+
         mainInstance.coreForm = this;
         Calendar calendar = Calendar.getInstance();
         Date now = new Date();
         calendar.setTime(now);
         int currentDay = calendar.get(Calendar.DAY_OF_WEEK);
-        int[] showThese = getDaysToShow(currentDay);
+        DayOfWeek[] showThese = getDaysToShow(currentDay);
 
-
-        //on click button
         updateTimetableButton.addActionListener(getUpdateTimetableListener(main));
-
 
         StringBuilder mainString = new StringBuilder("<html><center>Here are all of your lessons + train times :)<br><br>");
         //TODO in writeup mention it was between storing all days once, or doing a new segmentation object each time and just extracting one day
 
-        if (main.hasCroppedTimetableFileAlready(true)) { //true = check for png, has a valid cropped jpg file already
-            if (!hasSentencesStored(showThese)) {
+        if (user.hasOcrTextStored(showThese)) {
+            List<LessonInfo> info = user.getLessonInformation(showThese); //From stored ocr text
+            mainString = getStringToDisplay(info);
+        } else if (main.hasCroppedTimetableFileAlready(true)) { //didnt have internet, will store if possible
 
-                //TODO store sentences
+            Segmentation segmentation = new Segmentation(main);
 
-                Segmentation segmentation = new Segmentation(main);
+            List<LessonInfo> info = getLessonInformation(segmentation, showThese);
 
-                List<LessonInfo> info = getLessonInformation(segmentation, showThese);
+            mainString = getStringToDisplay(info);
 
-                for (int i = 0; i < info.size(); i++) {
-
-                    LessonInfo newCollegeDay = info.get(i);
-                    if (i != 0) mainString.append("<br>");
-                    mainString.append(upperFirst(newCollegeDay.getDayOfWeek())).append(":<br>");
-
-                    newCollegeDay.getLessons().forEach(lessonName -> {
-
-                        List<LocalTime> startTimes = newCollegeDay.getStartTimes(lessonName);
-                        List<LocalTime> finishTimes = newCollegeDay.getFinishTimes(lessonName);
-                        for (int k = 0; k < startTimes.size(); k++) {
-
-                            LocalTime startTime = startTimes.get(k);
-                            LocalTime finishTime = finishTimes.get(k);
-
-                            String startString = getPrettyMinute(startTime.getMinute());
-                            String endString = getPrettyMinute(finishTime.getMinute());
-
-                            mainString.append(lessonName).append(" lesson number ").append(k + 1).append(" starts at ").append(startTime.getHour()).append(":").append(startString).append(" and ends at< ").append(finishTime.getHour()).append(" ").append(endString).append("<br>");
-                        }
-                    });
-                }
-            } else {
-                //TODO get stored sentences
-            }
+            mainInstance.getSqlConnection().closeConnection();
         }
         mainString.append("</center></html>");
         mainInfoLabel.setText(mainString.toString());
     }
 
-    private boolean hasSentencesStored(int[] showThese) {
-        return false;
+
+    private StringBuilder getStringToDisplay(List<LessonInfo> info) {
+        StringBuilder mainString = new StringBuilder();
+        mainString.append("<html><center>");
+        for (int i = 0; i < info.size(); i++) {
+
+            LessonInfo newCollegeDay = info.get(i);
+            if (i != 0) mainString.append("<br>");
+            mainString.append(upperFirst(newCollegeDay.getDayOfWeek())).append(":<br>");
+
+            newCollegeDay.getLessons().forEach(lessonName -> {
+
+                List<LocalTime> startTimes = newCollegeDay.getStartTimes(lessonName);
+                List<LocalTime> finishTimes = newCollegeDay.getFinishTimes(lessonName);
+                for (int k = 0; k < startTimes.size(); k++) {
+
+                    LocalTime startTime = startTimes.get(k);
+                    LocalTime finishTime = finishTimes.get(k);
+
+                    String startString = getPrettyMinute(startTime.getMinute());
+                    String endString = getPrettyMinute(finishTime.getMinute());
+
+                    mainString.append(lessonName).append(" lesson number ").append(k + 1).append(" starts at ").append(startTime.getHour()).append(":").append(startString).append(" and ends at< ").append(finishTime.getHour()).append(" ").append(endString).append("<br>");
+                }
+            });
+        }
+        mainString.append("</center></html>");
+        return mainString;
     }
 
     private ActionListener getUpdateTimetableListener(TTrainParser main) {
@@ -96,21 +102,17 @@ public class CoreForm extends MessageDisplay {
                 sqlCon.openConnection();
 
                 long currentTime = System.currentTimeMillis();
-
-                long previousUploadTime = user.getPreviousUploadTime();
-
+                long previousUploadTime = getUser().getPreviousUploadTime();
                 long difference = currentTime - previousUploadTime;
+                long updateAfterThisTime = TimeUnit.DAYS.toMillis(User.DEFAULT_RENEW_COOLDOWN_DAYS);
 
-                long updateAfterThisTime = TimeUnit.DAYS.toMillis(7);
-
-
-                if (user.hasSqlEntry()) { //just incase
-                    int forceableUpdatesLeft = user.getTableUpdatesLeft();
+                if (getUser().hasSqlEntry(SqlConnection.SqlTableName.TIMETABLE_RENEWAL)) { //just incase
+                    int forceableUpdatesLeft = getUser().getTableUpdatesLeft();
 
                     if (difference >= updateAfterThisTime) {//7 day period, reset force timetable update number.
-                        user.setTableUpdatesLeft(DEFAULT_FORCE_UPDATE_QUANTITY);
+                        getUser().setTableUpdatesLeft(DEFAULT_FORCE_UPDATE_QUANTITY);
                     } else if (forceableUpdatesLeft > 0) {
-                        //user.setTableUpdatesLeft(sqlCon, forceableUpdatesLeft - 1);
+                        getUser().setTableUpdatesLeft(forceableUpdatesLeft - 1);
                     } else {
                         displayMessage("Sorry, you've run out of timetable updates for this period!");
                         return;
@@ -127,10 +129,9 @@ public class CoreForm extends MessageDisplay {
     }
 
 
-    private List<LessonInfo> getLessonInformation(Segmentation segmentation, int[] showThese) {
+    private List<LessonInfo> getLessonInformation(Segmentation segmentation, DayOfWeek[] showThese) {
         List<LessonInfo> info = new LinkedList<>();
-        for (int dayInt : showThese) {
-            DayOfWeek day = DayOfWeek.of(dayInt);
+        for (DayOfWeek day : showThese) {
 
             ManipulableObject<BufferedImage> mFile = new ManipulableObject<>(BufferedImage.class);
 
@@ -151,28 +152,33 @@ public class CoreForm extends MessageDisplay {
                 displayMessage("You don't have any lessons on " + upperFirst(day));
                 continue; /*No Lessons*/
             }
-            ocrText = depleteFutileInfo(ocrText, true);
+
+            ocrText = mainInstance.depleteFutileInfo(ocrText, true);
+
+            user.storeOcrText(ocrText, day); //Store before depleted, raw form
 
             List<String> words = new LinkedList<>(Arrays.asList(ocrText.split(" ")));
+//            for (String word : words) {
+//                System.out.print(word + " ");
+//            }
             info.add(new LessonInfo(words, day));
             mFile.deleteAllMade();
         }
         return info;
     }
 
-
-    private int[] getDaysToShow(int currentDay) {
-        int[] showThese = new int[2];
+    private DayOfWeek[] getDaysToShow(int currentDay) {
+        DayOfWeek[] showThese = new DayOfWeek[2];
         // TODO Allow user configuration
         if (currentDay == 6 || currentDay == 7) { //Weekend, show monday
-            showThese[0] = 1;
-            showThese[1] = 2;
+            showThese[0] = DayOfWeek.MONDAY;
+            showThese[1] = DayOfWeek.TUESDAY;
         } else if (currentDay == 5) { //Friday, show friday and monday
-            showThese[0] = 5;
-            showThese[1] = 1;
+            showThese[0] = DayOfWeek.FRIDAY;
+            showThese[1] = DayOfWeek.MONDAY;
         } else { //Show today and tomorrow
-            showThese[0] = currentDay;
-            showThese[1] = currentDay + 1;
+            showThese[0] = DayOfWeek.of(currentDay);
+            showThese[1] = DayOfWeek.of(currentDay + 1);
         }
         return showThese;
     }
@@ -188,106 +194,12 @@ public class CoreForm extends MessageDisplay {
         return string.substring(0, 1).toUpperCase() + string.substring(1).toLowerCase();
     }
 
-    /**
-     * One of the most fundamental functions to the program. The function, in order, removes...
-     * - class unique identifier names, lesson type ie A level and student registration symbols for example / and ?
-     * - duplicate whitespace and new line characters
-     * - teacher names
-     * - room names with support for tutorial sessions for example "Yr2 in SO1" or A2 Tutorial "in MO1"
-     */
-    private String depleteFutileInfo(String ocrResult, boolean oneSpaceBetweenAllInfo) {
-        ocrResult = ocrResult/*class names or numbers**/
-                .replaceAll("[\\[\\(].*[\\]\\)]", "") //"\\(.*\\)"
-                .replaceAll("/", "")
-                .replaceAll("\\?", "") //If you don't turn up to lesson, '?' appears
-                .replaceAll("\\.", ":") //Has been a time where string has contained this "09.00 - 10:05"
-                .replaceAll("A [Ll]evel", ""); //Some subjects viz Computer Science have lower case l for some reason?
-
-        String[] words = ocrResult.split("\\s+"); //one or more spaces
-
-        for (String word : words) {
-            System.out.print(word + " ");
-        }
-
-        List<String> removeStrings = new ArrayList<>();
-
-        for (String[] teachers : TTrainParser.getSubjectNamesWithMultipleTeachers().values()) {
-            for (String teacher : teachers) {
-                if (teacher == null) continue;
-                for (String wordInOcr : words) {
-                    for (String teacherFirstOrLastName : teacher.split(" ")) {
-                        if (teacherFirstOrLastName.equalsIgnoreCase("UNKNOWN")) continue;
-                        if (calculateDistance(wordInOcr, teacherFirstOrLastName) < 3) { //less than two characters changed
-                            removeStrings.add(wordInOcr);
-                        }
-                    }
-                }
-            }
-        }
-        for (String wordToRemove : removeStrings) {
-            ocrResult = ocrResult.replace(wordToRemove, "");
-        }
-        String pastSeven = "       "; //7 spaces
-        int beforeYr = -1;
-        int beforeColon;
-        boolean tutorialCondition = false;
-        boolean setTutorBound = false;
-        for (int j = 0; j < ocrResult.length(); j++) {
-            char charAt = ocrResult.charAt(j);
-            pastSeven = pastSeven.substring(1) + charAt;
-            String pastThree = pastSeven.substring(4);
-
-            if (!setTutorBound) { //false, dont potentially update to false when waiting for the colon
-                Matcher m = Pattern.compile("\\s(in)\\s").matcher(pastSeven);
-                tutorialCondition = !pastSeven.contains("Yr") && m.find() && pastThree.startsWith("in");
-            }
-            if (pastThree.startsWith("Yr")) { //will only begin with in if it's tutor
-                beforeYr = j - 2;
-            } else if (tutorialCondition && !setTutorBound) {
-                beforeYr = j - 3;
-                setTutorBound = true;
-            }
-
-            if (charAt == ':' && beforeYr != -1) { //will be -1 when it doesnt contain Yr, disregard & continue search
-                beforeColon = j - 2;
-                ocrResult = ocrResult.substring(0, beforeYr) + (tutorialCondition ? " " : "") + ocrResult.substring(beforeColon);
-                if (tutorialCondition) {
-                    beforeYr = -1;
-                    tutorialCondition = false;
-                }
-            }
-        }
-        if (oneSpaceBetweenAllInfo) ocrResult = ocrResult.replaceAll("\n", "").replaceAll("\\s{2,}", " ").trim();
-        return ocrResult;
-    }
-
-    private int calculateDistance(String x, String y) {
-        if (x.isEmpty()) {
-            return y.length();
-        }
-
-        if (y.isEmpty()) {
-            return x.length();
-        }
-
-
-        int substitution = calculateDistance(x.substring(1), y.substring(1)) + cost(x.charAt(0), y.charAt(0));
-        int insertion = calculateDistance(x, y.substring(1)) + 1;
-        int deletion = calculateDistance(x.substring(1), y) + 1;
-
-        return min(substitution, insertion, deletion);
-    }
-
-    private int cost(char first, char last) {
-        return first == last ? 0 : 1;
-    }
-
-    private int min(int... numbers) {
-        return Arrays.stream(numbers).min().orElse(Integer.MAX_VALUE);
-    }
-
     @Override
     public JPanel getPanel() {
         return this.coreFormPanel;
+    }
+
+    public User getUser() {
+        return user;
     }
 }

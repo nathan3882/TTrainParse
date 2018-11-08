@@ -1,6 +1,7 @@
 package me.nathan3882.gui.management;
 
 import me.nathan3882.data.DataFileInfo;
+import me.nathan3882.data.SqlConnection;
 import me.nathan3882.ttrainparse.MessageDisplay;
 import me.nathan3882.ttrainparse.ParsedTimetable;
 import me.nathan3882.ttrainparse.TTrainParser;
@@ -115,10 +116,10 @@ public class WelcomeForm extends MessageDisplay {
                         User user = main.getUser();
 
                         main.getSqlConnection().openConnection();
-                        if (!user.hasSqlEntry()) {
-                            user.generateDefaultValues();
+                        if (!user.hasSqlEntry(SqlConnection.SqlTableName.TIMETABLE_RENEWAL)) {
+                            user.generateDefaultRenewValues();
+                            user.setTableUpdatesLeft(CoreForm.DEFAULT_FORCE_UPDATE_QUANTITY);
                         }
-                        user.setTableUpdatesLeft(user.getTableUpdatesLeft() - 1);
                         user.setPreviousUploadTime(System.currentTimeMillis());
                         main.getSqlConnection().closeConnection();
 
@@ -204,6 +205,7 @@ public class WelcomeForm extends MessageDisplay {
         this.isUpdating = isUpdating;
         if (isUpdating) {
             setHeaderText(getUpdatingHeaderText());
+            resetWelcomeButtons();
         } else {
             setHeaderText(getDefaultHeaderText());
         }

@@ -6,9 +6,16 @@ import me.nathan3882.data.SqlUpdate;
 
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.time.DayOfWeek;
+import java.util.Arrays;
+import java.util.Date;
+import java.util.LinkedList;
+import java.util.List;
+import java.util.concurrent.TimeUnit;
 
 public class User {
 
+    public static final long DEFAULT_RENEW_COOLDOWN_DAYS = 7;
     private final String userIp;
     private final TTrainParser main;
     private final SqlConnection connection;
@@ -20,29 +27,20 @@ public class User {
     }
 
     //TODO What's a clean way to check if a record / row exists?
-    public boolean hasSqlEntry() {
+    public boolean hasSqlEntry(String table) {
         SqlQuery query = new SqlQuery(main.getSqlConnection());
-        query.executeQuery("SELECT renewsLeft FROM {table} WHERE userIp = '" + getUserIp() + "'",
-                SqlConnection.SqlTableName.TIMETABLE_RENEWAL);
-        ResultSet result = query.getResultSet();
-        int renewsLeft = 0;
-        try {
-            result.next();
-            renewsLeft = result.getInt(1);
-        } catch (SQLException e) {
-            return false;
-        }
-        return renewsLeft != 0;
+        query.executeQuery("SELECT * FROM {table} WHERE userIp = '" + getUserIp() + "'", table);
+        return query.next(false);
     }
 
-    private String getUserIp() {
+
+    public String getUserIp() {
         return this.userIp;
     }
 
     public long getPreviousUploadTime() {
         SqlQuery query = new SqlQuery(connection);
         String str = "SELECT lastRenewMillis FROM {table} WHERE userIp = '" + getUserIp() + "'";
-        System.out.println(str);
         ResultSet result = query.getResultSet(str,
                 SqlConnection.SqlTableName.TIMETABLE_RENEWAL);
         long previousUploadTime = 0L;
@@ -68,16 +66,43 @@ public class User {
         ResultSet result = query.getResultSet("SELECT renewsLeft FROM {table} WHERE userIp = '" + getUserIp() + "'",
                 SqlConnection.SqlTableName.TIMETABLE_RENEWAL);
 
-        int left = 0;
-        try {
-            result.next(); //Assure ResultSet getInt is acted upon the first row
-            left = result.getInt(1);
-            result.close();
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
+        query.next(false);
+
+        int left = query.getInt(1);
+
+        query.close();
         return left;
     }
+
+
+    public List<LessonInfo> getLessonInformation(DayOfWeek[] showThese) {
+        List<LessonInfo> info = new LinkedList<>();
+        connection.openConnection();
+
+        SqlQuery query = new SqlQuery(connection);
+
+        for (DayOfWeek day : showThese) {
+
+            String dayName = day.name();
+
+            query.executeQuery("SELECT " + dayName + " FROM {table} WHERE userIp = '" + getUserIp() + "'",
+                    SqlConnection.SqlTableName.TIMETABLE_LESSONS);
+
+            String depletedOcrText = "";
+            if (query.next(false)) {
+                depletedOcrText = query.getString(dayName);
+            }
+
+            List<String> words = new LinkedList<>(Arrays.asList(depletedOcrText.split(" ")));
+//            for (String word : words) {
+//                System.out.print(word + " ");
+//            }
+            info.add(new LessonInfo(words, day));
+        }
+        connection.closeConnection();
+        return info;
+    }
+
 
     public void setPreviousUploadTime(long currentTimeMillis) {
         SqlUpdate update = new SqlUpdate(connection);
@@ -85,10 +110,45 @@ public class User {
                 SqlConnection.SqlTableName.TIMETABLE_RENEWAL);
     }
 
-    public void generateDefaultValues() {
+
+    public void generateDefaultRenewValues() {
         SqlUpdate defaultValues = new SqlUpdate(connection);
         defaultValues.executeUpdate(
                 "INSERT INTO {table} (userIp, renewsLeft, lastRenewMillis) VALUES ('" + getUserIp() + "', 3, " + System.currentTimeMillis() + ")",
                 SqlConnection.SqlTableName.TIMETABLE_RENEWAL);
+    }
+
+    public Date getTableRenewDate(boolean close) {
+        Date date = new Date();
+        date.setTime(getPreviousUploadTime() + TimeUnit.DAYS.toMillis(DEFAULT_RENEW_COOLDOWN_DAYS));
+        return date;
+    }
+
+    public boolean hasOcrTextStored(DayOfWeek... days) {
+        if (!hasSqlEntry(SqlConnection.SqlTableName.TIMETABLE_LESSONS)) {
+            return false;
+        }
+        SqlQuery query = new SqlQuery(connection);
+        boolean failed = false;
+        for (DayOfWeek day : days) {
+            query.executeQuery("SELECT " + day.name() + " FROM {table} WHERE userIp = '" + getUserIp() + "'", SqlConnection.SqlTableName.TIMETABLE_LESSONS);
+
+            if (!query.next(false)) {
+                failed = true;
+                break;
+            }
+        }
+        return !failed;
+    }
+
+    public void storeOcrText(String ocrText, DayOfWeek day) {
+        SqlUpdate storeUpdate = new SqlUpdate(connection);
+        if (hasOcrTextStored(day)) {//update
+            storeUpdate.executeUpdate("UPDATE {table} SET " + day.name() + " = \"" + ocrText + "\"" + " WHERE userIp = \"" + getUserIp() + "\"",
+                    SqlConnection.SqlTableName.TIMETABLE_LESSONS);
+        } else {
+            storeUpdate.executeUpdate("INSERT INTO {table} (userIp, " + day.name() + ") VALUES (\"" + getUserIp() + "\", \"" + ocrText + "\")",
+                    SqlConnection.SqlTableName.TIMETABLE_LESSONS);
+        }
     }
 }
