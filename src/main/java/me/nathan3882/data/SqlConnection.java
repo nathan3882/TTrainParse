@@ -5,13 +5,11 @@ import java.sql.DriverManager;
 
 public class SqlConnection {
 
-    public enum SqlTableName {
-        TIMETABLE_RENEWAL {
-            @Override
-            public String toString() {
-                return "timetablerenewal";
-            }
-        }
+    private boolean open;
+
+    public interface SqlTableName {
+        String TIMETABLE_RENEWAL = "timetablerenewal";
+        String TIMETABLE_LESSONS = "timetablelessons";
     }
 
     private String host = "localhost";
@@ -39,16 +37,21 @@ public class SqlConnection {
      * @return success or not
      */
     public void openConnection() {
+        if (open) return;
         try {
             Class.forName("com.mysql.jdbc.Driver");
             this.connection = DriverManager.getConnection("jdbc:mysql://" + host + ":" + port + "/" + databaseName + "?allowMultiQueries=true", username, password);
+            open = true;
         } catch (Exception e) {
             e.printStackTrace();
         }
     }
 
     public void closeConnection() {
-        close(connection);
+        if (open) {
+            close(connection);
+            open = false;
+        }
     }
 
     public Connection getConnection() {

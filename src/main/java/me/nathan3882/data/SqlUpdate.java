@@ -1,13 +1,15 @@
 package me.nathan3882.data;
 
-import java.sql.*;
+import java.sql.Connection;
+import java.sql.PreparedStatement;
+import java.sql.SQLException;
+import java.sql.Statement;
 
 public class SqlUpdate {
 
     private SqlConnection sqlConnection;
     private final Connection connection;
     private PreparedStatement preparedStatement;
-    private ResultSet resultSet;
 
     public SqlUpdate(SqlConnection sqlConnection) {
         this.sqlConnection = sqlConnection;
@@ -20,12 +22,12 @@ public class SqlUpdate {
      *
      * @return success or not
      */
-    public boolean executeUpdate(String sql, SqlConnection.SqlTableName name) {
+    public boolean executeUpdate(String sql, String name) {
         PreparedStatement preparedStatement = null;
         try {
             connection.setAutoCommit(true);
             preparedStatement = connection.prepareStatement(
-                    sql.replace("{table}", name.toString()),
+                    sql.replace("{table}", name),
                     Statement.RETURN_GENERATED_KEYS);
 
             preparedStatement.executeUpdate();
