@@ -9,16 +9,18 @@ import net.sourceforge.tess4j.ITesseract;
 import net.sourceforge.tess4j.Tesseract;
 import net.sourceforge.yamlbeans.YamlException;
 import net.sourceforge.yamlbeans.YamlReader;
+import net.sourceforge.yamlbeans.YamlWriter;
 import org.apache.commons.io.IOUtils;
 
-import javax.imageio.ImageIO;
 import javax.swing.*;
 import java.awt.*;
 import java.awt.image.BufferedImage;
 import java.io.*;
 import java.net.URL;
-import java.util.HashMap;
-import java.util.Map;
+import java.util.*;
+import java.util.List;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 public class TTrainParser extends MessageDisplay {
 
@@ -58,7 +60,7 @@ public class TTrainParser extends MessageDisplay {
 
 
     /**
-     * Have embedded web browser in side
+     * Have embedded web browser inside
      */
 
     private SqlConnection sqlConnection;
@@ -70,31 +72,27 @@ public class TTrainParser extends MessageDisplay {
 
         mainInst.sqlConnection = new SqlConnection();
 
-        URL amazonWS = new URL("http://checkip.amazonaws.com");
-        BufferedReader reader = new BufferedReader(new InputStreamReader(
-                amazonWS.openStream()));
-
-        mainInst.user = new User(mainInst, reader.readLine());
+        mainInst.user = new User(mainInst, fetchIp());
 
         frame = new JFrame("TTrainParser");
 
         WelcomeForm wForm = new WelcomeForm(mainInst, false);
         wForm.setUpdating(false);
+
         LoginRegisterForm reg = new LoginRegisterForm(mainInst);
+
         addPanelToCard(wForm.getPanel(), WELCOME_PANEL);
         addPanelToCard(reg.getPanel(), LOGIN_REGISTER_PANEL);
 
+        generateDataFile();
 
         boolean hasStoredTimetable = mainInst.hasCroppedTimetableFileAlready(true);
+
         mainInst.getSqlConnection().openConnection();
-        if (mainInst.user.hasSqlEntry() && hasStoredTimetable) { //have sql entry and png done already
-            FileInputStream fis = new FileInputStream(mainInst.getCroppedTimetableFileName(true));
-            mainInst.allDayCroppedImage = ImageIO.read(fis);
-            if (mainInst.getUser().hasSqlEntry() || mainInst.getCurrentEmail() != null) {
-                mainInst.openPanel(CORE_PANEL);
-            } else {
-                mainInst.openPanel(LOGIN_REGISTER_PANEL);
-            }
+        String timetableLessons = SqlConnection.SqlTableName.TIMETABLE_LESSONS;
+
+        if (mainInst.user.hasSqlEntry(timetableLessons) || hasStoredTimetable) {
+            mainInst.openPanel(CORE_PANEL);
         } else {
             mainInst.openPanel(WELCOME_PANEL);
         }
@@ -110,6 +108,31 @@ public class TTrainParser extends MessageDisplay {
         frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         frame.pack();
         frame.setVisible(true);
+    }
+
+    private static String fetchIp() {
+        try {
+            URL amazonWS = new URL("http://checkip.amazonaws.com");
+            BufferedReader reader = new BufferedReader(new InputStreamReader(
+                    amazonWS.openStream()));
+            return reader.readLine();
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        return null;
+    }
+
+    private static void generateDataFile() {
+        DataFileInfo info = new DataFileInfo();
+        info.setDefaults();
+        YamlWriter writer = null;
+        try {
+            writer = new YamlWriter(new FileWriter(USER_DIRECTORY_FILE_SEP + "data.yml"));
+            writer.write(info); //writes previously collected data about jpg & pdf file names
+            writer.close();
+        } catch (IOException | YamlException e) {
+            e.printStackTrace();
+        }
     }
 
     private static void addPanelToCard(JPanel panel, String welcomePanel) {
@@ -283,9 +306,104 @@ public class TTrainParser extends MessageDisplay {
         return activePanel;
     }
 
+
+    /**
+     * One of the more fundamental functions to the program. The function, in order, removes...
+     * - class unique identifier names, lesson type ie A level and student registration symbols for example / and ?
+     * - duplicate whitespace and new line characters
+     * - teacher names
+     * - room names with support for tutorial sessions for example "Yr2 in SO1" or A2 Tutorial "in MO1"
+     */
+    public String depleteFutileInfo(String ocrResult, boolean oneSpaceBetweenAllInfo) {
+        ocrResult = ocrResult/*class names or numbers**/
+                .replaceAll("[\\[\\(].*[\\]\\)]", "") //"\\(.*\\)"
+                .replaceAll("/", "")
+                .replaceAll("\\?", "") //If you don't turn up to lesson, '?' appears
+                .replaceAll("\\.", ":") //Has been a time where string has contained this "09.00 - 10:05"
+                .replaceAll("A [Ll]evel", ""); //Some subjects viz Computer Science have lower case l for some reason?
+
+        String[] words = ocrResult.split("\\s+"); //one or more spaces
+
+        List<String> removeStrings = new ArrayList<>();
+
+        for (String[] teachers : TTrainParser.getSubjectNamesWithMultipleTeachers().values()) {
+            for (String teacher : teachers) {
+                if (teacher == null) continue;
+                for (String wordInOcr : words) {
+                    for (String teacherFirstOrLastName : teacher.split(" ")) {
+                        if (teacherFirstOrLastName.equalsIgnoreCase("UNKNOWN")) continue;
+                        if (calculateDistance(wordInOcr, teacherFirstOrLastName) < 3) { //less than two characters changed
+                            removeStrings.add(wordInOcr);
+                        }
+                    }
+                }
+            }
+        }
+        for (String wordToRemove : removeStrings) {
+            ocrResult = ocrResult.replace(wordToRemove, "");
+        }
+
+        String pastSeven = "       "; //7 spaces
+        int beforeYr = -1;
+        int beforeColon;
+        boolean tutorialCondition = false;
+        boolean setTutorBound = false;
+        for (int j = 0; j < ocrResult.length(); j++) {
+            char charAt = ocrResult.charAt(j);
+            pastSeven = pastSeven.substring(1) + charAt;
+            String pastThree = pastSeven.substring(4);
+
+            if (!setTutorBound) { //false, dont potentially update to false when waiting for the colon
+                Matcher m = Pattern.compile("\\s(in)\\s").matcher(pastSeven);
+                tutorialCondition = !pastSeven.contains("Yr") && m.find() && pastThree.startsWith("in");
+            }
+            if (pastThree.startsWith("Yr")) { //will only begin with in if it's tutor
+                beforeYr = j - 2;
+            } else if (tutorialCondition && !setTutorBound) {
+                beforeYr = j - 3;
+                setTutorBound = true;
+            }
+
+            if (charAt == ':' && beforeYr != -1) { //will be -1 when it doesnt contain Yr, disregard & continue search
+                beforeColon = j - 2;
+                ocrResult = ocrResult.substring(0, beforeYr) + (tutorialCondition ? " " : "") + ocrResult.substring(beforeColon);
+                if (tutorialCondition) {
+                    beforeYr = -1;
+                    tutorialCondition = false;
+                }
+            }
+        }
+        if (oneSpaceBetweenAllInfo) ocrResult = ocrResult.replaceAll("\n", "").replaceAll("\\s{2,}", " ").trim();
+        ocrResult = ocrResult.replaceAll("( Yr(0-9)?)", ""); //Due to an unknown reason, a singular "Yr" still exists sometimes.
+        return ocrResult;
+    }
+
+    private int calculateDistance(String x, String y) {
+        if (x.isEmpty()) {
+            return y.length();
+        }
+        if (y.isEmpty()) {
+            return x.length();
+        }
+        int substitution = calculateDistance(x.substring(1), y.substring(1)) + cost(x.charAt(0), y.charAt(0));
+        int insertion = calculateDistance(x, y.substring(1)) + 1;
+        int deletion = calculateDistance(x.substring(1), y) + 1;
+
+        return min(substitution, insertion, deletion);
+    }
+
+    private int cost(char first, char last) {
+        return first == last ? 0 : 1;
+    }
+
+    private int min(int... numbers) {
+        return Arrays.stream(numbers).min().orElse(Integer.MAX_VALUE);
+    }
+
+
     public void openPanel(String panelName) {
-        if (panelName == CORE_PANEL) {
-            coreForm = new CoreForm(mainInst); //referencing main instance that had outdated all day image
+        if (panelName == CORE_PANEL) { //Latest instance
+            coreForm = new CoreForm(mainInst);
             addPanelToCard(coreForm.getPanel(), TTrainParser.CORE_PANEL);
         }
         CardLayout cardLayout = (CardLayout) (cards.getLayout());
