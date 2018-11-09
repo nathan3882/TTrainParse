@@ -77,14 +77,10 @@ public class TTrainParser extends MessageDisplay {
         frame = new JFrame("TTrainParser");
 
         WelcomeForm wForm = new WelcomeForm(mainInst, false);
-        wForm.setUpdating(false);
+        addPanelToCard(wForm.getPanel(), WELCOME_PANEL);
 
         LoginRegisterForm reg = new LoginRegisterForm(mainInst);
-
-        addPanelToCard(wForm.getPanel(), WELCOME_PANEL);
         addPanelToCard(reg.getPanel(), LOGIN_REGISTER_PANEL);
-
-        generateDataFile();
 
         boolean hasStoredTimetable = mainInst.hasCroppedTimetableFileAlready(true);
 
@@ -102,7 +98,7 @@ public class TTrainParser extends MessageDisplay {
 
         DisplayMode mode = GraphicsEnvironment.getLocalGraphicsEnvironment().getDefaultScreenDevice().getDisplayMode();
         int frameHeight = 500;
-        int frameWidth = 500;
+        int frameWidth = 750;
         frame.setLocation(new Point(mode.getWidth() / 2 - (frameWidth / 2), mode.getHeight() / 2 - (frameHeight / 2)));
         frame.setPreferredSize(new Dimension(frameWidth, frameHeight));
         frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
@@ -280,13 +276,17 @@ public class TTrainParser extends MessageDisplay {
         return new File(USER_DIRECTORY_FILE_SEP + (trueForPNG ? info.timetableCroppedPngFileName : info.timetableCroppedPdfFileName));
     }
 
+    //Recursive
     public boolean hasCroppedTimetableFileAlready(boolean trueForPNG) {
         YamlReader reader;
         DataFileInfo info;
         try {
             reader = new YamlReader(new FileReader(USER_DIRECTORY_FILE_SEP + "data.yml"));
             info = reader.read(DataFileInfo.class);
-        } catch (FileNotFoundException | YamlException e) {
+        } catch (FileNotFoundException e) {
+            generateDataFile();
+            return hasCroppedTimetableFileAlready(trueForPNG);
+        } catch (YamlException e) {
             e.printStackTrace();
             return false;
         }
