@@ -1,7 +1,9 @@
 package me.nathan3882.ttrainparse;
 
+import javax.imageio.ImageIO;
 import java.awt.*;
 import java.awt.image.BufferedImage;
+import java.io.IOException;
 import java.time.DayOfWeek;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
@@ -15,21 +17,22 @@ public class Segmentation {
 
     private LinkedHashMap<Integer, Integer> leftsAndRights;
     private Map<DayOfWeek, BufferedImage> images = new HashMap<>();
-    private TTrainParser main;
     private int mondayLeft = -1;
 
 
     public Segmentation(TTrainParser main) {
-        this.main = main;
         for (int i = 1; i <= 5; i++) images.put(DayOfWeek.of(i), null);
+        if (main.allDayCroppedImage == null) {
+            try {
+                main.allDayCroppedImage = ImageIO.read(main.getCroppedTimetableFileName(true));
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+        }
         this.allDayImage = main.allDayCroppedImage;
         this.iterativeY = 5;
-        this.leftsAndRights = getLeftsAndRights();
-    }
-
-    private LinkedHashMap<Integer, Integer> getLeftsAndRights() {
         LinkedHashMap<Integer, Integer> leftsAndRightXValues = new LinkedHashMap<>(); //Left most x value and then right most x value
-        int previouslyRetainedRight = -1;
+        int previouslyRetainedRight;
         int previousLeftGot = -1;
         int width = allDayImage.getWidth();
         for (int xValue = 0; xValue < width; xValue++) {
@@ -38,16 +41,18 @@ public class Segmentation {
                 if (previousLeftGot == -1) {
                     previousLeftGot = xValue; //previousLeftGot is now first occurrence of border (to the left of monday)
                     this.mondayLeft = previousLeftGot;
-                } else if (xValue < (previousLeftGot + 25)) { //pixel belonging to same border position, a thick border
-                    previouslyRetainedRight = xValue;
-                } else { //came across new border
-                    previousLeftGot = xValue;
-                    previouslyRetainedRight = xValue; //Make the right pixel same as left incase xValue is never smaller than previousLeftGot + 25
+                } else {
+                    if (xValue < (previousLeftGot + 25)) { //different pixel of same segment / a thick pixel
+                        previouslyRetainedRight = xValue;
+                    } else { //came across new border
+                        previousLeftGot = xValue;
+                        previouslyRetainedRight = xValue; //Make the right pixel same as left incase xValue is never smaller than previousLeftGot + 25
+                    }
+                    leftsAndRightXValues.put(previousLeftGot, previouslyRetainedRight);
                 }
-                leftsAndRightXValues.put(previousLeftGot, previouslyRetainedRight);
             }
         }
-        return leftsAndRightXValues;
+        this.leftsAndRights = leftsAndRightXValues;
     }
 
     public BufferedImage getDay(DayOfWeek day) {
