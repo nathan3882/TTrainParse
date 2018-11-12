@@ -1,5 +1,7 @@
 package me.nathan3882.data;
 
+import me.nathan3882.ttrainparse.TTrainParser;
+
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
@@ -7,6 +9,7 @@ import java.sql.SQLException;
 
 public class SqlQuery {
 
+    private final TTrainParser main;
     private String host = "localhost";
     private String databaseName = "userdata";
     private int port = 3306;
@@ -18,23 +21,27 @@ public class SqlQuery {
     private ResultSet resultSet = null;
 
     public SqlQuery(SqlConnection cction) {
+        this.main = cction.getTTrainParser();
         this.connection = cction.getConnection();
     }
 
     public SqlQuery executeQuery(String sql, String name) {
-        if (resultSet != null) {
-            close();
-        }
-        try {
-            this.preparedStatement = connection.prepareStatement(
-                    sql.replace("{table}", name));
+        if (main.hasInternet()) {
+            if (resultSet != null) {
+                close();
+            }
+            try {
+                this.preparedStatement = connection.prepareStatement(
+                        sql.replace("{table}", name));
 
-            this.resultSet = preparedStatement.executeQuery();
-        } catch (SQLException e) {
-            e.printStackTrace();
+                this.resultSet = preparedStatement.executeQuery();
+            } catch (SQLException e) {
+                e.printStackTrace();
+            }
         }
         return this;
     }
+
 
     public ResultSet getResultSet() {
         return this.resultSet;

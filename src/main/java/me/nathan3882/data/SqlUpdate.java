@@ -1,5 +1,7 @@
 package me.nathan3882.data;
 
+import me.nathan3882.ttrainparse.TTrainParser;
+
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.SQLException;
@@ -7,12 +9,11 @@ import java.sql.Statement;
 
 public class SqlUpdate {
 
-    private SqlConnection sqlConnection;
     private final Connection connection;
-    private PreparedStatement preparedStatement;
+    private final TTrainParser main;
 
     public SqlUpdate(SqlConnection sqlConnection) {
-        this.sqlConnection = sqlConnection;
+        this.main = sqlConnection.getTTrainParser();
         this.connection = sqlConnection.getConnection();
     }
 
@@ -23,19 +24,21 @@ public class SqlUpdate {
      * @return success or not
      */
     public boolean executeUpdate(String sql, String name) {
-        PreparedStatement preparedStatement = null;
-        try {
-            connection.setAutoCommit(true);
-            preparedStatement = connection.prepareStatement(
-                    sql.replace("{table}", name),
-                    Statement.RETURN_GENERATED_KEYS);
+        if (main.hasInternet()) {
+            PreparedStatement preparedStatement;
+            try {
+                connection.setAutoCommit(true);
+                preparedStatement = connection.prepareStatement(
+                        sql.replace("{table}", name),
+                        Statement.RETURN_GENERATED_KEYS);
 
-            preparedStatement.executeUpdate();
-            close(preparedStatement);
-        } catch (SQLException e) {
-            e.printStackTrace();
-            return false;
-        }
+                preparedStatement.executeUpdate();
+                close(preparedStatement);
+            } catch (SQLException e) {
+                e.printStackTrace();
+                return false;
+            }
+        } else return false;
         return true;
     }
 
