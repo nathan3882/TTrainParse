@@ -16,7 +16,7 @@ import java.util.concurrent.TimeUnit;
 public class User {
 
     public static final long DEFAULT_RENEW_COOLDOWN_DAYS = 7;
-    private final String userIp;
+    private String userIp;
     private final TTrainParser main;
     private final SqlConnection connection;
 
@@ -28,6 +28,7 @@ public class User {
 
     //TODO What's a clean way to check if a record / row exists?
     public boolean hasSqlEntry(String table) {
+        if (!hasInternet()) return false;
         SqlQuery query = new SqlQuery(main.getSqlConnection());
         query.executeQuery("SELECT * FROM {table} WHERE userIp = '" + getUserIp() + "'", table);
         return query.next(false);
@@ -142,13 +143,23 @@ public class User {
     }
 
     public void storeOcrText(String ocrText, DayOfWeek day) {
-        SqlUpdate storeUpdate = new SqlUpdate(connection);
-        if (hasOcrTextStored(day)) {//update
-            storeUpdate.executeUpdate("UPDATE {table} SET " + day.name() + " = \"" + ocrText + "\"" + " WHERE userIp = \"" + getUserIp() + "\"",
-                    SqlConnection.SqlTableName.TIMETABLE_LESSONS);
-        } else {
-            storeUpdate.executeUpdate("INSERT INTO {table} (userIp, " + day.name() + ") VALUES (\"" + getUserIp() + "\", \"" + ocrText + "\")",
-                    SqlConnection.SqlTableName.TIMETABLE_LESSONS);
+        if (hasInternet()) {
+            SqlUpdate storeUpdate = new SqlUpdate(connection);
+            if (hasOcrTextStored(day)) {//update
+                storeUpdate.executeUpdate("UPDATE {table} SET " + day.name() + " = \"" + ocrText + "\"" + " WHERE userIp = \"" + getUserIp() + "\"",
+                        SqlConnection.SqlTableName.TIMETABLE_LESSONS);
+            } else {
+                storeUpdate.executeUpdate("INSERT INTO {table} (userIp, " + day.name() + ") VALUES (\"" + getUserIp() + "\", \"" + ocrText + "\")",
+                        SqlConnection.SqlTableName.TIMETABLE_LESSONS);
+            }
         }
+    }
+
+    public boolean hasInternet() {
+        return main.hasInternet();
+    }
+
+    public void setIp(String fetchIp) {
+        this.userIp = fetchIp;
     }
 }

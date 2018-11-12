@@ -27,14 +27,23 @@ public class CoreForm extends MessageDisplay {
 
     public CoreForm(TTrainParser main) {
         this.mainInstance = main;
-        this.user = mainInstance.getUser();
-
-        mainInstance.getSqlConnection().openConnection();
-        int left = getUser().getTableUpdatesLeft();
-        Date renewDate = getUser().getTableRenewDate(false);
-        updateTimetableInfoLabel.setText("<html><center>" + left + " timetable update/s available until...<br><br>" + renewDate + "...<br><br>when it will refresh :)</center></html>");
-
         mainInstance.coreForm = this;
+        this.user = mainInstance.getUser();
+        int left = -1;
+        Date renewDate = null;
+        if (user.hasInternet() && user.hasSqlEntry(SqlConnection.SqlTableName.TIMETABLE_RENEWAL)) {
+            mainInstance.getSqlConnection().openConnection();
+
+            left = getUser().getTableUpdatesLeft();
+
+            renewDate = getUser().getTableRenewDate(false);
+        }
+        if (left == -1 && renewDate == null) {
+            updateTimetableInfoLabel.setText("<html><center>You don't have internet.<br>Timetable updates disabled until internet accessable...</center></html>");
+            updateTimetableButton.setEnabled(false);
+        } else {
+            updateTimetableInfoLabel.setText("<html><center>" + left + " timetable update/s available until...<br><br>" + renewDate + "...<br><br>when it will refresh :)</center></html>");
+        }
         Calendar calendar = Calendar.getInstance();
         Date now = new Date();
         calendar.setTime(now);
@@ -46,9 +55,10 @@ public class CoreForm extends MessageDisplay {
         StringBuilder mainString = new StringBuilder("<html><center>Here are all of your lessons + train times :)<br><br>");
         //TODO in writeup mention it was between storing all days once, or doing a new segmentation object each time and just extracting one day
 
-        if (user.hasOcrTextStored(showThese)) {
+        if (user.hasInternet() && user.hasOcrTextStored(showThese)) {
             List<LessonInfo> info = user.getLessonInformation(showThese); //From stored ocr text
             mainString = getStringToDisplay(info);
+            mainInstance.getSqlConnection().closeConnection();
         } else if (main.hasCroppedTimetableFileAlready(true)) { //didnt have internet, will store if possible
 
             Segmentation segmentation = new Segmentation(main);
@@ -57,7 +67,6 @@ public class CoreForm extends MessageDisplay {
 
             mainString = getStringToDisplay(info);
 
-            mainInstance.getSqlConnection().closeConnection();
         }
         mainString.append("</center></html>");
         mainInfoLabel.setText(mainString.toString());
@@ -158,9 +167,9 @@ public class CoreForm extends MessageDisplay {
             user.storeOcrText(ocrText, day); //Store before depleted, raw form
 
             List<String> words = new LinkedList<>(Arrays.asList(ocrText.split(" ")));
-//            for (String word : words) {
-//                System.out.print(word + " ");
-//            }
+            for (String word : words) {
+                System.out.print(word + " ");
+            }
             info.add(new LessonInfo(words, day));
             mFile.deleteAllMade();
         }

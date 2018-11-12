@@ -17,6 +17,7 @@ import java.awt.*;
 import java.awt.image.BufferedImage;
 import java.io.*;
 import java.net.URL;
+import java.net.UnknownHostException;
 import java.util.*;
 import java.util.List;
 import java.util.regex.Matcher;
@@ -34,7 +35,7 @@ public class TTrainParser extends MessageDisplay {
 
     public static final String USER_DIRECTORY = System.getProperty("user.dir");
 
-    public BufferedImage allDayCroppedImage;
+    public BufferedImage allDayCroppedImage = null;
 
     public static TTrainParser mainInst;
     private static JFrame frame;
@@ -51,12 +52,8 @@ public class TTrainParser extends MessageDisplay {
 
     private static String activePanel;
 
-    public CardLayout cardLayout;
-
     public static final String USER_DIRECTORY_FILE_SEP = USER_DIRECTORY + File.separator;
     private static ITesseract instance = new Tesseract();
-
-    private String userIp;
 
 
     /**
@@ -65,14 +62,22 @@ public class TTrainParser extends MessageDisplay {
 
     private SqlConnection sqlConnection;
     private User user;
+    private boolean hasInternet = false;
 
-    public static void main(String[] args) throws IOException {
+    public static void main(String[] args) {
 
         mainInst = new TTrainParser();
 
-        mainInst.sqlConnection = new SqlConnection();
-
-        mainInst.user = new User(mainInst, fetchIp());
+        mainInst.sqlConnection = new SqlConnection(mainInst);
+        String ip = "";
+        try {
+            ip = fetchIp();
+        } catch (UnknownHostException exception) {
+            mainInst.hasInternet = false;
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+        mainInst.user = new User(mainInst, ip);
 
         frame = new JFrame("TTrainParser");
 
@@ -87,7 +92,7 @@ public class TTrainParser extends MessageDisplay {
         mainInst.getSqlConnection().openConnection();
         String timetableLessons = SqlConnection.SqlTableName.TIMETABLE_LESSONS;
 
-        if (mainInst.user.hasSqlEntry(timetableLessons) || hasStoredTimetable) {
+        if (hasStoredTimetable || mainInst.user.hasSqlEntry(timetableLessons)) {
             mainInst.openPanel(CORE_PANEL);
         } else {
             mainInst.openPanel(WELCOME_PANEL);
@@ -106,16 +111,11 @@ public class TTrainParser extends MessageDisplay {
         frame.setVisible(true);
     }
 
-    private static String fetchIp() {
-        try {
-            URL amazonWS = new URL("http://checkip.amazonaws.com");
-            BufferedReader reader = new BufferedReader(new InputStreamReader(
-                    amazonWS.openStream()));
-            return reader.readLine();
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
-        return null;
+    private static String fetchIp() throws IOException {
+        URL amazonWS = new URL("http://checkip.amazonaws.com");
+        BufferedReader reader = new BufferedReader(new InputStreamReader(
+                amazonWS.openStream()));
+        return reader.readLine();
     }
 
     private static void generateDataFile() {
@@ -194,7 +194,8 @@ public class TTrainParser extends MessageDisplay {
         return newTeacherFile;
     }
 
-    public static BufferedImage getNewImage(BufferedImage firstImage, int topLeftX, int topLeftY, int bottomRightX, int bottomRightY) {
+    public static BufferedImage getNewImage(BufferedImage firstImage, int topLeftX, int topLeftY, int bottomRightX,
+                                            int bottomRightY) {
         int subImageHeight = bottomRightY - topLeftY;
         int subImageWidth = bottomRightX - topLeftX;
         return firstImage.getSubimage(topLeftX, topLeftY, subImageWidth, subImageHeight);
@@ -316,7 +317,7 @@ public class TTrainParser extends MessageDisplay {
      */
     public String depleteFutileInfo(String ocrResult, boolean oneSpaceBetweenAllInfo) {
         ocrResult = ocrResult/*class names or numbers**/
-                .replaceAll("[\\[\\(].*[\\]\\)]", "") //"\\(.*\\)"
+                .replaceAll("[\\[\\(].*[\\]\\)]", "")//[ or a ( followed by anything then a ] or )
                 .replaceAll("/", "")
                 .replaceAll("\\?", "") //If you don't turn up to lesson, '?' appears
                 .replaceAll("\\.", ":") //Has been a time where string has contained this "09.00 - 10:05"
@@ -332,7 +333,7 @@ public class TTrainParser extends MessageDisplay {
                 for (String wordInOcr : words) {
                     for (String teacherFirstOrLastName : teacher.split(" ")) {
                         if (teacherFirstOrLastName.equalsIgnoreCase("UNKNOWN")) continue;
-                        if (calculateDistance(wordInOcr, teacherFirstOrLastName) < 3) { //less than two characters changed
+                        if (calculateDistance(wordInOcr, teacherFirstOrLastName) < 3) { //less than three characters changed
                             removeStrings.add(wordInOcr);
                         }
                     }
@@ -402,7 +403,7 @@ public class TTrainParser extends MessageDisplay {
 
 
     public void openPanel(String panelName) {
-        if (panelName == CORE_PANEL) { //Latest instance
+        if (panelName.equals(CORE_PANEL)) { //Latest instance
             coreForm = new CoreForm(mainInst);
             addPanelToCard(coreForm.getPanel(), TTrainParser.CORE_PANEL);
         }
@@ -412,12 +413,21 @@ public class TTrainParser extends MessageDisplay {
         cards.revalidate();
     }
 
-    private void setActivePanel(String panelName) {
-        activePanel = panelName;
+    public boolean hasInternet() {
+        try {
+            this.user.setIp(fetchIp());
+        } catch (UnknownHostException exception) {
+            mainInst.hasInternet = false;
+            return hasInternet;
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+        this.hasInternet = true;
+        return hasInternet;
     }
 
-    public String getUserIp() {
-        return userIp;
+    private void setActivePanel(String panelName) {
+        activePanel = panelName;
     }
 
     public SqlConnection getSqlConnection() {
