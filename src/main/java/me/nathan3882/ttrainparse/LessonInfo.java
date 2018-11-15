@@ -134,18 +134,6 @@ public class LessonInfo {
         return this.orderedSubjectFinishTimes.get(lesson);
     }
 
-    public int getLessonCount() {
-        return this.lessonCount;
-    }
-
-    public String getFirstLesson() {
-        return this.firstLesson;
-    }
-
-    public String getLastLesson() {
-        return this.lastLesson;
-    }
-
     public LinkedList<String> getLessons() {
         return this.orderedLessons;
     }
