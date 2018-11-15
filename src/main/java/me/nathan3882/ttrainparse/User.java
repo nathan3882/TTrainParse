@@ -125,27 +125,39 @@ public class User {
         return date;
     }
 
-    public boolean hasOcrTextStored(DayOfWeek... days) {
-        if (!hasSqlEntry(SqlConnection.SqlTableName.TIMETABLE_LESSONS)) {
+    public boolean hasOcrTextStored(DayOfWeek day) {
+        if (!hasInternet() || !hasSqlEntry(SqlConnection.SqlTableName.TIMETABLE_LESSONS)) {
+            System.out.println("no int");
             return false;
         }
+        boolean hasEntry = false;
         SqlQuery query = new SqlQuery(connection);
-        boolean failed = false;
-        for (DayOfWeek day : days) {
-            query.executeQuery("SELECT " + day.name() + " FROM {table} WHERE userIp = '" + getUserIp() + "'", SqlConnection.SqlTableName.TIMETABLE_LESSONS);
+        query.executeQuery("SELECT " + day.name() + " FROM {table} WHERE userIp = '" + getUserIp() + "'",
+                SqlConnection.SqlTableName.TIMETABLE_LESSONS);
 
-            if (!query.next(false)) {
-                failed = true;
-                break;
-            }
+        if (query.next(false)) {
+            hasEntry = true;
         }
-        return !failed;
+        return hasEntry;
     }
 
-    public void storeOcrText(String ocrText, DayOfWeek day) {
-        if (hasInternet()) {
+    public boolean hasOcrTextStored(DayOfWeek... days) {
+        boolean hasEntries = true;
+        for (DayOfWeek day : days) {
+            if (hasOcrTextStored(day)) {
+                continue;
+            } else {
+                hasEntries = false;
+            }
+        }
+        return hasEntries;
+    }
+
+    public void storeOcrText(String ocrText, DayOfWeek day, boolean hasInternet) {
+        if (hasInternet) {
+            connection.openConnection();
             SqlUpdate storeUpdate = new SqlUpdate(connection);
-            if (hasOcrTextStored(day)) {//update
+            if (hasOcrTextStored(day)) {
                 storeUpdate.executeUpdate("UPDATE {table} SET " + day.name() + " = \"" + ocrText + "\"" + " WHERE userIp = \"" + getUserIp() + "\"",
                         SqlConnection.SqlTableName.TIMETABLE_LESSONS);
             } else {
@@ -162,4 +174,5 @@ public class User {
     public void setIp(String fetchIp) {
         this.userIp = fetchIp;
     }
+
 }

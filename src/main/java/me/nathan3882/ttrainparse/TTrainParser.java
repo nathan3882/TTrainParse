@@ -10,7 +10,6 @@ import net.sourceforge.tess4j.Tesseract;
 import net.sourceforge.yamlbeans.YamlException;
 import net.sourceforge.yamlbeans.YamlReader;
 import net.sourceforge.yamlbeans.YamlWriter;
-import org.apache.commons.io.IOUtils;
 
 import javax.swing.*;
 import java.awt.*;
@@ -35,10 +34,9 @@ public class TTrainParser extends MessageDisplay {
 
     public static final String USER_DIRECTORY = System.getProperty("user.dir");
 
-    public BufferedImage allDayCroppedImage = null;
+    public BufferedImage allDayCroppedImage;
 
-    public static TTrainParser mainInst;
-    private static JFrame frame;
+    public static TTrainParser mainInst = new TTrainParser();
 
     public WelcomeForm welcomeForm;
     public LoginRegisterForm loginRegisterForm;
@@ -53,7 +51,7 @@ public class TTrainParser extends MessageDisplay {
     private static String activePanel;
 
     public static final String USER_DIRECTORY_FILE_SEP = USER_DIRECTORY + File.separator;
-    private static ITesseract instance = new Tesseract();
+    private static ITesseract tesseractInstance = new Tesseract();
 
 
     /**
@@ -61,25 +59,15 @@ public class TTrainParser extends MessageDisplay {
      */
 
     private SqlConnection sqlConnection;
+
     private User user;
     private boolean hasInternet = false;
 
     public static void main(String[] args) {
-
-        mainInst = new TTrainParser();
-
         mainInst.sqlConnection = new SqlConnection(mainInst);
-        String ip = "";
-        try {
-            ip = fetchIp();
-        } catch (UnknownHostException exception) {
-            mainInst.hasInternet = false;
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
-        mainInst.user = new User(mainInst, ip);
 
-        frame = new JFrame("TTrainParser");
+        mainInst.user = new User(mainInst, "");
+        String ip = fetchIp();
 
         WelcomeForm wForm = new WelcomeForm(mainInst, false);
         addPanelToCard(wForm.getPanel(), WELCOME_PANEL);
@@ -87,35 +75,16 @@ public class TTrainParser extends MessageDisplay {
         LoginRegisterForm reg = new LoginRegisterForm(mainInst);
         addPanelToCard(reg.getPanel(), LOGIN_REGISTER_PANEL);
 
-        boolean hasStoredTimetable = mainInst.hasCroppedTimetableFileAlready(true);
-
         mainInst.getSqlConnection().openConnection();
         String timetableLessons = SqlConnection.SqlTableName.TIMETABLE_LESSONS;
 
-        if (hasStoredTimetable || mainInst.user.hasSqlEntry(timetableLessons)) {
+        if (mainInst.hasCroppedTimetableFileAlready(true) || mainInst.user.hasSqlEntry(timetableLessons)) {
             mainInst.openPanel(CORE_PANEL);
         } else {
             mainInst.openPanel(WELCOME_PANEL);
         }
         mainInst.getSqlConnection().closeConnection();
-
-        frame.setContentPane(mainInst.cards);
-
-        DisplayMode mode = GraphicsEnvironment.getLocalGraphicsEnvironment().getDefaultScreenDevice().getDisplayMode();
-        int frameHeight = 500;
-        int frameWidth = 750;
-        frame.setLocation(new Point(mode.getWidth() / 2 - (frameWidth / 2), mode.getHeight() / 2 - (frameHeight / 2)));
-        frame.setPreferredSize(new Dimension(frameWidth, frameHeight));
-        frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
-        frame.pack();
-        frame.setVisible(true);
-    }
-
-    private static String fetchIp() throws IOException {
-        URL amazonWS = new URL("http://checkip.amazonaws.com");
-        BufferedReader reader = new BufferedReader(new InputStreamReader(
-                amazonWS.openStream()));
-        return reader.readLine();
+        initFrame("TTrainParser");
     }
 
     private static void generateDataFile() {
@@ -182,16 +151,37 @@ public class TTrainParser extends MessageDisplay {
         return subjectNamesWithMultipleTeachers;
     }
 
-    private static File makeDefaultTeachersFile() throws IOException {
-        ClassLoader classLoader = TTrainParser.class.getClassLoader();
-        InputStream is = classLoader.getResourceAsStream("Teacher Names.txt");
-        File newTeacherFile = new File(USER_DIRECTORY_FILE_SEP + "Teacher Names.txt");
+    private static void initFrame(String title) {
+        JFrame frame = new JFrame(title);
+        frame.setContentPane(mainInst.cards);
 
-        if (!newTeacherFile.exists()) newTeacherFile.createNewFile();
+        DisplayMode mode = GraphicsEnvironment.getLocalGraphicsEnvironment().getDefaultScreenDevice().getDisplayMode();
+        int frameHeight = 500;
+        int frameWidth = 750;
+        frame.setLocation(new Point(mode.getWidth() / 2 - (frameWidth / 2), mode.getHeight() / 2 - (frameHeight / 2)));
+        frame.setPreferredSize(new Dimension(frameWidth, frameHeight));
+        frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+        frame.pack();
+        frame.setVisible(true);
+    }
 
-        IOUtils.copy(is, new FileOutputStream(newTeacherFile));
-
-        return newTeacherFile;
+    private static String fetchIp() {
+        BufferedReader reader = null;
+        try {
+            URL amazonWS = new URL("http://checkip.amazonaws.com");
+            reader = new BufferedReader(new InputStreamReader(
+                    amazonWS.openStream()));
+            mainInst.hasInternet = true;
+            String ip = reader.readLine();
+            mainInst.getUser().setIp(ip);
+            return ip;
+        } catch (UnknownHostException exception) {
+            mainInst.hasInternet = false;
+        } catch (IOException e) {
+            mainInst.hasInternet = false;
+            e.printStackTrace();
+        }
+        return null;
     }
 
     public static BufferedImage getNewImage(BufferedImage firstImage, int topLeftX, int topLeftY, int bottomRightX,
@@ -202,7 +192,7 @@ public class TTrainParser extends MessageDisplay {
     }
 
     public static ITesseract getTesseractInstance() {
-        return instance;
+        return tesseractInstance;
     }
 
     public TablePart getTableType(String rgbString) {
@@ -238,24 +228,6 @@ public class TTrainParser extends MessageDisplay {
 
     public String getFileSuffix(File selected) {
         return selected.getName().split("\\.")[1];
-    }
-
-    public String getCurrentEmail() {
-        YamlReader reader = null;
-        DataFileInfo info = null;
-
-        try {
-            reader = new YamlReader(new FileReader(USER_DIRECTORY_FILE_SEP + "data.yml"));
-            info = reader.read(DataFileInfo.class);
-        } catch (FileNotFoundException | YamlException e) {
-            e.printStackTrace();
-        }
-
-        if (reader == null || info == null) {
-            return null;
-        }
-
-        return info.email;
     }
 
     public File getCroppedTimetableFileName(boolean trueForPNG) {
@@ -303,7 +275,7 @@ public class TTrainParser extends MessageDisplay {
         return false;
     }
 
-    public static String getActivePanel() {
+    public String getActivePanel() {
         return activePanel;
     }
 
@@ -403,7 +375,7 @@ public class TTrainParser extends MessageDisplay {
 
 
     public void openPanel(String panelName) {
-        if (panelName.equals(CORE_PANEL)) { //Latest instance
+        if (panelName.equals(CORE_PANEL)) { //Latest tesseractInstance
             coreForm = new CoreForm(mainInst);
             addPanelToCard(coreForm.getPanel(), TTrainParser.CORE_PANEL);
         }
@@ -414,16 +386,7 @@ public class TTrainParser extends MessageDisplay {
     }
 
     public boolean hasInternet() {
-        try {
-            this.user.setIp(fetchIp());
-        } catch (UnknownHostException exception) {
-            mainInst.hasInternet = false;
-            return hasInternet;
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
-        this.hasInternet = true;
-        return hasInternet;
+        return fetchIp() != null;
     }
 
     private void setActivePanel(String panelName) {

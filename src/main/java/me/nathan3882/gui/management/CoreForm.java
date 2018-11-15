@@ -12,11 +12,13 @@ import java.io.File;
 import java.time.DayOfWeek;
 import java.time.LocalTime;
 import java.util.*;
+import java.util.Timer;
 import java.util.concurrent.TimeUnit;
 
 public class CoreForm extends MessageDisplay {
 
     private final TTrainParser mainInstance;
+    private TaskUpdateDatabase task;
     private User user;
     private JPanel coreFormPanel;
     private JLabel mainInfoLabel;
@@ -26,19 +28,23 @@ public class CoreForm extends MessageDisplay {
     public static final int DEFAULT_FORCE_UPDATE_QUANTITY = 3;
 
     public CoreForm(TTrainParser main) {
+
         this.mainInstance = main;
+
         mainInstance.coreForm = this;
         this.user = mainInstance.getUser();
         int left = -1;
         Date renewDate = null;
-        if (user.hasInternet() && user.hasSqlEntry(SqlConnection.SqlTableName.TIMETABLE_RENEWAL)) {
+        boolean hasInternet = user.hasInternet();
+        if (hasInternet) {
             mainInstance.getSqlConnection().openConnection();
-
+            if (!user.hasSqlEntry(SqlConnection.SqlTableName.TIMETABLE_RENEWAL)) {
+                user.generateDefaultRenewValues();
+            }
             left = getUser().getTableUpdatesLeft();
-
             renewDate = getUser().getTableRenewDate(false);
         }
-        if (left == -1 && renewDate == null) {
+        if (!hasInternet) {
             updateTimetableInfoLabel.setText("<html><center>You don't have internet.<br>Timetable updates disabled until internet accessable...</center></html>");
             updateTimetableButton.setEnabled(false);
         } else {
@@ -55,19 +61,26 @@ public class CoreForm extends MessageDisplay {
         StringBuilder mainString = new StringBuilder("<html><center>Here are all of your lessons + train times :)<br><br>");
         //TODO in writeup mention it was between storing all days once, or doing a new segmentation object each time and just extracting one day
 
-        if (user.hasInternet() && user.hasOcrTextStored(showThese)) {
-            List<LessonInfo> info = user.getLessonInformation(showThese); //From stored ocr text
-            mainString = getStringToDisplay(info);
-            mainInstance.getSqlConnection().closeConnection();
-        } else if (main.hasCroppedTimetableFileAlready(true)) { //didnt have internet, will store if possible
-
-            Segmentation segmentation = new Segmentation(main);
-
-            List<LessonInfo> info = getLessonInformation(segmentation, showThese);
-
-            mainString = getStringToDisplay(info);
-
+        boolean hasOcrTextStored = user.hasOcrTextStored(showThese);
+        System.out.println("fft " + hasOcrTextStored);
+        boolean segment = true;
+        boolean store = false;
+        if (hasInternet) {
+            if (hasOcrTextStored) {
+                System.out.println("Has ocr ");
+                List<LessonInfo> info = user.getLessonInformation(showThese); //From stored ocr text
+                mainString = getStringToDisplay(info);
+                segment = false;
+            } else store = true;
         }
+
+        if (segment) {
+            Segmentation segmentation = new Segmentation(main);
+            List<LessonInfo> info = getLessonInformation(segmentation, showThese, store);
+            mainString = getStringToDisplay(info);
+        }
+        mainInstance.getSqlConnection().closeConnection();
+        System.out.println("4");
         mainString.append("</center></html>");
         mainInfoLabel.setText(mainString.toString());
     }
@@ -138,12 +151,14 @@ public class CoreForm extends MessageDisplay {
     }
 
 
-    private List<LessonInfo> getLessonInformation(Segmentation segmentation, DayOfWeek[] showThese) {
+    private List<LessonInfo> getLessonInformation(Segmentation segmentation, DayOfWeek[] showThese, boolean store) {
         List<LessonInfo> info = new LinkedList<>();
+        Map<DayOfWeek, String> texts = new HashMap<>();
+        boolean hasInternet = user.hasInternet();
+        boolean doTask = false;
         for (DayOfWeek day : showThese) {
 
             ManipulableObject<BufferedImage> mFile = new ManipulableObject<>(BufferedImage.class);
-
             mFile.setInitialUpload(segmentation.getDay(day));
 
             File pdfFile = mFile.toPdf(day.name() + ".pdf", false); //Convert specific day mFile toPdf, defensively making pdf each time, if timetable changed wouldnt use previous day pdf
@@ -164,14 +179,38 @@ public class CoreForm extends MessageDisplay {
 
             ocrText = mainInstance.depleteFutileInfo(ocrText, true);
 
-            user.storeOcrText(ocrText, day); //Store before depleted, raw form
+            if (store)
+                user.storeOcrText(ocrText, day, hasInternet); //Store before depleted, raw form
+            else
+                doTask = true;
+
+            texts.put(day, ocrText);
 
             List<String> words = new LinkedList<>(Arrays.asList(ocrText.split(" ")));
-            for (String word : words) {
-                System.out.print(word + " ");
-            }
+
             info.add(new LessonInfo(words, day));
             mFile.deleteAllMade();
+        }
+        if (doTask) {
+            this.task = new TaskUpdateDatabase(new Timer()) {
+                @Override
+                public void run() {
+                    if (user.hasInternet()) {
+                        mainInstance.getSqlConnection().openConnection();
+                        for (DayOfWeek day : showThese) {
+                            if (!user.hasOcrTextStored(showThese)) {
+                                user.storeOcrText(texts.get(day), day, true);
+                                System.out.println("Stored");
+                            }
+                        }
+                        terminate();
+                        System.out.println("Cancelled");
+                    } else {
+                        System.out.println("No internet");
+                    }
+                }
+            };
+            task.runTaskSynchronously(task, 5000, 5000);
         }
         return info;
     }
