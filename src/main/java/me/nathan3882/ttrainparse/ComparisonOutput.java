@@ -47,7 +47,7 @@ public class ComparisonOutput {
                 upperBound = (oneThird * leftRightInstantiations) + oneThird; //Lower bound + one third of height
             } else {
                 int oneThird = startImage.getHeight() / 3;
-                upperBound = (oneThird * topBottomInstantiations) + oneThird; //Lower bound + one third of height
+                upperBound = (oneThird * topBottomInstantiations) + oneThird; //Upper bound + one third of height
             }
             if (xOrYValue >= upperBound)
                 break; //Going above what this instance is meant to (new instance every third width or height)");
@@ -64,15 +64,16 @@ public class ComparisonOutput {
                 Response first = calculatingLeftRightBorder ? Response.VALID_LEFT_BORDER : Response.VALID_TOP_BORDER;
                 Response last = calculatingLeftRightBorder ? Response.VALID_RIGHT_BORDER : Response.VALID_BOTTOM_BORDER;
 
+                Response toSet = null;
+
                 if (!timetable.getResponses().contains(first)) { //doesnt contain left or top border, hasnt been found yet
-                    timetable.addNewResponse(first);
-                    this.setResponse(first);
-                    setValue(xOrY);
+                    toSet = first;
                 } else if (!timetable.getResponses().contains(last)) { //is left-right or top-bottom so else is equivalent to the right/bottom border
-                    timetable.addNewResponse(last);
-                    this.setResponse(last);
-                    setValue(xOrY);
+                    toSet = last;
                 }
+                setValue(xOrY);
+                timetable.addNewResponse(toSet);
+                setResponse(toSet);
                 return; //terminate on first iteration because we only want the first / most common
             }
         }
