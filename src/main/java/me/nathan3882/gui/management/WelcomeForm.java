@@ -39,8 +39,7 @@ public class WelcomeForm extends MessageDisplay {
 
     public WelcomeForm(TTrainParser main, boolean isUpdating) {
         this.mainInstance = main;
-        this.isUpdating = isUpdating;
-
+        this.setUpdating(isUpdating);
         mainInstance.welcomeForm = this;
         advanceToLoginButton.setEnabled(false);
         confirmValidTimetable.setEnabled(false);
