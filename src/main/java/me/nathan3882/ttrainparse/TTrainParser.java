@@ -19,6 +19,8 @@ import java.net.URL;
 import java.net.UnknownHostException;
 import java.util.*;
 import java.util.List;
+import java.util.Timer;
+import java.util.concurrent.TimeUnit;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -60,6 +62,8 @@ public class TTrainParser extends MessageDisplay {
 
     private SqlConnection sqlConnection;
 
+    private TaskManager closeConnectionTask;
+
     private User user;
     private boolean hasInternet = false;
 
@@ -75,6 +79,20 @@ public class TTrainParser extends MessageDisplay {
         LoginRegisterForm reg = new LoginRegisterForm(mainInst);
         addPanelToCard(reg.getPanel(), LOGIN_REGISTER_PANEL);
 
+        mainInst.closeConnectionTask = new TaskManager(new Timer()) {
+            @Override
+            public void run() {
+                long current = System.currentTimeMillis();
+                long lastOpen = SqlConnection.getLatestOpeningMilis();
+                if (mainInst.getSqlConnection().isOpen() &&
+                        current - lastOpen >= TimeUnit.SECONDS.toMillis(150)) { //Close after 2 and 1/2 minutes
+                    mainInst.getSqlConnection().closeConnection();
+                    SqlConnection.setLatestOpeningMilis(current); //Will be 0, condition will fail unless has been opened again
+                }
+            }
+        };
+        mainInst.closeConnectionTask.runTaskSynchronously(mainInst.closeConnectionTask, 5000L, 5000L);
+
         mainInst.getSqlConnection().openConnection();
         String timetableLessons = SqlConnection.SqlTableName.TIMETABLE_LESSONS;
 
@@ -83,7 +101,6 @@ public class TTrainParser extends MessageDisplay {
         } else {
             mainInst.openPanel(WELCOME_PANEL);
         }
-        mainInst.getSqlConnection().closeConnection();
         initFrame("TTrainParser");
     }
 

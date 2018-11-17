@@ -4,14 +4,34 @@ import me.nathan3882.ttrainparse.TTrainParser;
 
 import java.sql.Connection;
 import java.sql.DriverManager;
+import java.sql.SQLException;
 
 public class SqlConnection {
 
     private TTrainParser main;
     private boolean open;
 
+    private static long latestOpeningMilis;
+
+    public static void setLatestOpeningMilis(long latestOpeningMilis) {
+        SqlConnection.latestOpeningMilis = latestOpeningMilis;
+    }
+
     public TTrainParser getTTrainParser() {
         return this.main;
+    }
+
+    public boolean isClosed() {
+        try {
+            return this.connection.isClosed();
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+        return false;
+    }
+
+    public boolean isOpen() {
+        return !isClosed();
     }
 
     public interface SqlTableName {
@@ -46,8 +66,9 @@ public class SqlConnection {
      * @return success or not
      */
     public void openConnection() {
-        if (open) return;
         try {
+            latestOpeningMilis = System.currentTimeMillis();
+            if (open) return;
             Class.forName("com.mysql.jdbc.Driver");
             this.connection = DriverManager.getConnection("jdbc:mysql://" + host + ":" + port + "/" + databaseName + "?allowMultiQueries=true", username, password);
             open = true;
@@ -75,4 +96,7 @@ public class SqlConnection {
         }
     }
 
+    public static long getLatestOpeningMilis() {
+        return latestOpeningMilis;
+    }
 }
