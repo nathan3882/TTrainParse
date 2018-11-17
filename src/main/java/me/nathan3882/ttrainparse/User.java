@@ -100,7 +100,6 @@ public class User {
 //            }
             info.add(new LessonInfo(words, day));
         }
-        connection.closeConnection();
         return info;
     }
 

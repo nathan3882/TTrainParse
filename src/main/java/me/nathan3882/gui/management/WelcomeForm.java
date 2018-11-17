@@ -120,7 +120,6 @@ public class WelcomeForm extends MessageDisplay {
                             user.setTableUpdatesLeft(CoreForm.DEFAULT_FORCE_UPDATE_QUANTITY);
                         }
                         user.setPreviousUploadTime(System.currentTimeMillis());
-                        main.getSqlConnection().closeConnection();
 
                         YamlWriter writer = null;
                         try {
