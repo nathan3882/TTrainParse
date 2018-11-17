@@ -18,7 +18,7 @@ import java.util.concurrent.TimeUnit;
 public class CoreForm extends MessageDisplay {
 
     private final TTrainParser mainInstance;
-    private TaskUpdateDatabase task;
+    private TaskManager task;
     private User user;
     private JPanel coreFormPanel;
     private JLabel mainInfoLabel;
@@ -43,16 +43,14 @@ public class CoreForm extends MessageDisplay {
             }
             left = getUser().getTableUpdatesLeft();
             renewDate = getUser().getTableRenewDate(false);
-        }
-        if (!hasInternet) {
+            updateTimetableInfoLabel.setText("<html><center>" + left + " timetable update/s available until...<br><br>" + renewDate + "...<br><br>when it will refresh :)</center></html>");
+        } else {
             updateTimetableInfoLabel.setText("<html><center>You don't have internet.<br>Timetable updates disabled until internet accessable...</center></html>");
             updateTimetableButton.setEnabled(false);
-        } else {
             updateTimetableInfoLabel.setText("<html><center>" + left + " timetable update/s available until...<br><br>" + renewDate + "...<br><br>when it will refresh :)</center></html>");
         }
         Calendar calendar = Calendar.getInstance();
-        Date now = new Date();
-        calendar.setTime(now);
+        calendar.setTime(new Date());
         int currentDay = calendar.get(Calendar.DAY_OF_WEEK);
         DayOfWeek[] showThese = getDaysToShow(currentDay);
 
@@ -62,12 +60,10 @@ public class CoreForm extends MessageDisplay {
         //TODO in writeup mention it was between storing all days once, or doing a new segmentation object each time and just extracting one day
 
         boolean hasOcrTextStored = user.hasOcrTextStored(showThese);
-        System.out.println("fft " + hasOcrTextStored);
         boolean segment = true;
         boolean store = false;
         if (hasInternet) {
             if (hasOcrTextStored) {
-                System.out.println("Has ocr ");
                 List<LessonInfo> info = user.getLessonInformation(showThese); //From stored ocr text
                 mainString = getStringToDisplay(info);
                 segment = false;
@@ -79,8 +75,6 @@ public class CoreForm extends MessageDisplay {
             List<LessonInfo> info = getLessonInformation(segmentation, showThese, store);
             mainString = getStringToDisplay(info);
         }
-        mainInstance.getSqlConnection().closeConnection();
-        System.out.println("4");
         mainString.append("</center></html>");
         mainInfoLabel.setText(mainString.toString());
     }
@@ -145,7 +139,6 @@ public class CoreForm extends MessageDisplay {
                 } else {
                     displayMessage("Are you on a different IP?!");
                 }
-                sqlCon.closeConnection();
             }
         };
     }
@@ -192,7 +185,7 @@ public class CoreForm extends MessageDisplay {
             mFile.deleteAllMade();
         }
         if (doTask) {
-            this.task = new TaskUpdateDatabase(new Timer()) {
+            this.task = new TaskManager(new Timer()) {
                 @Override
                 public void run() {
                     if (user.hasInternet()) {
@@ -200,13 +193,9 @@ public class CoreForm extends MessageDisplay {
                         for (DayOfWeek day : showThese) {
                             if (!user.hasOcrTextStored(showThese)) {
                                 user.storeOcrText(texts.get(day), day, true);
-                                System.out.println("Stored");
                             }
                         }
                         terminate();
-                        System.out.println("Cancelled");
-                    } else {
-                        System.out.println("No internet");
                     }
                 }
             };

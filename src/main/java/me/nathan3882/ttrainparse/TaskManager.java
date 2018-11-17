@@ -3,15 +3,12 @@ package me.nathan3882.ttrainparse;
 import java.util.Timer;
 import java.util.TimerTask;
 
-public class TaskUpdateDatabase extends TimerTask {
+public class TaskManager extends TimerTask {
 
     private Timer timer;
 
-    public TaskUpdateDatabase() {
-    }
-
-    public TaskUpdateDatabase(Timer timer) {
-        this.timer = timer;
+    public TaskManager(Timer timer) {
+        setTimer(timer);
     }
 
     @Override
@@ -19,7 +16,7 @@ public class TaskUpdateDatabase extends TimerTask {
     }
 
     public void runTaskSynchronously(TimerTask task, long delay, long period) {
-        timer.scheduleAtFixedRate(this, delay, period);
+        timer.scheduleAtFixedRate(task, delay, period);
     }
 
     public Timer setTimer(Timer timer) {
