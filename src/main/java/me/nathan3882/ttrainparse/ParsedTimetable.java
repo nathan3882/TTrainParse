@@ -33,6 +33,9 @@ public class ParsedTimetable {
     private BufferedImage newImage = null;
 
     public ParsedTimetable(TTrainParser main, BufferedImage firstImage) {
+        ComparisonOutput.topBottomInstantiations = 0;
+        ComparisonOutput.leftRightInstantiations = 0;
+        responsesSoFar.clear();
         this.main = main;
         this.firstImage = firstImage;
 
@@ -75,7 +78,7 @@ public class ParsedTimetable {
                     if (getCondition(XYPixels.size(), width - 2)) { //analyses third of all pixels for left and right border
                         ComparisonOutput.leftRightInstantiations++;
                         comparisonOutputs.add( //New comparison output for previous 1/3rd of pixel data
-                                new ComparisonOutput(main, this, new HashMap<Integer, List<String>>(XYPixels), true, new HashMap<Integer, Integer>(borderCoordinates)));
+                                new ComparisonOutput(main, this, new HashMap<>(XYPixels), true, new HashMap<>(borderCoordinates)));
                         XYPixels.clear(); //Clears previous 1/3 of pixel data
                     }
                 }
@@ -85,7 +88,7 @@ public class ParsedTimetable {
                 for (int currentXPixel = 0; currentXPixel < width; currentXPixel++) { //then going from left to right
                     String currentPixelString = main.pixelRGBToString(new Color(firstImage.getRGB(currentXPixel, currentYPixel)));
 
-                    if (currentPixelString.equals("211, 211, 211"))
+                    if (main.getTableType(currentPixelString).equals(TablePart.BORDER))
                         borderCoordinates.put(currentXPixel, currentYPixel); //Is a border
 
                     if (storedXorYPixels.size() == width) {
@@ -97,7 +100,7 @@ public class ParsedTimetable {
                     if (getCondition(XYPixels.size(), height)) {
                         ComparisonOutput.topBottomInstantiations++;
                         //New comparison output for previous 1/3rd of pixel data
-                        comparisonOutputs.add(new ComparisonOutput(main, this, new HashMap<Integer, List<String>>(XYPixels), false, new HashMap<Integer, Integer>(borderCoordinates)));
+                        comparisonOutputs.add(new ComparisonOutput(main, this, new HashMap<>(XYPixels), false, new HashMap<>(borderCoordinates)));
                         XYPixels.clear(); //Clears previous 1/3 of pixel data
                     }
                 }
