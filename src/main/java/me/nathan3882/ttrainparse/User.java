@@ -110,6 +110,14 @@ public class User {
                 SqlConnection.SqlTableName.TIMETABLE_RENEWAL);
     }
 
+    public void removeEntryFromTable(String table) {
+        SqlUpdate update = new SqlUpdate(connection);
+
+        String updateStr = "DELETE FROM {table} WHERE userIp = '" + getUserIp() + "'";
+        System.out.println(updateStr);
+        update.executeUpdate(updateStr, table);
+    }
+
 
     public void generateDefaultRenewValues() {
         SqlUpdate defaultValues = new SqlUpdate(connection);
