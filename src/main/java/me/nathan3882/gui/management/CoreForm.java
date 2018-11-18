@@ -60,6 +60,7 @@ public class CoreForm extends MessageDisplay {
         //TODO in writeup mention it was between storing all days once, or doing a new segmentation object each time and just extracting one day
 
         boolean hasOcrTextStored = user.hasOcrTextStored(showThese);
+        boolean isUpdating = mainInstance.welcomeForm.isUpdating();
         boolean segment = true;
         boolean store = false;
         if (hasInternet) {
@@ -70,7 +71,7 @@ public class CoreForm extends MessageDisplay {
             } else store = true;
         }
 
-        if (segment) {
+        if (isUpdating || segment) {
             Segmentation segmentation = new Segmentation(main);
             List<LessonInfo> info = getLessonInformation(segmentation, showThese, store);
             mainString = getStringToDisplay(info);
@@ -128,7 +129,7 @@ public class CoreForm extends MessageDisplay {
                     if (difference >= updateAfterThisTime) {//7 day period, reset force timetable update number.
                         getUser().setTableUpdatesLeft(DEFAULT_FORCE_UPDATE_QUANTITY);
                     } else if (forceableUpdatesLeft > 0) {
-                        getUser().setTableUpdatesLeft(forceableUpdatesLeft - 1);
+                        //removal when has successfully been parsed, not here, when the button is clicked
                     } else {
                         displayMessage("Sorry, you've run out of timetable updates for this period!");
                         return;

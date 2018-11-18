@@ -79,7 +79,7 @@ public class WelcomeForm extends MessageDisplay {
 
                     DataFileInfo info = new DataFileInfo();
 
-                    if (isUpdating() || !main.hasCroppedTimetableFileAlready(false)) { //hasn't got a pdf
+                    if (isUpdating() || !main.hasCroppedTimetableFileAlready(false)) { //is updating or hasn't got a pdf
                         start = System.currentTimeMillis();
                         ParsedTimetable timetable = new ParsedTimetable(main, selectedFileImage); //parses jpg
                         successfullyParsed = timetable.successfullyParsed();
@@ -100,6 +100,16 @@ public class WelcomeForm extends MessageDisplay {
                             e.printStackTrace();
                         }
                         if (isUpdating()) {
+                            User user = main.getUser();
+
+                            main.getSqlConnection().openConnection();
+                            if (!user.hasSqlEntry(SqlConnection.SqlTableName.TIMETABLE_RENEWAL)) {
+                                user.generateDefaultRenewValues();
+                                user.setTableUpdatesLeft(CoreForm.DEFAULT_FORCE_UPDATE_QUANTITY);
+                            }
+                            mainInstance.getUser().setTableUpdatesLeft(mainInstance.getUser().getTableUpdatesLeft() - 1);
+                            user.setPreviousUploadTime(System.currentTimeMillis());
+
                             main.openPanel(TTrainParser.CORE_PANEL);
                         } else {
                             main.openPanel(TTrainParser.LOGIN_REGISTER_PANEL);
@@ -112,14 +122,6 @@ public class WelcomeForm extends MessageDisplay {
                         displayMessage("Parsing was not successful! Does the provided image contain timetable borders?");
                         return;
                     } else { //Update data file
-                        User user = main.getUser();
-
-                        main.getSqlConnection().openConnection();
-                        if (!user.hasSqlEntry(SqlConnection.SqlTableName.TIMETABLE_RENEWAL)) {
-                            user.generateDefaultRenewValues();
-                            user.setTableUpdatesLeft(CoreForm.DEFAULT_FORCE_UPDATE_QUANTITY);
-                        }
-                        user.setPreviousUploadTime(System.currentTimeMillis());
 
                         YamlWriter writer = null;
                         try {
