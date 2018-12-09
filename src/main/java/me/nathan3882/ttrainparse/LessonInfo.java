@@ -36,6 +36,7 @@ public class LessonInfo {
             firstLesson = orderedLessons.get(0);
             lessonCount = orderedLessons.size();
         } catch (IndexOutOfBoundsException e) {
+            TTrainParser.getDebugManager().handle(e);
             e.printStackTrace();
         }
     }
@@ -63,9 +64,9 @@ public class LessonInfo {
             int upperBoundForJustTimes = subjectNameUpperBound + 3;
 
             String timeString = "";
-            for (int i = lowerBoundForJustTimes; i <= upperBoundForJustTimes; i++) {
+            for (int i = lowerBoundForJustTimes; i <= upperBoundForJustTimes; i++)
                 timeString += words.get(i);
-            }
+
             String[] startFinish = timeString.split("-"); //"10:05-11:10" left is start, right is finish
             LocalTime startTime = LocalTime.parse(startFinish[0]);
             LocalTime finishTime = LocalTime.parse(startFinish[1]);

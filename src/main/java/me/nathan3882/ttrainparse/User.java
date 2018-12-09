@@ -28,7 +28,7 @@ public class User {
 
     //TODO What's a clean way to check if a record / row exists?
     public boolean hasSqlEntry(String table) {
-        if (!hasInternet()) return false;
+        if (!hasInternet() || !main.getSqlConnection().connectionEstablished()) return false;
         SqlQuery query = new SqlQuery(main.getSqlConnection());
         query.executeQuery("SELECT * FROM {table} WHERE userIp = '" + getUserIp() + "'", table);
         return query.next(false);
@@ -50,6 +50,7 @@ public class User {
             previousUploadTime = result.getLong(1);
             result.close();
         } catch (SQLException e) {
+            TTrainParser.getDebugManager().handle(e);
             e.printStackTrace();
         }
         return previousUploadTime;
@@ -133,7 +134,7 @@ public class User {
     }
 
     public boolean hasOcrTextStored(DayOfWeek day) {
-        if (!hasInternet() || !hasSqlEntry(SqlConnection.SqlTableName.TIMETABLE_LESSONS)) {
+        if (!hasInternet() || !main.getSqlConnection().connectionEstablished() || !hasSqlEntry(SqlConnection.SqlTableName.TIMETABLE_LESSONS)) {
             System.out.println("no int");
             return false;
         }
@@ -161,7 +162,7 @@ public class User {
     }
 
     public void storeOcrText(String ocrText, DayOfWeek day, boolean hasInternet) {
-        if (hasInternet) {
+        if (hasInternet && main.getSqlConnection().connectionEstablished()) {
             connection.openConnection();
             SqlUpdate storeUpdate = new SqlUpdate(connection);
             if (hasOcrTextStored(day)) {

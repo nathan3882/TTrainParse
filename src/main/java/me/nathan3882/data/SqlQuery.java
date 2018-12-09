@@ -26,7 +26,7 @@ public class SqlQuery {
     }
 
     public SqlQuery executeQuery(String sql, String name) {
-        if (main.hasInternet()) {
+        if (main.hasInternet() && main.getSqlConnection().connectionEstablished()) {
             if (resultSet != null) {
                 close();
             }
@@ -36,6 +36,7 @@ public class SqlQuery {
 
                 this.resultSet = preparedStatement.executeQuery();
             } catch (SQLException e) {
+                TTrainParser.getDebugManager().handle(e);
                 e.printStackTrace();
             }
         }
@@ -58,6 +59,7 @@ public class SqlQuery {
             next = resultSet.next();
             if (close) connection.close();
         } catch (SQLException e) {
+            TTrainParser.getDebugManager().handle(e);
             e.printStackTrace();
         }
         return next;
@@ -67,6 +69,7 @@ public class SqlQuery {
         try {
             return resultSet.getString(columnName);
         } catch (SQLException e) {
+            TTrainParser.getDebugManager().handle(e);
             e.printStackTrace();
         }
         return null;
@@ -76,6 +79,7 @@ public class SqlQuery {
         try {
             resultSet.close();
         } catch (SQLException e) {
+            TTrainParser.getDebugManager().handle(e);
             e.printStackTrace();
         }
     }
@@ -84,6 +88,7 @@ public class SqlQuery {
         try {
             return resultSet.getInt(i);
         } catch (SQLException e) {
+            TTrainParser.getDebugManager().handle(e);
             e.printStackTrace();
         }
         return -1;

@@ -24,7 +24,7 @@ public class SqlUpdate {
      * @return success or not
      */
     public boolean executeUpdate(String sql, String name) {
-        if (main.hasInternet()) {
+        if (main.hasInternet() && main.getSqlConnection().connectionEstablished()) {
             PreparedStatement preparedStatement;
             try {
                 connection.setAutoCommit(true);
@@ -35,6 +35,7 @@ public class SqlUpdate {
                 preparedStatement.executeUpdate();
                 close(preparedStatement);
             } catch (SQLException e) {
+                TTrainParser.getDebugManager().handle(e);
                 e.printStackTrace();
                 return false;
             }
@@ -46,6 +47,7 @@ public class SqlUpdate {
         try {
             resource.close();
         } catch (Exception e) {
+            TTrainParser.getDebugManager().handle(e);
             e.printStackTrace();
         }
     }
