@@ -4,7 +4,7 @@ import javax.swing.*;
 
 public class MessageDisplay {
 
-    public void displayMessage(String message) {
+    protected void displayMessage(String message) {
         JOptionPane.showMessageDialog(getPanel(), message);
     }
 
