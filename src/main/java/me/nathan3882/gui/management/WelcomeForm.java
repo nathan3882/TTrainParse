@@ -70,6 +70,7 @@ public class WelcomeForm extends MessageDisplay {
                     try {
                         selectedFileImage = ImageIO.read(selectedFile); //Get BufferedImage object from previously selected file
                     } catch (Exception e) {
+                        TTrainParser.getDebugManager().handle(e);
                         e.printStackTrace();
                         displayMessage("Your selected file has been relocated since you selected it! Please reselect");
                         resetWelcomeButtons();
@@ -97,6 +98,7 @@ public class WelcomeForm extends MessageDisplay {
                         try {
                             ImageIO.write(allDayCroppedImage, "png", new File(TTrainParser.USER_DIRECTORY_FILE_SEP + nesPngPath)); //overwrites the uncropped jpg/png to cropped png
                         } catch (IOException e) {
+                            TTrainParser.getDebugManager().handle(e);
                             e.printStackTrace();
                         }
                         if (isUpdating()) {
@@ -129,6 +131,7 @@ public class WelcomeForm extends MessageDisplay {
                             writer.write(info); //writes previously collected data about jpg & pdf file names
                             writer.close();
                         } catch (IOException | YamlException e) {
+                            TTrainParser.getDebugManager().handle(e);
                             e.printStackTrace();
                         }
                     }

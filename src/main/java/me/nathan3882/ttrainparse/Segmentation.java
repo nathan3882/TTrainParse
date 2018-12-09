@@ -26,6 +26,7 @@ public class Segmentation {
             try {
                 main.allDayCroppedImage = ImageIO.read(main.getCroppedTimetableFileName(true));
             } catch (IOException e) {
+                TTrainParser.getDebugManager().handle(e);
                 e.printStackTrace();
             }
         }
@@ -42,7 +43,7 @@ public class Segmentation {
                     previousLeftGot = xValue; //previousLeftGot is now first occurrence of border (to the left of monday)
                     this.mondayLeft = previousLeftGot;
                 } else {
-                    if (xValue < (previousLeftGot + 25)) { //different pixel of same segment / a thick pixel
+                    if (xValue < (previousLeftGot + 25)) { //different pixel of same segment / a thick set of pixel
                         previouslyRetainedRight = xValue;
                     } else { //came across new border
                         previousLeftGot = xValue;
@@ -67,6 +68,7 @@ public class Segmentation {
                 leftMostBound = keys.get(dayValue - 2); //For tuesday's left most bound = dayValue ie 2 - 2 so is first entry for tuesdays left most bound
             }
         } catch (IndexOutOfBoundsException e) {
+            TTrainParser.getDebugManager().handle(e);
             //System.out.println("Error getting bounds for day " + day.name() + "!");
             e.printStackTrace();
         }
