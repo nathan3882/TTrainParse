@@ -2,7 +2,6 @@ package me.nathan3882.gui.management;
 
 import me.nathan3882.data.SqlConnection;
 import me.nathan3882.ttrainparse.*;
-import net.sourceforge.tess4j.TesseractException;
 
 import javax.swing.*;
 import java.awt.event.ActionEvent;
@@ -11,8 +10,8 @@ import java.awt.image.BufferedImage;
 import java.io.File;
 import java.time.DayOfWeek;
 import java.time.LocalTime;
-import java.util.*;
 import java.util.Timer;
+import java.util.*;
 import java.util.concurrent.TimeUnit;
 
 public class CoreForm extends MessageDisplay {
@@ -36,25 +35,24 @@ public class CoreForm extends MessageDisplay {
         int left = -1;
         Date renewDate = null;
         boolean hasInternet = user.hasInternet();
-        if (hasInternet) {
+        if (hasInternet && main.getSqlConnection().connectionEstablished()) {
             mainInstance.getSqlConnection().openConnection();
             if (!user.hasSqlEntry(SqlConnection.SqlTableName.TIMETABLE_RENEWAL)) {
                 user.generateDefaultRenewValues();
             }
             left = getUser().getTableUpdatesLeft();
             renewDate = getUser().getTableRenewDate(false);
+            updateTimetableButton.addActionListener(getUpdateTimetableListener(main));
             updateTimetableInfoLabel.setText("<html><center>" + left + " timetable update/s available until...<br><br>" + renewDate + "...<br><br>when it will refresh :)</center></html>");
         } else {
-            updateTimetableInfoLabel.setText("<html><center>You don't have internet.<br>Timetable updates disabled until internet accessable...</center></html>");
+            updateTimetableInfoLabel.setText("<html><center>You either don't have internet or no sql connection has been established.<br>Timetable updates disabled until fixed...</center></html>");
             updateTimetableButton.setEnabled(false);
-            updateTimetableInfoLabel.setText("<html><center>" + left + " timetable update/s available until...<br><br>" + renewDate + "...<br><br>when it will refresh :)</center></html>");
         }
+
         Calendar calendar = Calendar.getInstance();
         calendar.setTime(new Date());
         int currentDay = calendar.get(Calendar.DAY_OF_WEEK);
         DayOfWeek[] showThese = getDaysToShow(currentDay);
-
-        updateTimetableButton.addActionListener(getUpdateTimetableListener(main));
 
         StringBuilder mainString = new StringBuilder("<html><center>Here are all of your lessons + train times :)<br><br>");
         //TODO in writeup mention it was between storing all days once, or doing a new segmentation object each time and just extracting one day
@@ -153,14 +151,17 @@ public class CoreForm extends MessageDisplay {
         for (DayOfWeek day : showThese) {
 
             ManipulableObject<BufferedImage> mFile = new ManipulableObject<>(BufferedImage.class);
-            mFile.setInitialUpload(segmentation.getDay(day));
+
+            BufferedImage oneSeg = segmentation.getDay(day);
+            mFile.setInitialUpload(oneSeg);
 
             File pdfFile = mFile.toPdf(day.name() + ".pdf", false); //Convert specific day mFile toPdf, defensively making pdf each time, if timetable changed wouldnt use previous day pdf
 
             String ocrText = null;
             try {
                 ocrText = TTrainParser.getTesseractInstance().doOCR(pdfFile);
-            } catch (TesseractException e) {
+            } catch (Exception e) {
+                TTrainParser.getDebugManager().handle(e);
                 e.printStackTrace();
             }
 
@@ -189,7 +190,7 @@ public class CoreForm extends MessageDisplay {
             this.task = new TaskManager(new Timer()) {
                 @Override
                 public void run() {
-                    if (user.hasInternet()) {
+                    if (user.hasInternet() && mainInstance.getSqlConnection().connectionEstablished()) {
                         mainInstance.getSqlConnection().openConnection();
                         for (DayOfWeek day : showThese) {
                             if (!user.hasOcrTextStored(showThese)) {
