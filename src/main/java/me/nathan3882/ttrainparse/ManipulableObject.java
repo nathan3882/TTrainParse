@@ -48,16 +48,20 @@ public class ManipulableObject<T> {
     public File toPdf(String newName, boolean deleteJpgIfMade) { //day.name() + ".pdf";
         File file = null;
         if (uploadCastableTo(BufferedImage.class)) {
-            File pngOutputFile = new File(TTrainParser.USER_DIRECTORY_FILE_SEP + newName.split(FULL_STOP)[0] + ".png");
+
+            String newNameSplit = newName.split(FULL_STOP)[0];
+
+            File pngOutputFile = new File(TTrainParser.USER_DIRECTORY_FILE_SEP + newNameSplit + ".png");
             try {
                 ImageIO.write((BufferedImage) getInitialUpload(), "png", pngOutputFile);
             } catch (IOException e) {
+                TTrainParser.getDebugManager().handle(e);
                 e.printStackTrace();
             }
 
-            String newOne = newName.split(FULL_STOP)[0] + ".pdf";
-            jpgToPdf(pngOutputFile, newOne, deleteJpgIfMade);
-            file = new File(TTrainParser.USER_DIRECTORY_FILE_SEP + newOne);
+            String newNamePdf = newNameSplit + ".pdf";
+            jpgToPdf(pngOutputFile, newNamePdf, deleteJpgIfMade);
+            file = new File(TTrainParser.USER_DIRECTORY_FILE_SEP + newNamePdf);
         } else if (uploadCastableTo(File.class)) {
             File asFile = (File) getInitialUpload();
             String name = asFile.getName();
@@ -80,6 +84,7 @@ public class ManipulableObject<T> {
         try {
             image = Image.getInstance(startImageFile.getName());
         } catch (BadElementException | IOException e) {
+            TTrainParser.getDebugManager().handle(e);
             e.printStackTrace();
 
         }
@@ -91,6 +96,7 @@ public class ManipulableObject<T> {
             writer = PdfWriter.getInstance(document, new FileOutputStream(outputFile));
             activeFiles.add(outputFile);
         } catch (FileNotFoundException | DocumentException e) {
+            TTrainParser.getDebugManager().handle(e);
             e.printStackTrace();
         }
         Rectangle rec = new Rectangle(0, 0, image.getWidth(), image.getHeight()); //Document size is always same size as image being inserted, minimizes blurryness
@@ -102,6 +108,7 @@ public class ManipulableObject<T> {
             document.add(image);
             document.close();
         } catch (Exception e) {
+            TTrainParser.getDebugManager().handle(e);
             e.printStackTrace();
         }
         writer.close();
