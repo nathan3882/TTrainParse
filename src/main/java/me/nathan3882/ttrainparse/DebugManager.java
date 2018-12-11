@@ -17,15 +17,14 @@ public class DebugManager {
         this.runtime = runtime;
 
         Date date = new Date(runtime);
-        fullFileName += date.getDay() + "." + date.getMonth() + "  " + date.getHours() + "." + date.getMinutes() + "." + date.getSeconds();
+        fullFileName = date.getDay() + "." + date.getMonth() + "  " + date.getHours() + "." + date.getMinutes() + "." + date.getSeconds();
         fullFileName += ".log";
         this.file = new File(fullFileName);
         if (!file.exists()) {
             try {
                 file.createNewFile();
             } catch (IOException e) {
-                TTrainParser.getDebugManager().handle(e);
-                System.out.println("Can't write to directory, is jar in restricted environment? Did you run as administrator?");
+                TTrainParser.getDebugManager().handle(e, "Can't write to directory, is jar in restricted environment? Did you run as administrator?");
                 e.printStackTrace();
             }
         }
@@ -71,7 +70,6 @@ public class DebugManager {
         StackTraceElement[] st = e.getStackTrace();
         writeLine("----------");
         for (StackTraceElement ste : st) {
-            System.out.println("-");
             writeLine(String.valueOf(e.getCause()));
             writeLine("was caused at line number '" + ste.getLineNumber() + "'");
             writeLine("in class " + ste.getClassName());
@@ -86,8 +84,7 @@ public class DebugManager {
             this.writer.write(string);
             this.writer.newLine();
         } catch (IOException e) {
-            TTrainParser.getDebugManager().handle(e);
-            System.out.println("Can't write to directory, is jar in restricted environment? Did you run as administrator?");
+            TTrainParser.getDebugManager().handle(e, "Can't write to directory, is jar in restricted environment? Did you run as administrator?");
             e.printStackTrace();
         }
     }
@@ -98,8 +95,7 @@ public class DebugManager {
             writer.append(string);
             closeWriter();
         } catch (IOException e) {
-            TTrainParser.getDebugManager().handle(e);
-            System.out.println("Can't write to directory, is jar in restricted environment? Did you run as administrator?");
+            TTrainParser.getDebugManager().handle(e, "Can't write to directory, is jar in restricted environment? Did you run as administrator?");
             e.printStackTrace();
         }
     }
