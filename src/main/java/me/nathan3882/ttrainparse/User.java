@@ -26,7 +26,6 @@ public class User {
         this.connection = main.getSqlConnection();
     }
 
-    //TODO What's a clean way to check if a record / row exists?
     public boolean hasSqlEntry(String table) {
         if (!hasInternet() || !main.getSqlConnection().connectionEstablished()) return false;
         SqlQuery query = new SqlQuery(main.getSqlConnection());
@@ -135,7 +134,6 @@ public class User {
 
     public boolean hasOcrTextStored(DayOfWeek day) {
         if (!hasInternet() || !main.getSqlConnection().connectionEstablished() || !hasSqlEntry(SqlConnection.SqlTableName.TIMETABLE_LESSONS)) {
-            System.out.println("no int");
             return false;
         }
         boolean hasEntry = false;
