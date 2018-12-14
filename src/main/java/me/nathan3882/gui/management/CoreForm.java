@@ -68,12 +68,14 @@ public class CoreForm extends MessageDisplay {
                 segment = false;
             } else store = true;
         }
-
-        if (isUpdating || segment) {
-            Segmentation segmentation = new Segmentation(main);
-            List<LessonInfo> info = getLessonInformation(segmentation, showThese, store);
-            mainString = getStringToDisplay(info);
-        }
+        if (mainInstance.hasTeachersFile()) {
+            if (isUpdating || segment) {
+                Segmentation segmentation = new Segmentation(main);
+                List<LessonInfo> info = getLessonInformation(segmentation, showThese, store);
+                mainString = getStringToDisplay(info);
+            }
+        } else
+            mainString.append("There has been an issue with your teachers file configuration").append("does the file exist?"); //TODO
         mainString.append("</center></html>");
         mainInfoLabel.setText(mainString.toString());
     }
