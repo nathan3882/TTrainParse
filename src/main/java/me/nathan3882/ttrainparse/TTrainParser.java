@@ -16,11 +16,10 @@ import java.awt.*;
 import java.awt.image.BufferedImage;
 import java.io.*;
 import java.net.URL;
-import java.net.UnknownHostException;
-import java.util.*;
+import java.nio.file.Files;
+import java.nio.file.StandardCopyOption;
 import java.util.List;
-import java.util.Timer;
-import java.util.concurrent.TimeUnit;
+import java.util.*;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -62,13 +61,16 @@ public class TTrainParser extends MessageDisplay {
 
     private SqlConnection sqlConnection;
 
-    private TaskManager closeConnectionTask;
-
     private User user;
     private boolean hasInternet = false;
+    private static DebugManager debugManager;
 
     public static void main(String[] args) {
-        mainInst.sqlConnection = new SqlConnection(mainInst);
+
+        DebugManager debugManager = new DebugManager(System.currentTimeMillis());
+        mainInst.debugManager = debugManager;
+
+        mainInst.sqlConnection = mainInst.getNewSqlConnection();
 
         mainInst.user = new User(mainInst, "");
         String ip = fetchIp();
@@ -78,20 +80,6 @@ public class TTrainParser extends MessageDisplay {
 
         LoginRegisterForm reg = new LoginRegisterForm(mainInst);
         addPanelToCard(reg.getPanel(), LOGIN_REGISTER_PANEL);
-
-        mainInst.closeConnectionTask = new TaskManager(new Timer()) {
-            @Override
-            public void run() {
-                long current = System.currentTimeMillis();
-                long lastOpen = SqlConnection.getLatestOpeningMilis();
-                if (mainInst.getSqlConnection().isOpen() &&
-                        current - lastOpen >= TimeUnit.SECONDS.toMillis(150)) { //Close after 2 and 1/2 minutes
-                    mainInst.getSqlConnection().closeConnection();
-                    SqlConnection.setLatestOpeningMilis(current); //Will be 0, condition will fail unless has been opened again
-                }
-            }
-        };
-        mainInst.closeConnectionTask.runTaskSynchronously(mainInst.closeConnectionTask, 5000L, 5000L);
 
         mainInst.getSqlConnection().openConnection();
         String timetableLessons = SqlConnection.SqlTableName.TIMETABLE_LESSONS;
@@ -104,6 +92,24 @@ public class TTrainParser extends MessageDisplay {
         initFrame("TTrainParser");
     }
 
+    private SqlConnection getNewSqlConnection() {
+        return new SqlConnection(mainInst);
+    }
+
+    private static File generateTeachersFile() {
+        File newTeacherFile = null;
+        try {
+            ClassLoader classLoader = Thread.currentThread().getContextClassLoader();
+            InputStream is = classLoader.getResourceAsStream("Teacher Names.txt");
+            System.out.println("nully = " + is == null);
+            newTeacherFile = new File(USER_DIRECTORY_FILE_SEP + "Teacher Names.txt");
+            Files.copy(is, newTeacherFile.toPath(), StandardCopyOption.REPLACE_EXISTING);
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+        return newTeacherFile;
+    }
+
     private static void generateDataFile() {
         DataFileInfo info = new DataFileInfo();
         info.setDefaults();
@@ -113,6 +119,7 @@ public class TTrainParser extends MessageDisplay {
             writer.write(info); //writes previously collected data about jpg & pdf file names
             writer.close();
         } catch (IOException | YamlException e) {
+            TTrainParser.getDebugManager().handle(e);
             e.printStackTrace();
         }
     }
@@ -129,11 +136,15 @@ public class TTrainParser extends MessageDisplay {
         Map<String, String[]> subjectNamesWithMultipleTeachers = new HashMap<>();
         String fileName = "Teacher Names.txt";
         File file = new File(USER_DIRECTORY_FILE_SEP + fileName);
+        if (!hasTeachersFile()) {
+            generateTeachersFile();
+        }
+        if (!hasTeachersFile()) return null;
         BufferedReader reader = null;
-
         try {
             reader = new BufferedReader(new FileReader(file));
         } catch (FileNotFoundException e) {
+            TTrainParser.getDebugManager().handle(e);
             e.printStackTrace();
         }
 
@@ -146,6 +157,7 @@ public class TTrainParser extends MessageDisplay {
                     break;
                 }
             } catch (IOException e) {
+                TTrainParser.getDebugManager().handle(e);
                 e.printStackTrace();
             }
             /**Following Strings are for Readability**/
@@ -192,11 +204,9 @@ public class TTrainParser extends MessageDisplay {
             String ip = reader.readLine();
             mainInst.getUser().setIp(ip);
             return ip;
-        } catch (UnknownHostException exception) {
+        } catch (Exception e) {
+            TTrainParser.getDebugManager().handle(e, "No Internet???");
             mainInst.hasInternet = false;
-        } catch (IOException e) {
-            mainInst.hasInternet = false;
-            e.printStackTrace();
         }
         return null;
     }
@@ -210,6 +220,10 @@ public class TTrainParser extends MessageDisplay {
 
     public static ITesseract getTesseractInstance() {
         return tesseractInstance;
+    }
+
+    public static DebugManager getDebugManager() {
+        return debugManager;
     }
 
     public TablePart getTableType(String rgbString) {
@@ -256,6 +270,7 @@ public class TTrainParser extends MessageDisplay {
             reader = new YamlReader(new FileReader(USER_DIRECTORY_FILE_SEP + "data.yml"));
             info = reader.read(DataFileInfo.class);
         } catch (FileNotFoundException | YamlException e) {
+            TTrainParser.getDebugManager().handle(e);
             e.printStackTrace();
         }
 
@@ -273,10 +288,12 @@ public class TTrainParser extends MessageDisplay {
         try {
             reader = new YamlReader(new FileReader(USER_DIRECTORY_FILE_SEP + "data.yml"));
             info = reader.read(DataFileInfo.class);
-        } catch (FileNotFoundException e) {
+        } catch (FileNotFoundException | NullPointerException e) {
+            TTrainParser.getDebugManager().handle(e);
             generateDataFile();
             return hasCroppedTimetableFileAlready(trueForPNG);
         } catch (YamlException e) {
+            TTrainParser.getDebugManager().handle(e);
             e.printStackTrace();
             return false;
         }
@@ -416,5 +433,10 @@ public class TTrainParser extends MessageDisplay {
 
     public User getUser() {
         return this.user;
+    }
+
+    public static boolean hasTeachersFile() {
+        File file = new File(USER_DIRECTORY_FILE_SEP + "Teacher Names.txt");
+        return file.exists();
     }
 }
