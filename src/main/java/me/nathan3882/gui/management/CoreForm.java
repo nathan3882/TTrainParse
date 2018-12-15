@@ -185,7 +185,12 @@ public class CoreForm extends MessageDisplay {
 
             List<String> words = new LinkedList<>(Arrays.asList(ocrText.split(" ")));
 
-            info.add(new LessonInfo(words, day));
+            LessonInfo lessonInfo = new LessonInfo(words, day);
+            if (!lessonInfo.isParsedSuccessfully()) {
+                displayMessage("Sorry, timetable can not be parsed. Did your configure Teacher Names.txt? Perhaps the screenshot came from another monitor, or was too small");
+                mainInstance.updateTimetableUpload();
+            }
+            info.add(lessonInfo);
             mFile.deleteAllMade();
         }
         if (doTask) {

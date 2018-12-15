@@ -86,7 +86,7 @@ public class WelcomeForm extends MessageDisplay {
                         successfullyParsed = timetable.successfullyParsed();
                         if (!successfullyParsed) {
                             resetWelcomeButtons();
-                            displayMessage("We've detected that's an invalid file!");
+                            displayMessage("Error occurred while cropping borders.");
                             return;
                         }
 
@@ -121,7 +121,7 @@ public class WelcomeForm extends MessageDisplay {
                     }
 
                     if (!successfullyParsed) { //Terminate
-                        displayMessage("Parsing was not successful! Does the provided image contain timetable borders?");
+                        displayMessage("Parsing was not successfull! Does the provided image contain timetable borders?");
                         return;
                     } else { //Update data file
 

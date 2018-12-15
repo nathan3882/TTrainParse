@@ -20,6 +20,7 @@ public class LessonInfo {
     private Map<String, LinkedList<LocalTime>> orderedSubjectFinishTimes = new LinkedHashMap<>();
     private String lastLesson;
     private String firstLesson;
+    private boolean parsedSuccessfully = true;
 
     public LessonInfo(List<String> words, DayOfWeek dayOfWeek) {
         this.dayOfWeek = dayOfWeek;
@@ -27,8 +28,14 @@ public class LessonInfo {
         Map<String, List<String>> subjectAndBounds = getBoundsForSubjects(words);
 
         for (String subject : subjectAndBounds.keySet()) {
-            storeStartEndTimes(subject, words, subjectAndBounds,
-                    orderedSubjectStartTimes, orderedSubjectFinishTimes);
+            try {
+                storeStartEndTimes(subject, words, subjectAndBounds,
+                        orderedSubjectStartTimes, orderedSubjectFinishTimes);
+            } catch (Exception exception) {
+                this.setParsedSuccessfully(false);
+                exception.printStackTrace();
+                return;
+            }
         }
 
         try {
@@ -143,4 +150,11 @@ public class LessonInfo {
         return this.dayOfWeek;
     }
 
+    public void setParsedSuccessfully(boolean parsedSuccessfully) {
+        this.parsedSuccessfully = parsedSuccessfully;
+    }
+
+    public boolean isParsedSuccessfully() {
+        return parsedSuccessfully;
+    }
 }
