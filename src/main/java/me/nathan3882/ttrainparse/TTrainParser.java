@@ -163,8 +163,9 @@ public class TTrainParser extends MessageDisplay {
             /**Following Strings are for Readability**/
             String subjectName = subjectWithTeachers;
             String[] value = new String[3];
-            if (subjectWithTeachers.contains(" - ")) {
-                String[] mainSplit = subjectWithTeachers.split(" - ");
+            String midString = " --- ";
+            if (subjectWithTeachers.contains(midString)) {
+                String[] mainSplit = subjectWithTeachers.split(midString);
                 subjectName = mainSplit[0];
                 String potentialTeachers = mainSplit[1];
 
