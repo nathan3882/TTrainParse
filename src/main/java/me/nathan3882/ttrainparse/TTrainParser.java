@@ -440,4 +440,9 @@ public class TTrainParser extends MessageDisplay {
         File file = new File(USER_DIRECTORY_FILE_SEP + "Teacher Names.txt");
         return file.exists();
     }
+
+    public void updateTimetableUpload() {
+        welcomeForm.setUpdating(true);
+        openPanel(TTrainParser.WELCOME_PANEL);
+    }
 }
