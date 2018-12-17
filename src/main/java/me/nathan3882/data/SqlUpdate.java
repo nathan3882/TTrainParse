@@ -15,6 +15,11 @@ public class SqlUpdate {
     public SqlUpdate(SqlConnection sqlConnection) {
         this.main = sqlConnection.getTTrainParser();
         this.connection = sqlConnection.getConnection();
+        try {
+            if (connection.isClosed()) sqlConnection.openConnection();
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
     }
 
     /**

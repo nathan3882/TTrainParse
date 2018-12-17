@@ -23,9 +23,14 @@ public class SqlQuery {
     public SqlQuery(SqlConnection cction) {
         this.main = cction.getTTrainParser();
         this.connection = cction.getConnection();
+        try {
+            if (connection.isClosed()) cction.openConnection();
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
     }
 
-    public SqlQuery executeQuery(String sql, String name) {
+    public ResultSet executeQuery(String sql, String name) {
         if (main.hasInternet() && main.getSqlConnection().connectionEstablished()) {
             if (resultSet != null) {
                 close();
@@ -40,7 +45,7 @@ public class SqlQuery {
                 e.printStackTrace();
             }
         }
-        return this;
+        return this.resultSet;
     }
 
 

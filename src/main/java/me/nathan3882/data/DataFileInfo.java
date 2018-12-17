@@ -26,8 +26,8 @@ public class DataFileInfo {
     }
 
     public void setDefaults() {
-        setTimetableCroppedPngFileName("");
-        setEmail("");
-        setTimetableCroppedPdfFileName("");
+        setTimetableCroppedPngFileName("{NOT BEEN SET}");
+        setEmail("{NOT BEEN SET}");
+        setTimetableCroppedPdfFileName("{NOT BEEN SET}");
     }
 }

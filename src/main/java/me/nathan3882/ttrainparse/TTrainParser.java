@@ -72,8 +72,8 @@ public class TTrainParser extends MessageDisplay {
 
         mainInst.sqlConnection = mainInst.getNewSqlConnection();
 
-        mainInst.user = new User(mainInst, "");
-        String ip = fetchIp();
+
+        fetchIp(); //
 
         WelcomeForm wForm = new WelcomeForm(mainInst, false);
         addPanelToCard(wForm.getPanel(), WELCOME_PANEL);
@@ -83,10 +83,22 @@ public class TTrainParser extends MessageDisplay {
 
         mainInst.getSqlConnection().openConnection();
         String timetableLessons = SqlConnection.SqlTableName.TIMETABLE_LESSONS;
+        boolean hasLocallyStoredEmail = mainInst.hasLocallyStoredEmail();
 
-        if (mainInst.hasCroppedTimetableFileAlready(true) || mainInst.user.hasSqlEntry(timetableLessons)) {
-            mainInst.openPanel(CORE_PANEL);
+        if (hasLocallyStoredEmail) {
+            mainInst.user = new User(mainInst, mainInst.getLocallyStoredEmail());
         } else {
+            mainInst.user = new User(mainInst, "");
+        }
+        boolean hasSql = mainInst.user.hasSqlEntry(timetableLessons);
+        boolean hasCroppedTimetableFileAlready = mainInst.hasCroppedTimetableFileAlready(true);
+        System.out.println("hlse " + hasLocallyStoredEmail);
+        System.out.println("has sql = " + hasSql);
+        System.out.println("hasCroppedTimetableFileAlready = " + hasCroppedTimetableFileAlready);
+        if (hasCroppedTimetableFileAlready || hasLocallyStoredEmail || hasSql) {
+            mainInst.openPanel(LOGIN_REGISTER_PANEL);
+        } else {
+            mainInst.user = new User(mainInst, "");
             mainInst.openPanel(WELCOME_PANEL);
         }
         initFrame("TTrainParser");
@@ -195,6 +207,7 @@ public class TTrainParser extends MessageDisplay {
         frame.setVisible(true);
     }
 
+
     private static String fetchIp() {
         BufferedReader reader = null;
         try {
@@ -203,7 +216,6 @@ public class TTrainParser extends MessageDisplay {
                     amazonWS.openStream()));
             mainInst.hasInternet = true;
             String ip = reader.readLine();
-            mainInst.getUser().setIp(ip);
             return ip;
         } catch (Exception e) {
             TTrainParser.getDebugManager().handle(e, "No Internet???");
@@ -262,44 +274,39 @@ public class TTrainParser extends MessageDisplay {
         return selected.getName().split("\\.")[1];
     }
 
+
+    public void doDatafileChecks() {
+        boolean fileExists = new File(TTrainParser.USER_DIRECTORY_FILE_SEP + "data.yml").exists();
+        if (!fileExists) generateDataFile();
+    }
+
+
+    public String getLocallyStoredEmail() {
+        doDatafileChecks();
+        DataFileInfo info = getYamlReadDatafile();
+        return info.email;
+    }
+
+    public boolean hasLocallyStoredEmail() {
+        doDatafileChecks();
+        System.out.println("lse = " + getLocallyStoredEmail());
+        return !getLocallyStoredEmail().equals("{NOT BEEN SET}");
+    }
+
     public File getCroppedTimetableFileName(boolean trueForPNG) {
-
-        YamlReader reader = null;
-        DataFileInfo info = null;
-
-        try {
-            reader = new YamlReader(new FileReader(USER_DIRECTORY_FILE_SEP + "data.yml"));
-            info = reader.read(DataFileInfo.class);
-        } catch (FileNotFoundException | YamlException e) {
-            TTrainParser.getDebugManager().handle(e);
-            e.printStackTrace();
-        }
-
-        if (reader == null) {
-            return null;
-        }
-
-        return new File(USER_DIRECTORY_FILE_SEP + (trueForPNG ? info.timetableCroppedPngFileName : info.timetableCroppedPdfFileName));
+        doDatafileChecks();
+        DataFileInfo info = getYamlReadDatafile();
+        return info == null ? null : (new File(USER_DIRECTORY_FILE_SEP + (trueForPNG ? info.timetableCroppedPngFileName : info.timetableCroppedPdfFileName)));
     }
 
     //Recursive
     public boolean hasCroppedTimetableFileAlready(boolean trueForPNG) {
-        YamlReader reader;
-        DataFileInfo info;
-        try {
-            reader = new YamlReader(new FileReader(USER_DIRECTORY_FILE_SEP + "data.yml"));
-            info = reader.read(DataFileInfo.class);
-        } catch (FileNotFoundException | NullPointerException e) {
-            TTrainParser.getDebugManager().handle(e);
-            generateDataFile();
-            return hasCroppedTimetableFileAlready(trueForPNG);
-        } catch (YamlException e) {
-            TTrainParser.getDebugManager().handle(e);
-            e.printStackTrace();
-            return false;
-        }
+        doDatafileChecks();
+        File file = getCroppedTimetableFileName(trueForPNG);
 
-        String setFilenameInDataFile = (trueForPNG ? info.timetableCroppedPngFileName : info.timetableCroppedPdfFileName);
+        if (file == null) return false;
+
+        String setFilenameInDataFile = getCroppedTimetableFileName(trueForPNG).getName();
 
         File[] files = new File(USER_DIRECTORY).listFiles();
 
@@ -444,5 +451,28 @@ public class TTrainParser extends MessageDisplay {
     public void updateTimetableUpload() {
         welcomeForm.setUpdating(true);
         openPanel(TTrainParser.WELCOME_PANEL);
+    }
+
+    public DataFileInfo getYamlReadDatafile() {
+        DataFileInfo info;
+        try {
+            YamlReader reader = new YamlReader(new FileReader(TTrainParser.USER_DIRECTORY_FILE_SEP + "data.yml"));
+            info = reader.read(DataFileInfo.class);
+        } catch (FileNotFoundException | YamlException exception) {
+            exception.printStackTrace();
+            info = null; //for easier comparison in future, if null then something has gone wrong & regenerate
+        }
+        return info;
+    }
+
+    public void writeToDatafile(DataFileInfo info) {
+        YamlWriter writer;
+        try { //TODO Store System current millis for the time which the user had first timetable parsed
+            writer = new YamlWriter(new FileWriter(TTrainParser.USER_DIRECTORY_FILE_SEP + "data.yml"));
+            writer.write(info); //writes previously collected data about jpg & pdf file names
+            writer.close();
+        } catch (IOException | YamlException e1) {
+            e1.printStackTrace();
+        }
     }
 }

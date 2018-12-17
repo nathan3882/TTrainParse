@@ -16,31 +16,32 @@ import java.util.concurrent.TimeUnit;
 public class User {
 
     public static final long DEFAULT_RENEW_COOLDOWN_DAYS = 7;
-    private String userIp;
     private final TTrainParser main;
     private final SqlConnection connection;
+    private String userEmail;
 
-    public User(TTrainParser main, String userIp) {
+    public User(TTrainParser main, String userEmail) {
         this.main = main;
-        this.userIp = userIp;
+        this.userEmail = userEmail;
         this.connection = main.getSqlConnection();
     }
 
     public boolean hasSqlEntry(String table) {
         if (!hasInternet() || !main.getSqlConnection().connectionEstablished()) return false;
         SqlQuery query = new SqlQuery(main.getSqlConnection());
-        query.executeQuery("SELECT * FROM {table} WHERE userIp = '" + getUserIp() + "'", table);
-        return query.next(false);
+        query.executeQuery("SELECT * FROM {table} WHERE userEmail = '" + getUserEmail() + "'", table);
+        boolean has = query.next(false);
+
+        return has;
     }
 
-
-    public String getUserIp() {
-        return this.userIp;
+    public String getUserEmail() {
+        return this.userEmail;
     }
 
     public long getPreviousUploadTime() {
         SqlQuery query = new SqlQuery(connection);
-        String str = "SELECT lastRenewMillis FROM {table} WHERE userIp = '" + getUserIp() + "'";
+        String str = "SELECT lastRenewMillis FROM {table} WHERE userEmail = '" + getUserEmail() + "'";
         ResultSet result = query.getResultSet(str,
                 SqlConnection.SqlTableName.TIMETABLE_RENEWAL);
         long previousUploadTime = 0L;
@@ -57,18 +58,17 @@ public class User {
 
     public void setTableUpdatesLeft(int number) {
         SqlUpdate update = new SqlUpdate(connection);
-        update.executeUpdate("UPDATE {table} SET renewsLeft = '" + number + "' WHERE userIp = '" + getUserIp() + "'",
+        update.executeUpdate("UPDATE {table} SET renewsLeft = '" + number + "' WHERE userEmail = '" + getUserEmail() + "'",
                 SqlConnection.SqlTableName.TIMETABLE_RENEWAL);
     }
 
     public int getTableUpdatesLeft() {
         SqlQuery query = new SqlQuery(connection);
 
-        ResultSet result = query.getResultSet("SELECT renewsLeft FROM {table} WHERE userIp = '" + getUserIp() + "'",
+        ResultSet result = query.getResultSet("SELECT renewsLeft FROM {table} WHERE userEmail = '" + getUserEmail() + "'",
                 SqlConnection.SqlTableName.TIMETABLE_RENEWAL);
 
         query.next(false);
-
         int left = query.getInt(1);
 
         query.close();
@@ -86,7 +86,7 @@ public class User {
 
             String dayName = day.name();
 
-            query.executeQuery("SELECT " + dayName + " FROM {table} WHERE userIp = '" + getUserIp() + "'",
+            query.executeQuery("SELECT " + dayName + " FROM {table} WHERE userEmail = '" + getUserEmail() + "'",
                     SqlConnection.SqlTableName.TIMETABLE_LESSONS);
 
             String depletedOcrText = "";
@@ -106,14 +106,14 @@ public class User {
 
     public void setPreviousUploadTime(long currentTimeMillis) {
         SqlUpdate update = new SqlUpdate(connection);
-        update.executeUpdate("UPDATE {table} SET lastRenewMillis = '" + currentTimeMillis + "' WHERE userIp = '" + getUserIp() + "'",
+        update.executeUpdate("UPDATE {table} SET lastRenewMillis = '" + currentTimeMillis + "' WHERE userEmail = '" + getUserEmail() + "'",
                 SqlConnection.SqlTableName.TIMETABLE_RENEWAL);
     }
 
     public void removeEntryFromTable(String table) {
         SqlUpdate update = new SqlUpdate(connection);
 
-        String updateStr = "DELETE FROM {table} WHERE userIp = '" + getUserIp() + "'";
+        String updateStr = "DELETE FROM {table} WHERE userEmail = '" + getUserEmail() + "'";
         System.out.println(updateStr);
         update.executeUpdate(updateStr, table);
     }
@@ -122,7 +122,7 @@ public class User {
     public void generateDefaultRenewValues() {
         SqlUpdate defaultValues = new SqlUpdate(connection);
         defaultValues.executeUpdate(
-                "INSERT INTO {table} (userIp, renewsLeft, lastRenewMillis) VALUES ('" + getUserIp() + "', 3, " + System.currentTimeMillis() + ")",
+                "INSERT INTO {table} (userEmail, renewsLeft, lastRenewMillis) VALUES ('" + getUserEmail() + "', 3, " + System.currentTimeMillis() + ")",
                 SqlConnection.SqlTableName.TIMETABLE_RENEWAL);
     }
 
@@ -138,7 +138,7 @@ public class User {
         }
         boolean hasEntry = false;
         SqlQuery query = new SqlQuery(connection);
-        query.executeQuery("SELECT " + day.name() + " FROM {table} WHERE userIp = '" + getUserIp() + "'",
+        query.executeQuery("SELECT " + day.name() + " FROM {table} WHERE userEmail = '" + getUserEmail() + "'",
                 SqlConnection.SqlTableName.TIMETABLE_LESSONS);
 
         if (query.next(false)) {
@@ -164,10 +164,10 @@ public class User {
             connection.openConnection();
             SqlUpdate storeUpdate = new SqlUpdate(connection);
             if (hasOcrTextStored(day)) {
-                storeUpdate.executeUpdate("UPDATE {table} SET " + day.name() + " = \"" + ocrText + "\"" + " WHERE userIp = \"" + getUserIp() + "\"",
+                storeUpdate.executeUpdate("UPDATE {table} SET " + day.name() + " = \"" + ocrText + "\"" + " WHERE userEmail = \"" + getUserEmail() + "\"",
                         SqlConnection.SqlTableName.TIMETABLE_LESSONS);
             } else {
-                storeUpdate.executeUpdate("INSERT INTO {table} (userIp, " + day.name() + ") VALUES (\"" + getUserIp() + "\", \"" + ocrText + "\")",
+                storeUpdate.executeUpdate("INSERT INTO {table} (userEmail, " + day.name() + ") VALUES (\"" + getUserEmail() + "\", \"" + ocrText + "\")",
                         SqlConnection.SqlTableName.TIMETABLE_LESSONS);
             }
         }
@@ -177,8 +177,27 @@ public class User {
         return main.hasInternet();
     }
 
-    public void setIp(String fetchIp) {
-        this.userIp = fetchIp;
+    public void setEmail(String userEmail) {
+        this.userEmail = userEmail;
     }
 
+    public String getPasswordFromSql() throws UnsupportedOperationException {
+        if (hasSqlEntry(SqlConnection.SqlTableName.TIMETABLE_USERDATA)) {
+            SqlQuery query = new SqlQuery(main.getSqlConnection());
+            query.executeQuery("SELECT password from {table} WHERE userEmail = '" + getUserEmail() + "'",
+                    SqlConnection.SqlTableName.TIMETABLE_USERDATA);
+            query.next(false);
+            int one = query.getInt(1);
+            System.out.println("pw = " + one);
+            return String.valueOf(one);
+        }
+        return "invalid email";
+    }
+
+    public void storeEmailAndPassword(String email, String password) {
+        SqlUpdate update = new SqlUpdate(main.getSqlConnection());
+        update.executeUpdate("INSERT INTO {table} (userEmail, password) VALUES (\"" + getUserEmail() + "\", \"" + password + "\")",
+                SqlConnection.SqlTableName.TIMETABLE_USERDATA);
+
+    }
 }

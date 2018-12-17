@@ -79,6 +79,7 @@ public class WelcomeForm extends MessageDisplay {
 
 
                     DataFileInfo info = new DataFileInfo();
+                    info.setDefaults();
 
                     if (isUpdating() || !main.hasCroppedTimetableFileAlready(false)) { //is updating or hasn't got a pdf
                         start = System.currentTimeMillis();

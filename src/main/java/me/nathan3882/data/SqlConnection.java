@@ -37,6 +37,7 @@ public class SqlConnection {
     public interface SqlTableName {
         String TIMETABLE_RENEWAL = "timetablerenewal";
         String TIMETABLE_LESSONS = "timetablelessons";
+        String TIMETABLE_USERDATA = "timetableuserdata";
     }
 
     private String host = "localhost";

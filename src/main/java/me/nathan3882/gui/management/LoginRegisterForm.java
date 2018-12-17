@@ -3,16 +3,9 @@ package me.nathan3882.gui.management;
 import me.nathan3882.data.DataFileInfo;
 import me.nathan3882.ttrainparse.MessageDisplay;
 import me.nathan3882.ttrainparse.TTrainParser;
-import net.sourceforge.yamlbeans.YamlException;
-import net.sourceforge.yamlbeans.YamlReader;
-import net.sourceforge.yamlbeans.YamlWriter;
 
 import javax.swing.*;
 import java.awt.event.*;
-import java.io.FileNotFoundException;
-import java.io.FileReader;
-import java.io.FileWriter;
-import java.io.IOException;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -23,51 +16,80 @@ public class LoginRegisterForm extends MessageDisplay {
     private String startingEmailTextFieldText;
     private JLabel aboveEverythingLabel;
     private JButton advanceToTrainsButton;
+    private JPasswordField sixDigitPwField;
+    private JLabel passwordHelpLabel;
+    private JLabel emailHelpLabel;
     private TTrainParser mainInstance;
 
     public LoginRegisterForm(TTrainParser mainInstance) {
         this.mainInstance = mainInstance;
         mainInstance.loginRegisterForm = this;
+        if (mainInstance.hasLocallyStoredEmail()) {
+            aboveEverythingLabel.setText("<html><center>Welcome<br>You've probably already stored your timetable<br>please login below using your previously created account</center></html>");
+        }
+        emailHelpLabel.setText("<html><center>Your email goes below</center></html>");
+        passwordHelpLabel.setText("<html><center>Your six digit password goes below<br>Note: These 6 digits will allow you to use the phone app too!</center></html>");
         advanceToTrainsButton.setEnabled(true);
 
         emailTextField.addMouseListener(getMouseListener());
-        advanceToTrainsButton.addActionListener(getActionListener());
+        advanceToTrainsButton.addActionListener(getAdvanceToTrainsBtnListener());
 
     }
 
-    private ActionListener getActionListener() {
+    private ActionListener getAdvanceToTrainsBtnListener() {
         return new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent e) {
                 String emailText = emailTextField.getText();
+                char[] pw = sixDigitPwField.getPassword();
+                String enteredPassword = new String(pw);
                 if (isValidEmailAddress(emailText)) {
-                    DataFileInfo info = new DataFileInfo();
-                    YamlReader reader = null;
-                    try {
-                        reader = new YamlReader(new FileReader(TTrainParser.USER_DIRECTORY_FILE_SEP + "data.yml"));
-                        info = reader.read(DataFileInfo.class);
-                    } catch (FileNotFoundException | YamlException exception) {
-                        exception.printStackTrace();
+                    if (isValidPasscode(pw)) {
+                        mainInstance.doDatafileChecks();
+                        mainInstance.getUser().setEmail(emailText);
+                        if (mainInstance.hasInternet() && mainInstance.getSqlConnection().connectionEstablished()) {
+                            DataFileInfo info = mainInstance.getYamlReadDatafile();
+                            if (info == null) return; //Safety, preventing exceptions
+                            if (!mainInstance.hasLocallyStoredEmail()) { //essentially havent made an acc yet
+                                //create an account
+                                info.setEmail(emailText);
+                                info.setTimetableCroppedPngFileName(info.timetableCroppedPngFileName);
+                                mainInstance.writeToDatafile(info);
+                                mainInstance.getUser().storeEmailAndPassword(emailText, enteredPassword); //TODO
+                            } else {
+                                String sqlPassword = mainInstance.getUser().getPasswordFromSql();
+                                if (sqlPassword.equals("invalid email")) { //= 'invalid email' when record doesnt exists
+                                    displayMessage("This email is incorrect!");
+                                    return;
+                                } else if (!enteredPassword.equals(sqlPassword)) {
+                                    displayMessage("This password is incorrect!");
+                                    return;
+                                }
+                            }
+                            displayMessage("Successfully authenticated!");
+                            mainInstance.openPanel(TTrainParser.CORE_PANEL);
+                        } else {
+                            displayMessage("You need internet in order to create an account or login with us!");
+                        }
+                    } else {
+                        displayMessage("Passcode must be SIX NUMBERS eg 123456 or 593412");
                     }
-                    if (reader == null) return;
-
-                    info.setEmail(emailText);
-                    info.setTimetableCroppedPngFileName(info.timetableCroppedPngFileName);
-
-                    YamlWriter writer = null;
-                    try { //TODO Store System current millis for the time which the user had first timetable parsed
-                        writer = new YamlWriter(new FileWriter(TTrainParser.USER_DIRECTORY_FILE_SEP + "data.yml"));
-                        writer.write(info); //writes previously collected data about jpg & pdf file names
-                        writer.close();
-                    } catch (IOException | YamlException e1) {
-                        e1.printStackTrace();
-                    }
-                    mainInstance.openPanel(TTrainParser.CORE_PANEL);
                 } else {
                     displayMessage("'" + emailText + "'\nis not a valid email!");
                 }
             }
         };
+    }
+
+    private boolean isValidPasscode(char[] password) {
+        if (password.length != 6) return false;
+        for (int i = 0; i < password.length; i++) {
+            char charAt = password[i];
+            if (!Character.isDigit(charAt)) {
+                return false;
+            }
+        }
+        return true;
     }
 
     private MouseListener getMouseListener() {
