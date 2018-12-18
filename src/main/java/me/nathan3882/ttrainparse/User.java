@@ -27,8 +27,8 @@ public class User {
     }
 
     public boolean hasSqlEntry(String table) {
-        if (!hasInternet() || !main.getSqlConnection().connectionEstablished()) return false;
-        SqlQuery query = new SqlQuery(main.getSqlConnection());
+        if (!hasInternet() || !connection.connectionEstablished()) return false;
+        SqlQuery query = new SqlQuery(connection);
         query.executeQuery("SELECT * FROM {table} WHERE userEmail = '" + getUserEmail() + "'", table);
         boolean has = query.next(false);
 
@@ -133,7 +133,7 @@ public class User {
     }
 
     public boolean hasOcrTextStored(DayOfWeek day) {
-        if (!hasInternet() || !main.getSqlConnection().connectionEstablished() || !hasSqlEntry(SqlConnection.SqlTableName.TIMETABLE_LESSONS)) {
+        if (!hasInternet() || !connection.connectionEstablished() || !hasSqlEntry(SqlConnection.SqlTableName.TIMETABLE_LESSONS)) {
             return false;
         }
         boolean hasEntry = false;
@@ -160,7 +160,7 @@ public class User {
     }
 
     public void storeOcrText(String ocrText, DayOfWeek day, boolean hasInternet) {
-        if (hasInternet && main.getSqlConnection().connectionEstablished()) {
+        if (hasInternet && connection.connectionEstablished()) {
             connection.openConnection();
             SqlUpdate storeUpdate = new SqlUpdate(connection);
             if (hasOcrTextStored(day)) {
@@ -191,7 +191,7 @@ public class User {
             System.out.println("pw = " + one);
             return String.valueOf(one);
         }
-        return "invalid email";
+        return null;
     }
 
     public void storeEmailAndPassword(String email, String password) {
