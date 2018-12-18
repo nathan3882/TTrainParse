@@ -1,6 +1,7 @@
 package me.nathan3882.gui.management;
 
 import me.nathan3882.data.DataFileInfo;
+import me.nathan3882.data.Encryption;
 import me.nathan3882.ttrainparse.MessageDisplay;
 import me.nathan3882.ttrainparse.TTrainParser;
 
@@ -55,13 +56,23 @@ public class LoginRegisterForm extends MessageDisplay {
                                 info.setEmail(emailText);
                                 info.setTimetableCroppedPngFileName(info.timetableCroppedPngFileName);
                                 mainInstance.writeToDatafile(info);
-                                mainInstance.getUser().storeEmailAndPassword(emailText, enteredPassword); //TODO
+
+                                Encryption encry = new Encryption(enteredPassword, Encryption.generateSalt());
+                                byte[] databaseSalt = encry.getSalt();
+                                byte[] databaseBytes = encry.getOriginalEncrypted();
+                                mainInstance.getUser().storeEmailAndPassword(emailText, databaseBytes, databaseSalt);
                             } else {
-                                String sqlPassword = mainInstance.getUser().getPasswordFromSql();
-                                if (sqlPassword.equals("invalid email")) { //= 'invalid email' when record doesnt exists
+                                String encryptedSqlPwBytes = mainInstance.getUser().getDatabaseStoredPwBytes(emailText);
+                                String gottenDBSalt = mainInstance.getUser().getDatabaseSalt(emailText);
+                                String gottenDBBytes = mainInstance.getUser().getDatabaseStoredPwBytes(emailText);
+
+                                if (encryptedSqlPwBytes.equals("invalid email")) { //= 'invalid email' when record doesnt exists
                                     displayMessage("This email is incorrect!");
                                     return;
-                                } else if (!enteredPassword.equals(sqlPassword)) {
+                                }
+
+                                boolean authenticated = Encryption.authenticate(enteredPassword, gottenDBBytes, gottenDBSalt);
+                                if (!authenticated) {
                                     displayMessage("This password is incorrect!");
                                     return;
                                 }

@@ -181,23 +181,40 @@ public class User {
         this.userEmail = userEmail;
     }
 
-    public String getPasswordFromSql() throws UnsupportedOperationException {
-        if (hasSqlEntry(SqlConnection.SqlTableName.TIMETABLE_USERDATA)) {
-            SqlQuery query = new SqlQuery(main.getSqlConnection());
-            query.executeQuery("SELECT password from {table} WHERE userEmail = '" + getUserEmail() + "'",
-                    SqlConnection.SqlTableName.TIMETABLE_USERDATA);
-            query.next(false);
-            int one = query.getInt(1);
-            System.out.println("pw = " + one);
-            return String.valueOf(one);
+    public String getDatabaseStoredPwBytes(String email) {
+        SqlQuery query = new SqlQuery(connection);
+        query.executeQuery("SELECT password FROM {table} WHERE userEmail = '" + email + "'",
+                SqlConnection.SqlTableName.TIMETABLE_USERDATA);
+        ResultSet set = query.getResultSet();
+        try {
+            if (!set.next()) return "invalid email";
+            return set.getString(1);
+        } catch (SQLException e) {
+            e.printStackTrace();
         }
         return null;
     }
 
-    public void storeEmailAndPassword(String email, String password) {
-        SqlUpdate update = new SqlUpdate(main.getSqlConnection());
-        update.executeUpdate("INSERT INTO {table} (userEmail, password) VALUES (\"" + getUserEmail() + "\", \"" + password + "\")",
+    public void storeEmailAndPassword(String email, byte[] password, byte[] salt) {
+        SqlUpdate update = new SqlUpdate(connection);
+        String valPw = new String(password);
+        String valSalt = new String(salt);
+        update.executeUpdate("INSERT INTO {table} (userEmail, password, salt) VALUES (\"" + email + "\", \"" + valPw + "\", \"" + valSalt + "\")",
                 SqlConnection.SqlTableName.TIMETABLE_USERDATA);
 
+    }
+
+    public String getDatabaseSalt(String email) {
+        SqlQuery query = new SqlQuery(connection);
+        query.executeQuery("SELECT salt FROM {table} WHERE userEmail = '" + email + "'",
+                SqlConnection.SqlTableName.TIMETABLE_USERDATA);
+        ResultSet set = query.getResultSet();
+        try {
+            if (!set.next()) return "invalid email";
+            return set.getString(1);
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+        return null;
     }
 }
