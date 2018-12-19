@@ -33,17 +33,14 @@ hs_err_pid*
 Backup Timetable jpg.png
 External Libs/
 TTrainParse.iml
-Teacher Names.txt
 data.yml
-lib/forms_rt-7.0.3.jar
-lib/json-simple-1.1.1.jar
-lib/mysql-connector-java-5.1.39-bin.jar
-lib/mysql-connector-java-8.0.13.jar
 out/production/TTrainParse/META-INF/
-out/test/
+/lib/
 src/META-INF/
 src/main/resources/META-INF/
 src/main/resources/tessdata/
 src/main/test/
 src/test/
 target/
+/lib/nblibraries.properties
+!/src/main/resources/Teacher Names.txt
