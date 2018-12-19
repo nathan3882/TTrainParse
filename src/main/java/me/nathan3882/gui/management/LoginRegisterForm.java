@@ -62,11 +62,10 @@ public class LoginRegisterForm extends MessageDisplay {
                                 byte[] databaseBytes = encry.getOriginalEncrypted();
                                 mainInstance.getUser().storeEmailAndPassword(emailText, databaseBytes, databaseSalt);
                             } else {
-                                String encryptedSqlPwBytes = mainInstance.getUser().getDatabaseStoredPwBytes(emailText);
                                 String gottenDBSalt = mainInstance.getUser().getDatabaseSalt(emailText);
                                 String gottenDBBytes = mainInstance.getUser().getDatabaseStoredPwBytes(emailText);
 
-                                if (encryptedSqlPwBytes.equals("invalid email")) { //= 'invalid email' when record doesnt exists
+                                if (gottenDBBytes.equals("invalid email")) { //= 'invalid email' when record doesnt exists
                                     displayMessage("This email is incorrect!");
                                     return;
                                 }
