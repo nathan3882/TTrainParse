@@ -78,18 +78,18 @@ public class LessonInfo {
             LocalTime startTime = LocalTime.parse(startFinish[0]);
             LocalTime finishTime = LocalTime.parse(startFinish[1]);
 
-            LinkedList<LocalTime> startTimes = orderedSubjectStartTimes.containsKey(subject) ? new LinkedList<>(orderedSubjectStartTimes.get(subject)) : new LinkedList<>();
-            if (subjectAndBounds.containsKey(subject)) startTimes.add(startTime);
-
-            orderedSubjectStartTimes.put(subject, startTimes);
-
-            LinkedList<LocalTime> finishTimes = orderedSubjectFinishTimes.containsKey(subject) ? new LinkedList<>(orderedSubjectFinishTimes.get(subject)) : new LinkedList<>();
-            if (subjectAndBounds.containsKey(subject)) {
-                finishTimes.add(finishTime);
-            }
-
-            orderedSubjectFinishTimes.put(subject, finishTimes);
+            addToList(subject, subjectAndBounds, orderedSubjectStartTimes, startTime);
+            addToList(subject, subjectAndBounds, orderedSubjectFinishTimes, finishTime);
         }
+    }
+
+    private void addToList(String subject, Map<String, List<String>> subjectAndBounds, Map<String, LinkedList<LocalTime>> orderedSubjectTimes, LocalTime finishTime) {
+        LinkedList<LocalTime> finishTimes = orderedSubjectTimes.containsKey(subject) ? new LinkedList<>(orderedSubjectTimes.get(subject)) : new LinkedList<>();
+        if (subjectAndBounds.containsKey(subject)) {
+            finishTimes.add(finishTime);
+        }
+
+        orderedSubjectTimes.put(subject, finishTimes);
     }
 
     private Map<String, List<String>> getBoundsForSubjects(List<String> words) {
