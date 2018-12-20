@@ -7,10 +7,7 @@ import me.nathan3882.data.SqlUpdate;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.time.DayOfWeek;
-import java.util.Arrays;
-import java.util.Date;
-import java.util.LinkedList;
-import java.util.List;
+import java.util.*;
 import java.util.concurrent.TimeUnit;
 
 public class User {
@@ -26,13 +23,17 @@ public class User {
         this.connection = main.getSqlConnection();
     }
 
-    public boolean hasSqlEntry(String table) {
-        if (!hasInternet() || !connection.connectionEstablished()) return false;
+    public static boolean hasSqlEntry(TTrainParser tTrainParser, String table, String userEmail) {
+        SqlConnection connection = tTrainParser.getSqlConnection();
+        if (!tTrainParser.hasInternet() || !connection.connectionEstablished()) return false;
         SqlQuery query = new SqlQuery(connection);
-        query.executeQuery("SELECT * FROM {table} WHERE userEmail = '" + getUserEmail() + "'", table);
+        query.executeQuery("SELECT * FROM {table} WHERE userEmail = '" + userEmail + "'", table);
         boolean has = query.next(false);
-
         return has;
+    }
+
+    public boolean hasSqlEntry(String table) {
+        return hasSqlEntry(main, table, getUserEmail());
     }
 
     public String getUserEmail() {
@@ -56,9 +57,9 @@ public class User {
         return previousUploadTime;
     }
 
-    public void setTableUpdatesLeft(int number) {
+    public void setPreviousUploadTime(long currentTimeMillis) {
         SqlUpdate update = new SqlUpdate(connection);
-        update.executeUpdate("UPDATE {table} SET renewsLeft = '" + number + "' WHERE userEmail = '" + getUserEmail() + "'",
+        update.executeUpdate("UPDATE {table} SET lastRenewMillis = '" + currentTimeMillis + "' WHERE userEmail = '" + getUserEmail() + "'",
                 SqlConnection.SqlTableName.TIMETABLE_RENEWAL);
     }
 
@@ -75,6 +76,11 @@ public class User {
         return left;
     }
 
+    public void setTableUpdatesLeft(int number) {
+        SqlUpdate update = new SqlUpdate(connection);
+        update.executeUpdate("UPDATE {table} SET renewsLeft = '" + number + "' WHERE userEmail = '" + getUserEmail() + "'",
+                SqlConnection.SqlTableName.TIMETABLE_RENEWAL);
+    }
 
     public List<LessonInfo> getLessonInformation(DayOfWeek[] showThese) {
         List<LessonInfo> info = new LinkedList<>();
@@ -95,19 +101,9 @@ public class User {
             }
 
             List<String> words = new LinkedList<>(Arrays.asList(depletedOcrText.split(" ")));
-//            for (String word : words) {
-//                System.out.print(word + " ");
-//            }
             info.add(new LessonInfo(words, day));
         }
         return info;
-    }
-
-
-    public void setPreviousUploadTime(long currentTimeMillis) {
-        SqlUpdate update = new SqlUpdate(connection);
-        update.executeUpdate("UPDATE {table} SET lastRenewMillis = '" + currentTimeMillis + "' WHERE userEmail = '" + getUserEmail() + "'",
-                SqlConnection.SqlTableName.TIMETABLE_RENEWAL);
     }
 
     public void removeEntryFromTable(String table) {
@@ -197,11 +193,10 @@ public class User {
 
     public void storeEmailAndPassword(String email, byte[] password, byte[] salt) {
         SqlUpdate update = new SqlUpdate(connection);
-        String valPw = new String(password);
-        String valSalt = new String(salt);
+        String valPw = Base64.getEncoder().encodeToString(password);
+        String valSalt = Base64.getEncoder().encodeToString(salt);
         update.executeUpdate("INSERT INTO {table} (userEmail, password, salt) VALUES (\"" + email + "\", \"" + valPw + "\", \"" + valSalt + "\")",
                 SqlConnection.SqlTableName.TIMETABLE_USERDATA);
-
     }
 
     public String getDatabaseSalt(String email) {
