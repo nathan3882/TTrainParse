@@ -2,8 +2,10 @@ package me.nathan3882.gui.management;
 
 import me.nathan3882.data.DataFileInfo;
 import me.nathan3882.data.Encryption;
+import me.nathan3882.data.SqlConnection;
 import me.nathan3882.ttrainparse.MessageDisplay;
 import me.nathan3882.ttrainparse.TTrainParser;
+import me.nathan3882.ttrainparse.User;
 
 import javax.swing.*;
 import java.awt.event.*;
@@ -50,8 +52,7 @@ public class LoginRegisterForm extends MessageDisplay {
                         mainInstance.getUser().setEmail(emailText);
                         if (mainInstance.hasInternet() && mainInstance.getSqlConnection().connectionEstablished()) {
                             DataFileInfo info = mainInstance.getYamlReadDatafile();
-                            if (info == null) return; //Safety, preventing exceptions
-                            if (!mainInstance.hasLocallyStoredEmail()) { //essentially havent made an acc yet
+                            if (info == null || !mainInstance.hasLocallyStoredEmail()) { //essentially havent made an acc yet
                                 //create an account
                                 info.setEmail(emailText);
                                 info.setTimetableCroppedPngFileName(info.timetableCroppedPngFileName);
@@ -60,7 +61,9 @@ public class LoginRegisterForm extends MessageDisplay {
                                 Encryption encry = new Encryption(enteredPassword, Encryption.generateSalt());
                                 byte[] databaseSalt = encry.getSalt();
                                 byte[] databaseBytes = encry.getOriginalEncrypted();
-                                mainInstance.getUser().storeEmailAndPassword(emailText, databaseBytes, databaseSalt);
+                                if (!User.hasSqlEntry(mainInstance, SqlConnection.SqlTableName.TIMETABLE_USERDATA, emailText)) {
+                                    mainInstance.getUser().storeEmailAndPassword(emailText, databaseBytes, databaseSalt);
+                                }
                             } else {
                                 String gottenDBSalt = mainInstance.getUser().getDatabaseSalt(emailText);
                                 String gottenDBBytes = mainInstance.getUser().getDatabaseStoredPwBytes(emailText);
