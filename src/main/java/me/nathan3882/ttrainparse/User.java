@@ -32,6 +32,10 @@ public class User {
         return has;
     }
 
+    public boolean hasSqlEntry(String table, String column) {
+        return hasSqlEntry(main, table, column);
+    }
+
     public boolean hasSqlEntry(String table) {
         return hasSqlEntry(main, table, getUserEmail());
     }

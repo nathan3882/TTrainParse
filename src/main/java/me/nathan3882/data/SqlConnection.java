@@ -23,11 +23,11 @@ public class SqlConnection {
         String TIMETABLE_USERDATA = "timetableuserdata";
     }
 
-    private String host = "51.77.194.49";
-    private String databaseName = "ttrainparseUserdata";
-    private int port = 3307;
+    private String host = "localhost";
+    private String databaseName = "userdata";
+    private int port = 3306;
     private String username = "root";
-    private String password = "not valid";
+    private String password = "";
 
     private Connection connection;
 
@@ -100,6 +100,7 @@ public class SqlConnection {
     }
 
     public boolean connectionEstablished() {
+        if (this.connection == null) openConnection();
         return this.connection != null;
     }
 

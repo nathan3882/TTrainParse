@@ -38,7 +38,7 @@ public class LoginRegisterForm extends MessageDisplay {
             homeCrsHelpLabel.setText("<html><center>Add your home station below:</html></center>");
         }
         if (mainInstance.hasLocallyStoredEmail()) {
-            aboveEverythingLabel.setText("<html><center>Welcome<br>You've probably already stored your timetable<br>please login below using your previously created account</center></html>");
+            aboveEverythingLabel.setText("<html><center>Welcome<br>You've probably already stored your timetable<br>Please login/register below using your previously created account</center></html>");
         }
         emailHelpLabel.setText("<html><center>Your email goes below</center></html>");
         passwordHelpLabel.setText("<html><center>Your six digit password goes below<br>Note: These 6 digits will allow you to use the phone app too!</center></html>");
@@ -64,20 +64,28 @@ public class LoginRegisterForm extends MessageDisplay {
                             mainInstance.doDatafileChecks();
                             mainInstance.getUser().setEmail(emailText);
                             if (mainInstance.hasInternet() && mainInstance.getSqlConnection().connectionEstablished()) {
-                                DataFileInfo info = mainInstance.getYamlReadDatafile();
-                                if (info == null || !mainInstance.hasLocallyStoredEmail()) { //essentially havent made an acc yet
-                                    //create an account
-                                    info.setEmail(emailText);
-                                    info.setTimetableCroppedPngFileName(info.timetableCroppedPngFileName);
-                                    mainInstance.writeToDatafile(info);
+                                boolean noEmailStored = !User.hasSqlEntry(mainInstance, SqlConnection.SqlTableName.TIMETABLE_USERDATA, emailText);
+                                if (noEmailStored) { //No account stored for entered email
+                                    DataFileInfo info = mainInstance.getYamlReadDatafile();
+                                    if (info == null || !mainInstance.hasLocallyStoredEmail()) {
+                                        //create an account
+                                        info.setTimetableCroppedPngFileName(info.timetableCroppedPngFileName);
 
-                                    Encryption encry = new Encryption(enteredPassword, Encryption.generateSalt());
-                                    byte[] databaseSalt = encry.getSalt();
-                                    byte[] databaseBytes = encry.getOriginalEncrypted();
-                                    if (!User.hasSqlEntry(mainInstance, SqlConnection.SqlTableName.TIMETABLE_USERDATA, emailText)) {
-                                        mainInstance.getUser().storeEmailAndPasswordWithCrs(emailText, databaseBytes, databaseSalt, crs);
+                                        doEmails(emailText, info);
+                                        doDatabase(emailText, enteredPassword, crs);
+                                        sendRegisteredMessage();
+                                    } else {
+                                        //Have got local email stored, but no database email stored
+                                        String localEmail = info.getEmail();
+                                        if (emailText.equals(localEmail)) { //entered same as locally stored, but not in db yet
+                                            doDatabase(emailText, enteredPassword, crs);
+                                            sendRegisteredMessage();
+                                        } else { //different than locally stored, change local email still not in db
+                                            doEmails(emailText, info);
+                                            displayMessage("Local Account changed - please re login!");
+                                        }
                                     }
-                                } else {
+                                } else { //Same email as entered stored in database, logging in to existing
                                     String gottenDBSalt = mainInstance.getUser().getDatabaseSalt(emailText);
                                     String gottenDBBytes = mainInstance.getUser().getDatabaseStoredPwBytes(emailText);
 
@@ -94,8 +102,8 @@ public class LoginRegisterForm extends MessageDisplay {
                                     if (!crs.equals(mainInstance.getUser().getHomeCrs())) {
                                         mainInstance.getUser().updateHomeCrs(crs);
                                     }
+                                    displayMessage("Successfully logged in!");
                                 }
-                                displayMessage("Successfully authenticated!");
                                 mainInstance.openPanel(TTrainParser.CORE_PANEL);
                             } else {
                                 displayMessage("Your internet is either down, or our server is down!");
@@ -111,6 +119,23 @@ public class LoginRegisterForm extends MessageDisplay {
                 }
             }
         };
+    }
+
+    private void sendRegisteredMessage() {
+        displayMessage("Registered to database! Remember these details!");
+    }
+
+    private void doEmails(String emailText, DataFileInfo info) {
+        info.setEmail(emailText);
+        mainInstance.getUser().setEmail(emailText);
+        mainInstance.writeToDatafile(info);
+    }
+
+    private void doDatabase(String emailText, String enteredPassword, String crs) {
+        Encryption encry = new Encryption(enteredPassword, Encryption.generateSalt());
+        byte[] databaseSalt = encry.getSalt();
+        byte[] databaseBytes = encry.getOriginalEncrypted();
+        mainInstance.getUser().storeEmailAndPasswordWithCrs(emailText, databaseBytes, databaseSalt, crs);
     }
 
 

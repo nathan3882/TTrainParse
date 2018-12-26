@@ -53,7 +53,7 @@ public class CoreForm extends MessageDisplay {
 
         if (hasInternet && main.getSqlConnection().connectionEstablished()) {
             mainInstance.getSqlConnection().openConnection();
-            if (!user.hasSqlEntry(SqlConnection.SqlTableName.TIMETABLE_RENEWAL)) {
+            if (!user.hasSqlEntry(SqlConnection.SqlTableName.TIMETABLE_RENEWAL, "renewsLeft")) {
                 user.generateDefaultRenewValues();
             }
             left = getUser().getTableUpdatesLeft();
