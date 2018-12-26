@@ -22,11 +22,21 @@ public class LoginRegisterForm extends MessageDisplay {
     private JPasswordField sixDigitPwField;
     private JLabel passwordHelpLabel;
     private JLabel emailHelpLabel;
+    private JLabel homeCrsHelpLabel;
+    private JComboBox selectHomeCrsBox;
     private TTrainParser mainInstance;
 
     public LoginRegisterForm(TTrainParser mainInstance) {
         this.mainInstance = mainInstance;
         mainInstance.loginRegisterForm = this;
+        mainInstance.configureCrsComboBox(selectHomeCrsBox);
+        User user = mainInstance.getUser();
+        if (user.hasEmailPwAndHomeData()) {
+            homeCrsHelpLabel.setText("<html><center>New house? Add click below if you want to change:</html></center>");
+            mainInstance.changeCrsComboBoxToCurrentCrs(selectHomeCrsBox);
+        } else {
+            homeCrsHelpLabel.setText("<html><center>Add your home station below:</html></center>");
+        }
         if (mainInstance.hasLocallyStoredEmail()) {
             aboveEverythingLabel.setText("<html><center>Welcome<br>You've probably already stored your timetable<br>please login below using your previously created account</center></html>");
         }
@@ -48,41 +58,50 @@ public class LoginRegisterForm extends MessageDisplay {
                 String enteredPassword = new String(pw);
                 if (isValidEmailAddress(emailText)) {
                     if (isValidPasscode(pw)) {
-                        mainInstance.doDatafileChecks();
-                        mainInstance.getUser().setEmail(emailText);
-                        if (mainInstance.hasInternet() && mainInstance.getSqlConnection().connectionEstablished()) {
-                            DataFileInfo info = mainInstance.getYamlReadDatafile();
-                            if (info == null || !mainInstance.hasLocallyStoredEmail()) { //essentially havent made an acc yet
-                                //create an account
-                                info.setEmail(emailText);
-                                info.setTimetableCroppedPngFileName(info.timetableCroppedPngFileName);
-                                mainInstance.writeToDatafile(info);
+                        if (selectHomeCrsBox.getSelectedIndex() != -1) {
+                            String selected = (String) selectHomeCrsBox.getSelectedItem();
+                            String crs = selected.split(" / ")[0];
+                            mainInstance.doDatafileChecks();
+                            mainInstance.getUser().setEmail(emailText);
+                            if (mainInstance.hasInternet() && mainInstance.getSqlConnection().connectionEstablished()) {
+                                DataFileInfo info = mainInstance.getYamlReadDatafile();
+                                if (info == null || !mainInstance.hasLocallyStoredEmail()) { //essentially havent made an acc yet
+                                    //create an account
+                                    info.setEmail(emailText);
+                                    info.setTimetableCroppedPngFileName(info.timetableCroppedPngFileName);
+                                    mainInstance.writeToDatafile(info);
 
-                                Encryption encry = new Encryption(enteredPassword, Encryption.generateSalt());
-                                byte[] databaseSalt = encry.getSalt();
-                                byte[] databaseBytes = encry.getOriginalEncrypted();
-                                if (!User.hasSqlEntry(mainInstance, SqlConnection.SqlTableName.TIMETABLE_USERDATA, emailText)) {
-                                    mainInstance.getUser().storeEmailAndPassword(emailText, databaseBytes, databaseSalt);
+                                    Encryption encry = new Encryption(enteredPassword, Encryption.generateSalt());
+                                    byte[] databaseSalt = encry.getSalt();
+                                    byte[] databaseBytes = encry.getOriginalEncrypted();
+                                    if (!User.hasSqlEntry(mainInstance, SqlConnection.SqlTableName.TIMETABLE_USERDATA, emailText)) {
+                                        mainInstance.getUser().storeEmailAndPasswordWithCrs(emailText, databaseBytes, databaseSalt, crs);
+                                    }
+                                } else {
+                                    String gottenDBSalt = mainInstance.getUser().getDatabaseSalt(emailText);
+                                    String gottenDBBytes = mainInstance.getUser().getDatabaseStoredPwBytes(emailText);
+
+                                    if (gottenDBBytes.equals("invalid email")) { //= 'invalid email' when record doesnt exists
+                                        displayMessage("This email is incorrect!");
+                                        return;
+                                    }
+
+                                    boolean authenticated = Encryption.authenticate(enteredPassword, gottenDBBytes, gottenDBSalt);
+                                    if (!authenticated) {
+                                        displayMessage("This password is incorrect!");
+                                        return;
+                                    }
+                                    if (!crs.equals(mainInstance.getUser().getHomeCrs())) {
+                                        mainInstance.getUser().updateHomeCrs(crs);
+                                    }
                                 }
+                                displayMessage("Successfully authenticated!");
+                                mainInstance.openPanel(TTrainParser.CORE_PANEL);
                             } else {
-                                String gottenDBSalt = mainInstance.getUser().getDatabaseSalt(emailText);
-                                String gottenDBBytes = mainInstance.getUser().getDatabaseStoredPwBytes(emailText);
-
-                                if (gottenDBBytes.equals("invalid email")) { //= 'invalid email' when record doesnt exists
-                                    displayMessage("This email is incorrect!");
-                                    return;
-                                }
-
-                                boolean authenticated = Encryption.authenticate(enteredPassword, gottenDBBytes, gottenDBSalt);
-                                if (!authenticated) {
-                                    displayMessage("This password is incorrect!");
-                                    return;
-                                }
+                                displayMessage("Your internet is either down, or our server is down!");
                             }
-                            displayMessage("Successfully authenticated!");
-                            mainInstance.openPanel(TTrainParser.CORE_PANEL);
                         } else {
-                            displayMessage("You need internet in order to create an account or login with us!");
+                            displayMessage("Please select a valid home station! This can be changed later.");
                         }
                     } else {
                         displayMessage("Passcode must be SIX NUMBERS eg 123456 or 593412");
@@ -93,6 +112,7 @@ public class LoginRegisterForm extends MessageDisplay {
             }
         };
     }
+
 
     private boolean isValidPasscode(char[] password) {
         if (password.length != 6) return false;

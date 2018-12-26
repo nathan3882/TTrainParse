@@ -191,11 +191,11 @@ public class User {
         return null;
     }
 
-    public void storeEmailAndPassword(String email, byte[] password, byte[] salt) {
+    public void storeEmailAndPasswordWithCrs(String email, byte[] password, byte[] salt, String CRS) {
         SqlUpdate update = new SqlUpdate(connection);
         String valPw = Base64.getEncoder().encodeToString(password);
         String valSalt = Base64.getEncoder().encodeToString(salt);
-        update.executeUpdate("INSERT INTO {table} (userEmail, password, salt) VALUES (\"" + email + "\", \"" + valPw + "\", \"" + valSalt + "\")",
+        update.executeUpdate("INSERT INTO {table} (userEmail, password, salt, homeCrs) VALUES (\"" + email + "\", \"" + valPw + "\", \"" + valSalt + "\", \"" + CRS + "\")",
                 SqlConnection.SqlTableName.TIMETABLE_USERDATA);
     }
 
@@ -207,6 +207,31 @@ public class User {
         try {
             if (!set.next()) return "invalid email";
             return set.getString(1);
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+        return null;
+    }
+
+    public boolean hasEmailPwAndHomeData() {
+        return hasSqlEntry(SqlConnection.SqlTableName.TIMETABLE_USERDATA);
+    }
+
+    public void updateHomeCrs(String crs) {
+        SqlUpdate update = new SqlUpdate(connection);
+        update.executeUpdate("UPDATE {table} SET homeCrs='" + crs + "' WHERE userEmail='" + getUserEmail() + "'",
+                SqlConnection.SqlTableName.TIMETABLE_USERDATA);
+    }
+
+    public String getHomeCrs() {
+        SqlQuery query = new SqlQuery(connection);
+        query.executeQuery("SELECT homeCrs FROM {table} WHERE userEmail = '" + getUserEmail() + "'",
+                SqlConnection.SqlTableName.TIMETABLE_USERDATA);
+        ResultSet set = query.getResultSet();
+        try {
+            if (set.next()) {
+                return set.getString(1);
+            }
         } catch (SQLException e) {
             e.printStackTrace();
         }

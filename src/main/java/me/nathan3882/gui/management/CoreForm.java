@@ -1,21 +1,27 @@
 package me.nathan3882.gui.management;
 
 import me.nathan3882.data.SqlConnection;
+import me.nathan3882.idealtrains.IdealTrains;
+import me.nathan3882.idealtrains.Service;
 import me.nathan3882.ttrainparse.*;
 
 import javax.swing.*;
+import javax.xml.datatype.XMLGregorianCalendar;
+import javax.xml.soap.SOAPException;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
+import java.awt.event.ItemEvent;
+import java.awt.event.ItemListener;
 import java.awt.image.BufferedImage;
 import java.io.File;
-import java.time.DayOfWeek;
-import java.time.LocalTime;
+import java.time.*;
 import java.util.Timer;
 import java.util.*;
 import java.util.concurrent.TimeUnit;
 
 public class CoreForm extends MessageDisplay {
 
+    public static final int DEFAULT_FORCE_UPDATE_QUANTITY = 3;
     private final TTrainParser mainInstance;
     private TaskManager task;
     private User user;
@@ -23,18 +29,28 @@ public class CoreForm extends MessageDisplay {
     private JLabel mainInfoLabel;
     private JButton updateTimetableButton;
     private JLabel updateTimetableInfoLabel;
+    private JComboBox updateHomeCrsComboBox;
+    private JLabel updateHomeCrsHelpLabel;
 
-    public static final int DEFAULT_FORCE_UPDATE_QUANTITY = 3;
+    private String displayString;
+    private List<LessonInfo> info;
+    private boolean showTrainsForEveryLesson;
 
     public CoreForm(TTrainParser main) {
 
         this.mainInstance = main;
 
         mainInstance.coreForm = this;
+        updateHomeCrsHelpLabel.setText("<html><center>^ New home? Update it above ^</center></html>");
+        mainInstance.configureCrsComboBox(updateHomeCrsComboBox);
+        mainInstance.changeCrsComboBoxToCurrentCrs(updateHomeCrsComboBox);
+
+        updateHomeCrsComboBox.addItemListener(getUpdateHomeCrsComboBoxListener());
         this.user = mainInstance.getUser();
         int left = -1;
         Date renewDate = null;
         boolean hasInternet = user.hasInternet();
+
         if (hasInternet && main.getSqlConnection().connectionEstablished()) {
             mainInstance.getSqlConnection().openConnection();
             if (!user.hasSqlEntry(SqlConnection.SqlTableName.TIMETABLE_RENEWAL)) {
@@ -64,7 +80,7 @@ public class CoreForm extends MessageDisplay {
         if (hasInternet) {
             if (hasOcrTextStored) {
                 List<LessonInfo> info = user.getLessonInformation(showThese); //From stored ocr text
-                mainString = getStringToDisplay(info);
+                mainString = getStringToDisplay(info, true);
                 segment = false;
             } else store = true;
         }
@@ -72,18 +88,48 @@ public class CoreForm extends MessageDisplay {
             if (isUpdating || segment) {
                 Segmentation segmentation = new Segmentation(main);
                 List<LessonInfo> info = getLessonInformation(segmentation, showThese, store);
-                mainString = getStringToDisplay(info);
+                mainString = getStringToDisplay(info, true);
             }
         } else
             mainString.append("There has been an issue with your teachers file configuration").append("does the file exist?"); //TODO
         mainString.append("</center></html>");
-        mainInfoLabel.setText(mainString.toString());
+        setDisplayString(mainString.toString());
+        mainInfoLabel.setText(getDisplayString(user.getHomeCrs()));
+    }
+
+    private ItemListener getUpdateHomeCrsComboBoxListener() {
+        return new ItemListener() {
+            @Override
+            public void itemStateChanged(ItemEvent e) {
+                if (e.getStateChange() == ItemEvent.SELECTED) {
+                    String selected = (String) updateHomeCrsComboBox.getSelectedItem();
+                    String newCrs = selected.split(" / ")[0];
+                    user.updateHomeCrs(newCrs);
+                    mainInfoLabel.setText(getDisplayString(newCrs));
+                }
+            }
+        };
+    }
+
+    private void setDisplayString(String string) {
+        this.displayString = string;
+    }
+
+    private String getDisplayString(String crs) {
+        return this.getStringToDisplay(this.info, this.showTrainsForEveryLesson).toString().replace("{crs}", crs);
     }
 
 
-    private StringBuilder getStringToDisplay(List<LessonInfo> info) {
+    private StringBuilder getStringToDisplay(List<LessonInfo> info, boolean showTrainsForEveryLesson) {
+        this.info = info;
+        this.showTrainsForEveryLesson = showTrainsForEveryLesson;
         StringBuilder mainString = new StringBuilder();
         mainString.append("<html><center>");
+        Calendar cal = Calendar.getInstance();
+        Date currentDate = new Date(System.currentTimeMillis());
+        int year = cal.get(Calendar.YEAR);
+        int month = cal.get(Calendar.MONTH);
+        int day = cal.get(Calendar.DAY_OF_MONTH);
         for (int i = 0; i < info.size(); i++) {
 
             LessonInfo newCollegeDay = info.get(i);
@@ -94,15 +140,45 @@ public class CoreForm extends MessageDisplay {
 
                 List<LocalTime> startTimes = newCollegeDay.getStartTimes(lessonName);
                 List<LocalTime> finishTimes = newCollegeDay.getFinishTimes(lessonName);
-                for (int k = 0; k < startTimes.size(); k++) {
 
+                int startSize = startTimes.size();
+                int lastLesson = startSize - 1;
+
+                for (int k = 0; k < startSize; k++) {
+                    mainString.append("<br>");
                     LocalTime startTime = startTimes.get(k);
+                    Instant instant = startTime.atDate(LocalDate.of(year, month, day)).
+                            atZone(ZoneId.systemDefault()).toInstant();
+                    Date lessonTime = Date.from(instant);
+
                     LocalTime finishTime = finishTimes.get(k);
 
                     String startString = getPrettyMinute(startTime.getMinute());
                     String endString = getPrettyMinute(finishTime.getMinute());
 
-                    mainString.append(lessonName).append(" lesson number ").append(k + 1).append(" starts at ").append(startTime.getHour()).append(":").append(startString).append(" and ends at< ").append(finishTime.getHour()).append(" ").append(endString).append("<br>");
+                    mainString.append(lessonName + " lesson number " + (k + 1) + " starts at " + startTime.getHour() + ":" + startString + " and ends at " + finishTime.getHour() + ":" + endString);
+                    if (showTrainsForEveryLesson || k == 0 || k == lastLesson) {
+
+                        List<Service> idealTrains = null;
+                        try {
+                            idealTrains = IdealTrains.getHomeToLessonServices(
+                                    user.getHomeCrs(), "BCU", currentDate, 8, 60, lessonTime);
+                        } catch (SOAPException e) {
+                            e.printStackTrace();
+                        }
+                        if (idealTrains != null) {
+                            mainString.append("<br>From your home station, catch the:<br>");
+                            for (int l = 0; l < idealTrains.size(); l++) {
+                                Service service = idealTrains.get(l);
+                                XMLGregorianCalendar eta = service.getEta();
+                                Date etaDate = eta.toGregorianCalendar().getTime();
+                                long etaMillis = etaDate.getTime();
+                                long toSpareMinutes = TimeUnit.MILLISECONDS.toMinutes(lessonTime.getTime() - etaMillis);
+                                mainString.append(service.getEtd() + " that arrives @ " + eta + ". (" + toSpareMinutes + "mins before lesson)");
+                                if (l == 1) break; //terminate after best 2 have been shown
+                            }
+                        }
+                    }
                 }
             });
         }

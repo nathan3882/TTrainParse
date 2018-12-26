@@ -34,36 +34,26 @@ public class TTrainParser extends MessageDisplay {
      */
 
     public static final String USER_DIRECTORY = System.getProperty("user.dir");
-
-    public BufferedImage allDayCroppedImage;
-
-    public static TTrainParser mainInst = new TTrainParser();
-
-    public WelcomeForm welcomeForm;
-    public LoginRegisterForm loginRegisterForm;
-    public CoreForm coreForm;
-
     public static final String WELCOME_PANEL = "welcomePanel";
     public static final String CORE_PANEL = "corePanel";
     public static final String LOGIN_REGISTER_PANEL = "loginRegisterPanel";
-
-    public JPanel cards = null;
-
-    private static String activePanel;
-
     public static final String USER_DIRECTORY_FILE_SEP = USER_DIRECTORY + File.separator;
+    public static TTrainParser mainInst = new TTrainParser();
+    private static String activePanel;
     private static ITesseract tesseractInstance = new Tesseract();
-
-
+    private static DebugManager debugManager;
+    public BufferedImage allDayCroppedImage;
+    public WelcomeForm welcomeForm;
+    public LoginRegisterForm loginRegisterForm;
+    public CoreForm coreForm;
+    public JPanel cards = null;
     /**
      * Have embedded web browser inside
      */
 
     private SqlConnection sqlConnection;
-
     private User user;
     private boolean hasInternet = false;
-    private static DebugManager debugManager;
 
     public static void main(String[] args) {
 
@@ -75,12 +65,6 @@ public class TTrainParser extends MessageDisplay {
 
         fetchIp(); //
 
-        WelcomeForm wForm = new WelcomeForm(mainInst, false);
-        addPanelToCard(wForm.getPanel(), WELCOME_PANEL);
-
-        LoginRegisterForm reg = new LoginRegisterForm(mainInst);
-        addPanelToCard(reg.getPanel(), LOGIN_REGISTER_PANEL);
-
         mainInst.getSqlConnection().openConnection();
         String timetableLessons = SqlConnection.SqlTableName.TIMETABLE_LESSONS;
         boolean hasLocallyStoredEmail = mainInst.hasLocallyStoredEmail();
@@ -90,6 +74,15 @@ public class TTrainParser extends MessageDisplay {
         } else {
             mainInst.user = new User(mainInst, "");
         }
+
+
+        WelcomeForm wForm = new WelcomeForm(mainInst, false);
+        addPanelToCard(wForm.getPanel(), WELCOME_PANEL);
+
+        LoginRegisterForm reg = new LoginRegisterForm(mainInst);
+        addPanelToCard(reg.getPanel(), LOGIN_REGISTER_PANEL);
+
+
         boolean hasSql = mainInst.user.hasSqlEntry(timetableLessons);
         boolean hasCroppedTimetableFileAlready = mainInst.hasCroppedTimetableFileAlready(true);
         System.out.println("hlse " + hasLocallyStoredEmail);
@@ -102,10 +95,6 @@ public class TTrainParser extends MessageDisplay {
             mainInst.openPanel(WELCOME_PANEL);
         }
         initFrame("TTrainParser");
-    }
-
-    private SqlConnection getNewSqlConnection() {
-        return new SqlConnection(mainInst);
     }
 
     private static File generateTeachersFile() {
@@ -142,7 +131,6 @@ public class TTrainParser extends MessageDisplay {
         }
         mainInst.cards.add(panel, welcomePanel);
     }
-
 
     public static Map<String, String[]> getSubjectNamesWithMultipleTeachers() {
         Map<String, String[]> subjectNamesWithMultipleTeachers = new HashMap<>();
@@ -207,7 +195,6 @@ public class TTrainParser extends MessageDisplay {
         frame.setVisible(true);
     }
 
-
     private static String fetchIp() {
         BufferedReader reader = null;
         try {
@@ -237,6 +224,15 @@ public class TTrainParser extends MessageDisplay {
 
     public static DebugManager getDebugManager() {
         return debugManager;
+    }
+
+    public static boolean hasTeachersFile() {
+        File file = new File(USER_DIRECTORY_FILE_SEP + "Teacher Names.txt");
+        return file.exists();
+    }
+
+    private SqlConnection getNewSqlConnection() {
+        return new SqlConnection(mainInst);
     }
 
     public TablePart getTableType(String rgbString) {
@@ -274,12 +270,10 @@ public class TTrainParser extends MessageDisplay {
         return selected.getName().split("\\.")[1];
     }
 
-
     public void doDatafileChecks() {
         boolean fileExists = new File(TTrainParser.USER_DIRECTORY_FILE_SEP + "data.yml").exists();
         if (!fileExists) generateDataFile();
     }
-
 
     public String getLocallyStoredEmail() {
         doDatafileChecks();
@@ -321,6 +315,9 @@ public class TTrainParser extends MessageDisplay {
         return activePanel;
     }
 
+    private void setActivePanel(String panelName) {
+        activePanel = panelName;
+    }
 
     /**
      * One of the more fundamental functions to the program. The function, in order, removes...
@@ -415,7 +412,6 @@ public class TTrainParser extends MessageDisplay {
         return Arrays.stream(numbers).min().orElse(Integer.MAX_VALUE);
     }
 
-
     public void openPanel(String panelName) {
         if (panelName.equals(CORE_PANEL)) { //Latest tesseractInstance
             coreForm = new CoreForm(mainInst);
@@ -431,21 +427,12 @@ public class TTrainParser extends MessageDisplay {
         return fetchIp() != null;
     }
 
-    private void setActivePanel(String panelName) {
-        activePanel = panelName;
-    }
-
     public SqlConnection getSqlConnection() {
         return sqlConnection;
     }
 
     public User getUser() {
         return this.user;
-    }
-
-    public static boolean hasTeachersFile() {
-        File file = new File(USER_DIRECTORY_FILE_SEP + "Teacher Names.txt");
-        return file.exists();
     }
 
     public void updateTimetableUpload() {
@@ -473,6 +460,32 @@ public class TTrainParser extends MessageDisplay {
             writer.close();
         } catch (IOException | YamlException e1) {
             e1.printStackTrace();
+        }
+    }
+
+    public void configureCrsComboBox(JComboBox selectHomeCrsBox) {
+        selectHomeCrsBox.addItem("POO / Poole");
+        selectHomeCrsBox.addItem("PKS / Parkstone");
+        selectHomeCrsBox.addItem("BSM / Branksome");
+        selectHomeCrsBox.addItem("BMH / Bournemouth");
+        selectHomeCrsBox.addItem("POK / Pokesdown");
+        selectHomeCrsBox.addItem("CHR / Christchurch");
+        selectHomeCrsBox.addItem("HNA / Hinton Admiral");
+        selectHomeCrsBox.addItem("NWM / New Milton");
+        selectHomeCrsBox.addItem("SWY / Sway");
+        selectHomeCrsBox.addItem("AHS / Ashurst");
+        selectHomeCrsBox.addItem("ANF / Ashurst New Forest");
+        selectHomeCrsBox.addItem("TTN / Totton");
+        selectHomeCrsBox.addItem("LYT / Lymington Town");
+    }
+
+    public void changeCrsComboBoxToCurrentCrs(JComboBox selectHomeCrsBox) {
+        for (int i = 0; i < selectHomeCrsBox.getItemCount(); i++) {
+            String item = (String) selectHomeCrsBox.getItemAt(i);
+            if (item.startsWith(user.getHomeCrs())) {
+                selectHomeCrsBox.setSelectedItem(item);
+                break;
+            }
         }
     }
 }
