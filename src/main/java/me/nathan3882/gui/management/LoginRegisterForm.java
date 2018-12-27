@@ -62,15 +62,13 @@ public class LoginRegisterForm extends MessageDisplay {
                             String selected = (String) selectHomeCrsBox.getSelectedItem();
                             String crs = selected.split(" / ")[0];
                             mainInstance.doDatafileChecks();
+                            DataFileInfo info = mainInstance.getYamlReadDatafile();
                             mainInstance.getUser().setEmail(emailText);
                             if (mainInstance.hasInternet() && mainInstance.getSqlConnection().connectionEstablished()) {
                                 boolean noEmailStored = !User.hasSqlEntry(mainInstance, SqlConnection.SqlTableName.TIMETABLE_USERDATA, emailText);
                                 if (noEmailStored) { //No account stored for entered email
-                                    DataFileInfo info = mainInstance.getYamlReadDatafile();
-                                    if (info == null || !mainInstance.hasLocallyStoredEmail()) {
-                                        //create an account
+                                    if (info == null || !mainInstance.hasLocallyStoredEmail()) {//create an account
                                         info.setTimetableCroppedPngFileName(info.timetableCroppedPngFileName);
-
                                         doEmails(emailText, info);
                                         doDatabase(emailText, enteredPassword, crs);
                                         sendRegisteredMessage();
@@ -80,8 +78,9 @@ public class LoginRegisterForm extends MessageDisplay {
                                         if (emailText.equals(localEmail)) { //entered same as locally stored, but not in db yet
                                             doDatabase(emailText, enteredPassword, crs);
                                             sendRegisteredMessage();
-                                        } else { //different than locally stored, change local email still not in db
+                                        } else { //different than locally stored, change local email - still not in db, will be next login
                                             doEmails(emailText, info);
+                                            mainInstance.changeCrsComboBoxToCurrentCrs(selectHomeCrsBox);
                                             displayMessage("Local Account changed - please re login!");
                                         }
                                     }
@@ -98,13 +97,21 @@ public class LoginRegisterForm extends MessageDisplay {
                                     if (!authenticated) {
                                         displayMessage("This password is incorrect!");
                                         return;
+                                    } else {
+                                        String localEmail = info.getEmail();
+                                        if (emailText.equals(localEmail)) { //entered same as locally stored, but not in db yet
+                                            if (!crs.equals(mainInstance.getUser().getHomeCrs())) {
+                                                mainInstance.getUser().updateHomeCrs(crs);
+                                            }
+                                            displayMessage("Successfully logged in to existing acc!");
+                                            mainInstance.openPanel(TTrainParser.CORE_PANEL);
+                                        } else { //different than locally stored, change local email - still not in db, will be next login
+                                            doEmails(emailText, info);
+                                            mainInstance.changeCrsComboBoxToCurrentCrs(selectHomeCrsBox);
+                                            displayMessage("Local Account changed - please re login!");
+                                        }
                                     }
-                                    if (!crs.equals(mainInstance.getUser().getHomeCrs())) {
-                                        mainInstance.getUser().updateHomeCrs(crs);
-                                    }
-                                    displayMessage("Successfully logged in!");
                                 }
-                                mainInstance.openPanel(TTrainParser.CORE_PANEL);
                             } else {
                                 displayMessage("Your internet is either down, or our server is down!");
                             }
