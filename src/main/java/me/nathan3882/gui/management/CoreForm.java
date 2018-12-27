@@ -14,6 +14,7 @@ import java.awt.event.ItemEvent;
 import java.awt.event.ItemListener;
 import java.awt.image.BufferedImage;
 import java.io.File;
+import java.math.BigInteger;
 import java.time.*;
 import java.util.Timer;
 import java.util.*;
@@ -47,13 +48,14 @@ public class CoreForm extends MessageDisplay {
 
         updateHomeCrsComboBox.addItemListener(getUpdateHomeCrsComboBoxListener());
         this.user = mainInstance.getUser();
-        int left = -1;
-        Date renewDate = null;
         boolean hasInternet = user.hasInternet();
+
+        int left;
+        Date renewDate;
 
         if (hasInternet && main.getSqlConnection().connectionEstablished()) {
             mainInstance.getSqlConnection().openConnection();
-            if (!user.hasSqlEntry(SqlConnection.SqlTableName.TIMETABLE_RENEWAL, "renewsLeft")) {
+            if (!user.hasSqlEntry(SqlConnection.SqlTableName.TIMETABLE_RENEWAL)) {
                 user.generateDefaultRenewValues();
             }
             left = getUser().getTableUpdatesLeft();
@@ -80,7 +82,7 @@ public class CoreForm extends MessageDisplay {
         if (hasInternet) {
             if (hasOcrTextStored) {
                 List<LessonInfo> info = user.getLessonInformation(showThese); //From stored ocr text
-                mainString = getStringToDisplay(info, true);
+                mainString = getStringToDisplay(info, false);
                 segment = false;
             } else store = true;
         }
@@ -88,7 +90,7 @@ public class CoreForm extends MessageDisplay {
             if (isUpdating || segment) {
                 Segmentation segmentation = new Segmentation(main);
                 List<LessonInfo> info = getLessonInformation(segmentation, showThese, store);
-                mainString = getStringToDisplay(info, true);
+                mainString = getStringToDisplay(info, false);
             }
         } else
             mainString.append("There has been an issue with your teachers file configuration").append("does the file exist?"); //TODO
@@ -141,28 +143,26 @@ public class CoreForm extends MessageDisplay {
                 List<LocalTime> startTimes = newCollegeDay.getStartTimes(lessonName);
                 List<LocalTime> finishTimes = newCollegeDay.getFinishTimes(lessonName);
 
-                int startSize = startTimes.size();
-                int lastLesson = startSize - 1;
+                int startTimesSize = startTimes.size();
+                int lastLesson = startTimesSize - 1;
 
-                for (int k = 0; k < startSize; k++) {
+                for (int k = 0; k < startTimesSize; k++) {
                     mainString.append("<br>");
-                    LocalTime startTime = startTimes.get(k);
-                    Instant instant = startTime.atDate(LocalDate.of(year, month, day)).
-                            atZone(ZoneId.systemDefault()).toInstant();
-                    Date lessonTime = Date.from(instant);
+                    LocalTime aLessonsStartTime = startTimes.get(k);
+                    Date aLessonsStartDate = toDate(aLessonsStartTime);
 
                     LocalTime finishTime = finishTimes.get(k);
 
-                    String startString = getPrettyMinute(startTime.getMinute());
+                    String startString = getPrettyMinute(aLessonsStartTime.getMinute());
                     String endString = getPrettyMinute(finishTime.getMinute());
 
-                    mainString.append(lessonName + " lesson number " + (k + 1) + " starts at " + startTime.getHour() + ":" + startString + " and ends at " + finishTime.getHour() + ":" + endString);
+                    mainString.append(lessonName + " lesson number " + (k + 1) + " starts at " + aLessonsStartTime.getHour() + ":" + startString + " and ends at " + finishTime.getHour() + ":" + endString);
                     if (showTrainsForEveryLesson || k == 0 || k == lastLesson) {
 
                         List<Service> idealTrains = null;
                         try {
                             idealTrains = IdealTrains.getHomeToLessonServices(
-                                    user.getHomeCrs(), "BCU", currentDate, 8, 60, lessonTime);
+                                    user.getHomeCrs(), "BCU", currentDate, 8 * 60, aLessonsStartDate);
                         } catch (SOAPException e) {
                             e.printStackTrace();
                         }
@@ -170,12 +170,31 @@ public class CoreForm extends MessageDisplay {
                             mainString.append("<br>From your home station, catch the:<br>");
                             for (int l = 0; l < idealTrains.size(); l++) {
                                 Service service = idealTrains.get(l);
-                                XMLGregorianCalendar eta = service.getEta();
-                                Date etaDate = eta.toGregorianCalendar().getTime();
-                                long etaMillis = etaDate.getTime();
-                                long toSpareMinutes = TimeUnit.MILLISECONDS.toMinutes(lessonTime.getTime() - etaMillis);
-                                mainString.append(service.getEtd() + " that arrives @ " + eta + ". (" + toSpareMinutes + "mins before lesson)");
-                                if (l == 1) break; //terminate after best 2 have been shown
+                                XMLGregorianCalendar xmlEta = service.getEta();
+                                XMLGregorianCalendar xmlSta = service.getSta();
+                                XMLGregorianCalendar xmlEtd = service.getEtd();
+                                XMLGregorianCalendar xmlSdt = service.getSdt();
+                                Date arrivalDate = null;
+                                if (xmlEta != null) {
+                                    arrivalDate = xmlEta.toGregorianCalendar().getTime();
+                                } else if (xmlSta != null) { //Eta not in xml response, was null, try sta
+                                    arrivalDate = xmlSta.toGregorianCalendar().getTime();
+                                }
+                                if (xmlEtd != null) {
+                                    arrivalDate = xmlEtd.toGregorianCalendar().getTime();
+                                } else if (xmlSdt != null) {
+                                    arrivalDate = xmlSdt.toGregorianCalendar().getTime();
+                                }
+                                if (arrivalDate == null) {
+                                    continue; //Sometimes is null from national rail API? cant really do much?
+                                }
+                                long etaMillis = arrivalDate.getTime();
+                                String etaHoursString = String.valueOf(xmlEta.getHour());
+                                String etaMinsString = String.valueOf(xmlEta.getMinute());
+                                String etdHoursString = String.valueOf(xmlEtd.getHour());
+                                String etdMinsString = String.valueOf(xmlEtd.getMinute());
+                                int difFromLesson = service.getToSpareMinutes();
+                                mainString.append(etdHoursString + ":" + etdMinsString + " from " + getUser().getHomeCrs() + " that arrives @ " + etaHoursString + ":" + etaMinsString + ". (" + difFromLesson + "mins before lesson)<br>");
                             }
                         }
                     }
@@ -184,6 +203,20 @@ public class CoreForm extends MessageDisplay {
         }
         mainString.append("</center></html>");
         return mainString;
+    }
+
+    public static Date toDate(LocalTime localTime) {
+        Instant instant = localTime.atDate(LocalDate.now())
+                .atZone(ZoneId.systemDefault()).toInstant();
+        return toDate(instant);
+    }
+
+    public static Date toDate(Instant instant) {
+        BigInteger milis = BigInteger.valueOf(instant.getEpochSecond()).multiply(
+                BigInteger.valueOf(1000));
+        milis = milis.add(BigInteger.valueOf(instant.getNano()).divide(
+                BigInteger.valueOf(1_000_000)));
+        return new Date(milis.longValue());
     }
 
     private ActionListener getUpdateTimetableListener(TTrainParser main) {
@@ -196,13 +229,12 @@ public class CoreForm extends MessageDisplay {
 
                 long currentTime = System.currentTimeMillis();
                 long previousUploadTime = getUser().getPreviousUploadTime();
-                long difference = currentTime - previousUploadTime;
+                long currentTimeTakePrevUpload = currentTime - previousUploadTime;
                 long updateAfterThisTime = TimeUnit.DAYS.toMillis(User.DEFAULT_RENEW_COOLDOWN_DAYS);
 
                 if (getUser().hasSqlEntry(SqlConnection.SqlTableName.TIMETABLE_RENEWAL)) { //just incase
                     int forceableUpdatesLeft = getUser().getTableUpdatesLeft();
-
-                    if (difference >= updateAfterThisTime) {//7 day period, reset force timetable update number.
+                    if (currentTimeTakePrevUpload >= updateAfterThisTime) {//7 day period, reset force timetable update number.
                         getUser().setTableUpdatesLeft(DEFAULT_FORCE_UPDATE_QUANTITY);
                     } else if (forceableUpdatesLeft > 0) {
                         //removal when has successfully been parsed, not here, when the button is clicked
@@ -245,7 +277,7 @@ public class CoreForm extends MessageDisplay {
 
             assert ocrText != null;
 
-            if (ocrText.length() < 30) {
+            if (ocrText.length() < 30) { //Would assume 30 chars or less means no lessons
                 displayMessage("You don't have any lessons on " + upperFirst(day));
                 continue; /*No Lessons*/
             }
@@ -253,7 +285,7 @@ public class CoreForm extends MessageDisplay {
             ocrText = mainInstance.depleteFutileInfo(ocrText, true);
 
             if (store)
-                user.storeOcrText(ocrText, day, hasInternet); //Store before depleted, raw form
+                user.storeOcrText(ocrText, day, hasInternet); //store depleted text, for example Tuesday Computer Science 12:00 13:00
             else
                 doTask = true;
 
