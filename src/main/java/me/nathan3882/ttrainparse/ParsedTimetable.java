@@ -60,6 +60,7 @@ public class ParsedTimetable {
 
     /**
      * Following code determines left and right side border coordinates of the timetable
+     * Not sure how to do this in a non duplicative fashion?
      */
     private void doTimetableAnalysis(AnalysisType analysisType, int width, int height, List<String> storedXorYPixels, Map<Integer, Integer> borderCoordinates, Map<Integer, List<String>> XYPixels) {
         if (analysisType.equals(AnalysisType.LEFT_RIGHT_TOP_BOTTOM)) {

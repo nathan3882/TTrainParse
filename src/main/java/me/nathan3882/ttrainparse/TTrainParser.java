@@ -28,9 +28,6 @@ public class TTrainParser extends MessageDisplay {
     /*
      * display live departure board via digital screens, where the information is self-refreshing;
      * , must say Powered by National Rail Enquiries
-     *
-     * Sending off a SOAP request to "https://lite.realtime.nationalrail.co.uk/OpenLDBWS/wsdl.aspx?ver=yyyy-mm-dd"
-     * to retrieve WSDL/Info in XML format to manipulate and get train times
      */
 
     public static final String USER_DIRECTORY = System.getProperty("user.dir");
@@ -46,10 +43,8 @@ public class TTrainParser extends MessageDisplay {
     public WelcomeForm welcomeForm;
     public LoginRegisterForm loginRegisterForm;
     public CoreForm coreForm;
-    public JPanel cards = null;
-    /**
-     * Have embedded web browser inside
-     */
+
+    private JPanel cards = null;
 
     private SqlConnection sqlConnection;
     private User user;
@@ -70,9 +65,9 @@ public class TTrainParser extends MessageDisplay {
         boolean hasLocallyStoredEmail = mainInst.hasLocallyStoredEmail();
 
         if (hasLocallyStoredEmail) {
-            mainInst.user = new User(mainInst, mainInst.getLocallyStoredEmail());
+            mainInst.setUser(new User(mainInst, mainInst.getLocallyStoredEmail()));
         } else {
-            mainInst.user = new User(mainInst, "");
+            mainInst.setUser(new User(mainInst, ""));
         }
 
 
@@ -83,15 +78,12 @@ public class TTrainParser extends MessageDisplay {
         addPanelToCard(reg.getPanel(), LOGIN_REGISTER_PANEL);
 
 
-        boolean hasSql = mainInst.user.hasSqlEntry(timetableLessons);
+        boolean hasSql = mainInst.getUser().hasSqlEntry(timetableLessons);
         boolean hasCroppedTimetableFileAlready = mainInst.hasCroppedTimetableFileAlready(true);
-        System.out.println("hlse " + hasLocallyStoredEmail);
-        System.out.println("has sql = " + hasSql);
-        System.out.println("hasCroppedTimetableFileAlready = " + hasCroppedTimetableFileAlready);
         if (hasCroppedTimetableFileAlready || hasLocallyStoredEmail || hasSql) {
             mainInst.openPanel(LOGIN_REGISTER_PANEL);
         } else {
-            mainInst.user = new User(mainInst, "");
+            mainInst.setUser(new User(mainInst, ""));
             mainInst.openPanel(WELCOME_PANEL);
         }
         initFrame("TTrainParser");
@@ -102,7 +94,6 @@ public class TTrainParser extends MessageDisplay {
         try {
             ClassLoader classLoader = Thread.currentThread().getContextClassLoader();
             InputStream is = classLoader.getResourceAsStream("Teacher Names.txt");
-            System.out.println("nully = " + is == null);
             newTeacherFile = new File(USER_DIRECTORY_FILE_SEP + "Teacher Names.txt");
             Files.copy(is, newTeacherFile.toPath(), StandardCopyOption.REPLACE_EXISTING);
         } catch (IOException e) {
@@ -126,8 +117,8 @@ public class TTrainParser extends MessageDisplay {
     }
 
     private static void addPanelToCard(JPanel panel, String welcomePanel) {
-        if (mainInst.cards == null) {
-            mainInst.cards = new JPanel(new CardLayout());
+        if (mainInst.getCards() == null) {
+            mainInst.setCards(new JPanel(new CardLayout()));
         }
         mainInst.cards.add(panel, welcomePanel);
     }
@@ -183,7 +174,7 @@ public class TTrainParser extends MessageDisplay {
 
     private static void initFrame(String title) {
         JFrame frame = new JFrame(title);
-        frame.setContentPane(mainInst.cards);
+        frame.setContentPane(mainInst.getCards());
 
         DisplayMode mode = GraphicsEnvironment.getLocalGraphicsEnvironment().getDefaultScreenDevice().getDisplayMode();
         int frameHeight = 500;
@@ -283,7 +274,6 @@ public class TTrainParser extends MessageDisplay {
 
     public boolean hasLocallyStoredEmail() {
         doDatafileChecks();
-        System.out.println("lse = " + getLocallyStoredEmail());
         return !getLocallyStoredEmail().equals("{NOT BEEN SET}");
     }
 
@@ -355,21 +345,21 @@ public class TTrainParser extends MessageDisplay {
             ocrResult = ocrResult.replace(wordToRemove, "");
         }
 
-        String pastSeven = "       "; //7 spaces
+        String pastSevenChars = "       "; //7 spaces
         int beforeYr = -1;
         int beforeColon;
         boolean tutorialCondition = false;
         boolean setTutorBound = false;
         for (int j = 0; j < ocrResult.length(); j++) {
             char charAt = ocrResult.charAt(j);
-            pastSeven = pastSeven.substring(1) + charAt;
-            String pastThree = pastSeven.substring(4);
+            pastSevenChars = pastSevenChars.substring(1) + charAt; //removes pastSeven[0], adds charAt to end
+            String pastThreeChars = pastSevenChars.substring(4);
 
             if (!setTutorBound) { //false, dont potentially update to false when waiting for the colon
-                Matcher m = Pattern.compile("\\s(in)\\s").matcher(pastSeven);
-                tutorialCondition = !pastSeven.contains("Yr") && m.find() && pastThree.startsWith("in");
+                Matcher m = Pattern.compile("\\s(in)\\s").matcher(pastSevenChars);
+                tutorialCondition = !pastSevenChars.contains("Yr") && m.find() && pastThreeChars.startsWith("in");
             }
-            if (pastThree.startsWith("Yr")) { //will only begin with in if it's tutor
+            if (pastThreeChars.startsWith("Yr")) { //will only begin with in if it's tutor
                 beforeYr = j - 2;
             } else if (tutorialCondition && !setTutorBound) {
                 beforeYr = j - 3;
@@ -390,17 +380,16 @@ public class TTrainParser extends MessageDisplay {
         return ocrResult;
     }
 
+    /**
+     * Recursive levenshtein distance following 3 functions
+     **/
     private int calculateDistance(String x, String y) {
-        if (x.isEmpty()) {
-            return y.length();
-        }
-        if (y.isEmpty()) {
-            return x.length();
-        }
+        if (x.isEmpty()) return y.length();
+        if (y.isEmpty()) return x.length();
+
         int substitution = calculateDistance(x.substring(1), y.substring(1)) + cost(x.charAt(0), y.charAt(0));
         int insertion = calculateDistance(x, y.substring(1)) + 1;
         int deletion = calculateDistance(x.substring(1), y) + 1;
-
         return min(substitution, insertion, deletion);
     }
 
@@ -433,6 +422,10 @@ public class TTrainParser extends MessageDisplay {
 
     public User getUser() {
         return this.user;
+    }
+
+    public void setUser(User user) {
+        this.user = user;
     }
 
     public void updateTimetableUpload() {
@@ -488,4 +481,13 @@ public class TTrainParser extends MessageDisplay {
             }
         }
     }
+
+    public JPanel getCards() {
+        return cards;
+    }
+
+    public void setCards(JPanel cards) {
+        this.cards = cards;
+    }
+
 }
