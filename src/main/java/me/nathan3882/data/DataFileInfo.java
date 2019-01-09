@@ -10,7 +10,6 @@ public class DataFileInfo {
      * Have to be public in order for YAML library to work
      */
     public String timetableCroppedPdfFileName;
-
     public String email;
     public String timetableCroppedPngFileName;
 

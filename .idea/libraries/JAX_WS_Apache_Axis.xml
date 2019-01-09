@@ -1,6 +1,5 @@
 <component name="libraryTable">
-  <library name="JAX-WS-Apache Axis" type="JAX-WS">
-    <properties version="Apache Axis" />
+  <library name="JAX-WS-Apache Axis">
     <CLASSES>
       <root url="jar://$PROJECT_DIR$/lib/saaj.jar!/" />
       <root url="jar://$PROJECT_DIR$/lib/commons-discovery-0.2.jar!/" />

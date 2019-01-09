@@ -44,3 +44,4 @@ src/test/
 target/
 /lib/nblibraries.properties
 !/src/main/resources/Teacher Names.txt
+/Teacher Names.txt

@@ -33,6 +33,8 @@ public class CoreForm extends MessageDisplay {
     private JComboBox updateHomeCrsComboBox;
     private JLabel updateHomeCrsHelpLabel;
 
+    Calendar calendar = Calendar.getInstance();
+
     private String displayString;
     private List<LessonInfo> info;
     private boolean showTrainsForEveryLesson;
@@ -66,14 +68,11 @@ public class CoreForm extends MessageDisplay {
             updateTimetableInfoLabel.setText("<html><center>You either don't have internet or no sql connection has been established.<br>Timetable updates disabled until fixed...</center></html>");
             updateTimetableButton.setEnabled(false);
         }
-
-        Calendar calendar = Calendar.getInstance();
         calendar.setTime(new Date());
         int currentDay = calendar.get(Calendar.DAY_OF_WEEK);
         DayOfWeek[] showThese = getDaysToShow(currentDay);
 
         StringBuilder mainString = new StringBuilder("<html><center>Here are all of your lessons + train times :)<br><br>");
-        //TODO in writeup mention it was between storing all days once, or doing a new segmentation object each time and just extracting one day
 
         boolean hasOcrTextStored = user.hasOcrTextStored(showThese);
         boolean isUpdating = mainInstance.welcomeForm.isUpdating();
@@ -86,7 +85,7 @@ public class CoreForm extends MessageDisplay {
                 segment = false;
             } else store = true;
         }
-        if (mainInstance.hasTeachersFile()) {
+        if (TTrainParser.hasTeachersFile()) {
             if (isUpdating || segment) {
                 Segmentation segmentation = new Segmentation(main);
                 List<LessonInfo> info = getLessonInformation(segmentation, showThese, store);
@@ -127,11 +126,7 @@ public class CoreForm extends MessageDisplay {
         this.showTrainsForEveryLesson = showTrainsForEveryLesson;
         StringBuilder mainString = new StringBuilder();
         mainString.append("<html><center>");
-        Calendar cal = Calendar.getInstance();
         Date currentDate = new Date(System.currentTimeMillis());
-        int year = cal.get(Calendar.YEAR);
-        int month = cal.get(Calendar.MONTH);
-        int day = cal.get(Calendar.DAY_OF_MONTH);
         for (int i = 0; i < info.size(); i++) {
 
             LessonInfo newCollegeDay = info.get(i);
@@ -168,33 +163,38 @@ public class CoreForm extends MessageDisplay {
                         }
                         if (idealTrains != null) {
                             mainString.append("<br>From your home station, catch the:<br>");
-                            for (int l = 0; l < idealTrains.size(); l++) {
-                                Service service = idealTrains.get(l);
-                                XMLGregorianCalendar xmlEta = service.getEta();
-                                XMLGregorianCalendar xmlSta = service.getSta();
-                                XMLGregorianCalendar xmlEtd = service.getEtd();
-                                XMLGregorianCalendar xmlSdt = service.getSdt();
-                                Date arrivalDate = null;
-                                if (xmlEta != null) {
-                                    arrivalDate = xmlEta.toGregorianCalendar().getTime();
-                                } else if (xmlSta != null) { //Eta not in xml response, was null, try sta
-                                    arrivalDate = xmlSta.toGregorianCalendar().getTime();
+                            if (!idealTrains.isEmpty()) {
+                                for (int l = 0; l < idealTrains.size(); l++) {
+                                    Service service = idealTrains.get(l);
+                                    XMLGregorianCalendar xmlEta = service.getEta();
+                                    XMLGregorianCalendar xmlSta = service.getSta();
+                                    XMLGregorianCalendar xmlEtd = service.getEtd();
+                                    XMLGregorianCalendar xmlSdt = service.getSdt();
+                                    Date arrivalDate = null;
+                                    if (xmlEta != null) {
+                                        arrivalDate = xmlEta.toGregorianCalendar().getTime();
+                                    } else if (xmlSta != null) { //Eta not in xml response, was null, try sta
+                                        arrivalDate = xmlSta.toGregorianCalendar().getTime();
+                                    }
+                                    if (xmlEtd != null) {
+                                        arrivalDate = xmlEtd.toGregorianCalendar().getTime();
+                                    } else if (xmlSdt != null) {
+                                        arrivalDate = xmlSdt.toGregorianCalendar().getTime();
+                                    }
+                                    if (arrivalDate == null) {
+                                        continue; //Sometimes is null from national rail API? cant really do much?
+                                    }
+                                    long etaMillis = arrivalDate.getTime();
+                                    String etaHoursString = String.valueOf(xmlEta.getHour());
+                                    String etaMinsString = getPrettyMinute(xmlEta.getMinute());
+                                    String etdHoursString = String.valueOf(xmlEtd.getHour());
+                                    String etdMinsString = getPrettyMinute(xmlEtd.getMinute());
+                                    long difFromLesson = service.getToSpareMinutes();
+                                    mainString.append(etdHoursString + ":" + etdMinsString + " from " + getUser().getHomeCrs() + " that arrives @ " + etaHoursString + ":" + etaMinsString + ". (" + difFromLesson + "mins before lesson)<br>");
+
                                 }
-                                if (xmlEtd != null) {
-                                    arrivalDate = xmlEtd.toGregorianCalendar().getTime();
-                                } else if (xmlSdt != null) {
-                                    arrivalDate = xmlSdt.toGregorianCalendar().getTime();
-                                }
-                                if (arrivalDate == null) {
-                                    continue; //Sometimes is null from national rail API? cant really do much?
-                                }
-                                long etaMillis = arrivalDate.getTime();
-                                String etaHoursString = String.valueOf(xmlEta.getHour());
-                                String etaMinsString = String.valueOf(xmlEta.getMinute());
-                                String etdHoursString = String.valueOf(xmlEtd.getHour());
-                                String etdMinsString = String.valueOf(xmlEtd.getMinute());
-                                int difFromLesson = service.getToSpareMinutes();
-                                mainString.append(etdHoursString + ":" + etdMinsString + " from " + getUser().getHomeCrs() + " that arrives @ " + etaHoursString + ":" + etaMinsString + ". (" + difFromLesson + "mins before lesson)<br>");
+                            } else {
+                                mainString.append("No trains found for this lesson...");
                             }
                         }
                     }

@@ -51,7 +51,6 @@ public class TTrainParser extends MessageDisplay {
     private boolean hasInternet = false;
 
     public static void main(String[] args) {
-
         DebugManager debugManager = new DebugManager(System.currentTimeMillis());
         mainInst.debugManager = debugManager;
 
