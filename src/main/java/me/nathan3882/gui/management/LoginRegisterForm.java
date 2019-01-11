@@ -6,9 +6,13 @@ import me.nathan3882.data.SqlConnection;
 import me.nathan3882.ttrainparse.MessageDisplay;
 import me.nathan3882.ttrainparse.TTrainParser;
 import me.nathan3882.ttrainparse.User;
+import net.sourceforge.yamlbeans.YamlException;
+import net.sourceforge.yamlbeans.YamlWriter;
 
 import javax.swing.*;
 import java.awt.event.*;
+import java.io.FileWriter;
+import java.io.IOException;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -61,7 +65,7 @@ public class LoginRegisterForm extends MessageDisplay {
                         if (selectHomeCrsBox.getSelectedIndex() != -1) {
                             String selected = (String) selectHomeCrsBox.getSelectedItem();
                             String crs = selected.split(" / ")[0];
-                            mainInstance.doDatafileChecks();
+                            mainInstance.createDataFileIfNotPresent();
                             DataFileInfo info = mainInstance.getYamlReadDatafile();
                             mainInstance.getUser().setEmail(emailText);
                             if (mainInstance.hasInternet() && mainInstance.getSqlConnection().connectionEstablished()) {
@@ -135,7 +139,7 @@ public class LoginRegisterForm extends MessageDisplay {
     private void doEmails(String emailText, DataFileInfo info) {
         info.setEmail(emailText);
         mainInstance.getUser().setEmail(emailText);
-        mainInstance.writeToDatafile(info);
+        writeToDatafile(info);
     }
 
     private void doDatabase(String emailText, String enteredPassword, String crs) {
@@ -143,6 +147,17 @@ public class LoginRegisterForm extends MessageDisplay {
         byte[] databaseSalt = encry.getSalt();
         byte[] databaseBytes = encry.getOriginalEncrypted();
         mainInstance.getUser().storeEmailAndPasswordWithCrs(emailText, databaseBytes, databaseSalt, crs);
+    }
+
+    public void writeToDatafile(DataFileInfo info) {
+        YamlWriter writer;
+        try { //TODO Store System current millis for the time which the user had first timetable parsed
+            writer = new YamlWriter(new FileWriter(TTrainParser.USER_DIRECTORY_FILE_SEP + "data.yml"));
+            writer.write(info); //writes previously collected data about jpg & pdf file names
+            writer.close();
+        } catch (IOException | YamlException e1) {
+            e1.printStackTrace();
+        }
     }
 
 

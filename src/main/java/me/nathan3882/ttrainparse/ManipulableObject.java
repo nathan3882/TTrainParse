@@ -66,7 +66,7 @@ public class ManipulableObject<T> {
             File asFile = (File) getInitialUpload();
             String name = asFile.getName();
             String fileSuffix = name.split(FULL_STOP)[1];
-            if (fileSuffix.equals(".pdf")) { //Tried to get a pdf file from a pdf file???
+            if (fileSuffix.equals(".pdf")) { //Tried to instance a pdf file from a pdf file???
                 return asFile;
             } else if (fileSuffix.equals("jpg")) {
                 jpgToPdf(asFile, newName.split(FULL_STOP)[0] + ".pdf", deleteJpgIfMade);

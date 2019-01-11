@@ -54,7 +54,7 @@ public class ComparisonOutput {
 
             Map<Integer, Integer> sortedQuantities = sortQuantitiesOfBorder(quantitiesOfBorder);
 
-            for (Integer xOrY : sortedQuantities.keySet()) { //to get the first entry in the map
+            for (Integer xOrY : sortedQuantities.keySet()) { //to instance the first entry in the map
                 int occurences = sortedQuantities.get(xOrY);
                 if (occurences <= 300) {
                     this.setResponse(Response.MIDDLE_NOT_A_BORDER);

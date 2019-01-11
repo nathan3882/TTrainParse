@@ -35,7 +35,7 @@ public class TTrainParser extends MessageDisplay {
     public static final String CORE_PANEL = "corePanel";
     public static final String LOGIN_REGISTER_PANEL = "loginRegisterPanel";
     public static final String USER_DIRECTORY_FILE_SEP = USER_DIRECTORY + File.separator;
-    public static TTrainParser mainInst = new TTrainParser();
+    private static TTrainParser tTrainParser = new TTrainParser();
     private static String activePanel;
     private static ITesseract tesseractInstance = new Tesseract();
     private static DebugManager debugManager;
@@ -51,39 +51,36 @@ public class TTrainParser extends MessageDisplay {
     private boolean hasInternet = false;
 
     public static void main(String[] args) {
-        DebugManager debugManager = new DebugManager(System.currentTimeMillis());
-        mainInst.debugManager = debugManager;
 
-        mainInst.sqlConnection = mainInst.getNewSqlConnection();
+        TTrainParser.debugManager = new DebugManager(System.currentTimeMillis());
 
+        instance().sqlConnection = instance().getNewSqlConnection();
 
-        fetchIp(); //
+        fetchIp();
 
-        mainInst.getSqlConnection().openConnection();
+        instance().getSqlConnection().openConnection();
         String timetableLessons = SqlConnection.SqlTableName.TIMETABLE_LESSONS;
-        boolean hasLocallyStoredEmail = mainInst.hasLocallyStoredEmail();
-
+        boolean hasLocallyStoredEmail = instance().hasLocallyStoredEmail();
         if (hasLocallyStoredEmail) {
-            mainInst.setUser(new User(mainInst, mainInst.getLocallyStoredEmail()));
+            instance().setUser(new User(tTrainParser, instance().getLocallyStoredEmail()));
         } else {
-            mainInst.setUser(new User(mainInst, ""));
+            instance().setUser(new User(tTrainParser, ""));
         }
 
-
-        WelcomeForm wForm = new WelcomeForm(mainInst, false);
+        WelcomeForm wForm = new WelcomeForm(tTrainParser, false);
         addPanelToCard(wForm.getPanel(), WELCOME_PANEL);
 
-        LoginRegisterForm reg = new LoginRegisterForm(mainInst);
+        LoginRegisterForm reg = new LoginRegisterForm(tTrainParser);
         addPanelToCard(reg.getPanel(), LOGIN_REGISTER_PANEL);
 
 
-        boolean hasSql = mainInst.getUser().hasSqlEntry(timetableLessons);
-        boolean hasCroppedTimetableFileAlready = mainInst.hasCroppedTimetableFileAlready(true);
+        boolean hasSql = instance().getUser().hasSqlEntry(timetableLessons);
+        boolean hasCroppedTimetableFileAlready = instance().hasCroppedTimetableFileAlready(true);
         if (hasCroppedTimetableFileAlready || hasLocallyStoredEmail || hasSql) {
-            mainInst.openPanel(LOGIN_REGISTER_PANEL);
+            instance().openPanel(LOGIN_REGISTER_PANEL);
         } else {
-            mainInst.setUser(new User(mainInst, ""));
-            mainInst.openPanel(WELCOME_PANEL);
+            instance().setUser(new User(tTrainParser, ""));
+            instance().openPanel(WELCOME_PANEL);
         }
         initFrame("TTrainParser");
     }
@@ -116,10 +113,10 @@ public class TTrainParser extends MessageDisplay {
     }
 
     private static void addPanelToCard(JPanel panel, String welcomePanel) {
-        if (mainInst.getCards() == null) {
-            mainInst.setCards(new JPanel(new CardLayout()));
+        if (instance().getCards() == null) {
+            instance().setCards(new JPanel(new CardLayout()));
         }
-        mainInst.cards.add(panel, welcomePanel);
+        instance().cards.add(panel, welcomePanel);
     }
 
     public static Map<String, String[]> getSubjectNamesWithMultipleTeachers() {
@@ -173,7 +170,7 @@ public class TTrainParser extends MessageDisplay {
 
     private static void initFrame(String title) {
         JFrame frame = new JFrame(title);
-        frame.setContentPane(mainInst.getCards());
+        frame.setContentPane(instance().getCards());
 
         DisplayMode mode = GraphicsEnvironment.getLocalGraphicsEnvironment().getDefaultScreenDevice().getDisplayMode();
         int frameHeight = 500;
@@ -191,12 +188,12 @@ public class TTrainParser extends MessageDisplay {
             URL amazonWS = new URL("http://checkip.amazonaws.com");
             reader = new BufferedReader(new InputStreamReader(
                     amazonWS.openStream()));
-            mainInst.hasInternet = true;
+            instance().hasInternet = true;
             String ip = reader.readLine();
             return ip;
         } catch (Exception e) {
             TTrainParser.getDebugManager().handle(e, "No Internet???");
-            mainInst.hasInternet = false;
+            instance().hasInternet = false;
         }
         return null;
     }
@@ -222,7 +219,7 @@ public class TTrainParser extends MessageDisplay {
     }
 
     private SqlConnection getNewSqlConnection() {
-        return new SqlConnection(mainInst);
+        return new SqlConnection(tTrainParser);
     }
 
     public TablePart getTableType(String rgbString) {
@@ -249,7 +246,6 @@ public class TTrainParser extends MessageDisplay {
         int lower = ofThisNumber - within;
         int upper = ofThisNumber + within;
         return (number >= lower) && (number <= upper);
-
     }
 
     public String pixelRGBToString(Color colour) {
@@ -260,31 +256,31 @@ public class TTrainParser extends MessageDisplay {
         return selected.getName().split("\\.")[1];
     }
 
-    public void doDatafileChecks() {
+    public void createDataFileIfNotPresent() {
         boolean fileExists = new File(TTrainParser.USER_DIRECTORY_FILE_SEP + "data.yml").exists();
         if (!fileExists) generateDataFile();
     }
 
     public String getLocallyStoredEmail() {
-        doDatafileChecks();
+        createDataFileIfNotPresent();
         DataFileInfo info = getYamlReadDatafile();
         return info.email;
     }
 
     public boolean hasLocallyStoredEmail() {
-        doDatafileChecks();
+        createDataFileIfNotPresent();
         return !getLocallyStoredEmail().equals("{NOT BEEN SET}");
     }
 
     public File getCroppedTimetableFileName(boolean trueForPNG) {
-        doDatafileChecks();
+        createDataFileIfNotPresent();
         DataFileInfo info = getYamlReadDatafile();
         return info == null ? null : (new File(USER_DIRECTORY_FILE_SEP + (trueForPNG ? info.timetableCroppedPngFileName : info.timetableCroppedPdfFileName)));
     }
 
     //Recursive
     public boolean hasCroppedTimetableFileAlready(boolean trueForPNG) {
-        doDatafileChecks();
+        createDataFileIfNotPresent();
         File file = getCroppedTimetableFileName(trueForPNG);
 
         if (file == null) return false;
@@ -402,7 +398,7 @@ public class TTrainParser extends MessageDisplay {
 
     public void openPanel(String panelName) {
         if (panelName.equals(CORE_PANEL)) { //Latest tesseractInstance
-            coreForm = new CoreForm(mainInst);
+            coreForm = new CoreForm(tTrainParser);
             addPanelToCard(coreForm.getPanel(), TTrainParser.CORE_PANEL);
         }
         CardLayout cardLayout = (CardLayout) (cards.getLayout());
@@ -444,17 +440,6 @@ public class TTrainParser extends MessageDisplay {
         return info;
     }
 
-    public void writeToDatafile(DataFileInfo info) {
-        YamlWriter writer;
-        try { //TODO Store System current millis for the time which the user had first timetable parsed
-            writer = new YamlWriter(new FileWriter(TTrainParser.USER_DIRECTORY_FILE_SEP + "data.yml"));
-            writer.write(info); //writes previously collected data about jpg & pdf file names
-            writer.close();
-        } catch (IOException | YamlException e1) {
-            e1.printStackTrace();
-        }
-    }
-
     public void configureCrsComboBox(JComboBox selectHomeCrsBox) {
         selectHomeCrsBox.addItem("POO / Poole");
         selectHomeCrsBox.addItem("PKS / Parkstone");
@@ -469,6 +454,10 @@ public class TTrainParser extends MessageDisplay {
         selectHomeCrsBox.addItem("ANF / Ashurst New Forest");
         selectHomeCrsBox.addItem("TTN / Totton");
         selectHomeCrsBox.addItem("LYT / Lymington Town");
+    }
+
+    public static TTrainParser instance() {
+        return tTrainParser;
     }
 
     public void changeCrsComboBoxToCurrentCrs(JComboBox selectHomeCrsBox) {
