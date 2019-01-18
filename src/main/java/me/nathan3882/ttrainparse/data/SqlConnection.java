@@ -24,7 +24,7 @@ public class SqlConnection {
 
     public SqlConnection(TTrainParser main) {
         this.main = main;
-        this.connection = newCon();
+        establishConnection();
     }
 
     public SqlConnection(TTrainParser main, String host, int port, String databaseName, String username, String password) {
@@ -50,8 +50,8 @@ public class SqlConnection {
      * @return success or not
      */
     public void openConnection() {
-        if (!connectionEstablished()) {
-            newCon();
+        if (!hasConnection() || isClosed()) {
+            establishConnection();
         }
         if (connectionEstablished()) {
             if (closeConnectionTask == null) {
@@ -73,7 +73,7 @@ public class SqlConnection {
                 latestOpeningMilis = System.currentTimeMillis();
                 if (open) return;
                 Class.forName("com.mysql.jdbc.Driver");
-                this.connection = newCon();
+                establishConnection();
                 open = true;
             } catch (Exception e) {
                 TTrainParser.getDebugManager().handle(e);
@@ -82,7 +82,7 @@ public class SqlConnection {
         }
     }
 
-    private Connection newCon() {
+    private Connection establishConnection() {
         Connection ans;
         try {
             ans = DriverManager.getConnection("jdbc:mysql://" + host + ":" + port + "/" + databaseName + "?useSSL=false&allowMultiQueries=true", username, password);
@@ -91,6 +91,7 @@ public class SqlConnection {
             e.printStackTrace();
             return null;
         }
+        this.connection = ans;
         return ans;
     }
 
@@ -101,9 +102,15 @@ public class SqlConnection {
         }
     }
 
-    public boolean connectionEstablished() {
-        if (this.connection == null) openConnection();
+    public boolean hasConnection() {
         return this.connection != null;
+    }
+
+    public boolean connectionEstablished() {
+        if (!hasConnection()) {
+            establishConnection();
+        }
+        return hasConnection() && !isClosed();
     }
 
     public Connection getConnection() {
