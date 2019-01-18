@@ -1,4 +1,4 @@
-package me.nathan3882.data;
+package me.nathan3882.ttrainparse.data;
 
 import me.nathan3882.ttrainparse.TTrainParser;
 

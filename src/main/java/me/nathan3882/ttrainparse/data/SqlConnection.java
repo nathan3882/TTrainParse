@@ -1,4 +1,4 @@
-package me.nathan3882.data;
+package me.nathan3882.ttrainparse.data;
 
 import me.nathan3882.ttrainparse.TTrainParser;
 import me.nathan3882.ttrainparse.TaskManager;
@@ -11,24 +11,15 @@ import java.util.concurrent.TimeUnit;
 
 public class SqlConnection {
 
+    private static long latestOpeningMilis;
     private TTrainParser main;
     private boolean open;
-
-    private static long latestOpeningMilis;
     private TaskManager closeConnectionTask;
-
-    public interface SqlTableName {
-        String TIMETABLE_RENEWAL = "timetablerenewal";
-        String TIMETABLE_LESSONS = "timetablelessons";
-        String TIMETABLE_USERDATA = "timetableuserdata";
-    }
-
     private String host = "localhost";
     private String databaseName = "userdata";
     private int port = 3306;
     private String username = "root";
     private String password = "";
-
     private Connection connection;
 
     public SqlConnection(TTrainParser main) {
@@ -43,6 +34,14 @@ public class SqlConnection {
         this.port = port;
         this.username = username;
         this.password = password;
+    }
+
+    public static long getLatestOpeningMilis() {
+        return latestOpeningMilis;
+    }
+
+    public static void setLatestOpeningMilis(long latestOpeningMilis) {
+        SqlConnection.latestOpeningMilis = latestOpeningMilis;
     }
 
     /**
@@ -64,7 +63,7 @@ public class SqlConnection {
                         if (connectionEstablished() && isOpen() &&
                                 current - lastOpen >= TimeUnit.SECONDS.toMillis(150)) { //Close after 2 and 1/2 minutes
                             closeConnection();
-                            SqlConnection.setLatestOpeningMilis(current); //Will be 0, condition will fail unless has been opened again
+                            setLatestOpeningMilis(current); //Will be 0, condition will fail unless has been opened again
                         }
                     }
                 };
@@ -84,12 +83,15 @@ public class SqlConnection {
     }
 
     private Connection newCon() {
+        Connection ans;
         try {
-            return DriverManager.getConnection("jdbc:mysql://" + host + ":" + port + "/" + databaseName + "?useSSL=false&allowMultiQueries=true", username, password);
+            ans = DriverManager.getConnection("jdbc:mysql://" + host + ":" + port + "/" + databaseName + "?useSSL=false&allowMultiQueries=true", username, password);
+            setLatestOpeningMilis(System.currentTimeMillis());
         } catch (Exception e) {
             e.printStackTrace();
             return null;
         }
+        return ans;
     }
 
     public void closeConnection() {
@@ -117,11 +119,6 @@ public class SqlConnection {
         }
     }
 
-
-    public static void setLatestOpeningMilis(long latestOpeningMilis) {
-        SqlConnection.latestOpeningMilis = latestOpeningMilis;
-    }
-
     public TTrainParser getTTrainParser() {
         return this.main;
     }
@@ -140,7 +137,9 @@ public class SqlConnection {
         return !isClosed();
     }
 
-    public static long getLatestOpeningMilis() {
-        return latestOpeningMilis;
+    public interface SqlTableName {
+        String TIMETABLE_RENEWAL = "timetablerenewal";
+        String TIMETABLE_LESSONS = "timetablelessons";
+        String TIMETABLE_USERDATA = "timetableuserdata";
     }
 }
