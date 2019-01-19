@@ -1,9 +1,9 @@
-package me.nathan3882.gui.management;
+package me.nathan3882.ttrainparse.gui.management;
 
-import me.nathan3882.data.SqlConnection;
 import me.nathan3882.idealtrains.IdealTrains;
 import me.nathan3882.idealtrains.Service;
 import me.nathan3882.ttrainparse.*;
+import me.nathan3882.ttrainparse.data.SqlConnection;
 
 import javax.swing.*;
 import javax.xml.datatype.XMLGregorianCalendar;
@@ -22,7 +22,6 @@ import java.util.concurrent.TimeUnit;
 
 public class CoreForm extends MessageDisplay {
 
-    public static final int DEFAULT_FORCE_UPDATE_QUANTITY = 3;
     private final TTrainParser mainInstance;
     private TaskManager task;
     private User user;
@@ -32,11 +31,8 @@ public class CoreForm extends MessageDisplay {
     private JLabel updateTimetableInfoLabel;
     private JComboBox updateHomeCrsComboBox;
     private JLabel updateHomeCrsHelpLabel;
-
-    Calendar calendar = Calendar.getInstance();
-
     private String displayString;
-    private List<LessonInfo> info;
+    private List<LessonInfo> differentDayInfo;
     private boolean showTrainsForEveryLesson;
 
     public CoreForm(TTrainParser main) {
@@ -63,25 +59,24 @@ public class CoreForm extends MessageDisplay {
             left = getUser().getTableUpdatesLeft();
             renewDate = getUser().getTableRenewDate(false);
             updateTimetableButton.addActionListener(getUpdateTimetableListener(main));
-            updateTimetableInfoLabel.setText("<html><center>" + left + " timetable update/s available until...<br><br>" + renewDate + "...<br><br>when it will refresh :)</center></html>");
+            updateTimetableInfoLabel.setText("<html><center>" + left + " timetable update/s available until..." + TTrainParser.DOUBLE_BREAK + renewDate + "..." + TTrainParser.BREAK + TTrainParser.BREAK + "when it will refresh :)</center></html>");
         } else {
             updateTimetableInfoLabel.setText("<html><center>You either don't have internet or no sql connection has been established.<br>Timetable updates disabled until fixed...</center></html>");
             updateTimetableButton.setEnabled(false);
         }
-        calendar.setTime(new Date());
-        int currentDay = calendar.get(Calendar.DAY_OF_WEEK);
+        int currentDay = TTrainParser.GLOBAL_CALENDAR.get(Calendar.DAY_OF_WEEK);
         DayOfWeek[] showThese = getDaysToShow(currentDay);
 
-        StringBuilder mainString = new StringBuilder("<html><center>Here are all of your lessons + train times :)<br><br>");
+        StringBuilder mainString = new StringBuilder("<html><center>Here are all of your lessons + train times :)" + TTrainParser.DOUBLE_BREAK);
 
         boolean hasOcrTextStored = user.hasOcrTextStored(showThese);
-        boolean isUpdating = mainInstance.welcomeForm.isUpdating();
+        boolean isUpdating = mainInstance.welcomeForm.isUpdatingTimetable();
         boolean segment = true;
         boolean store = false;
         if (hasInternet) {
             if (hasOcrTextStored) {
                 List<LessonInfo> info = user.getLessonInformation(showThese); //From stored ocr text
-                mainString = getStringToDisplay(info, false);
+                mainString = getStringToDisplay(info, false, 2);
                 segment = false;
             } else store = true;
         }
@@ -89,13 +84,27 @@ public class CoreForm extends MessageDisplay {
             if (isUpdating || segment) {
                 Segmentation segmentation = new Segmentation(main);
                 List<LessonInfo> info = getLessonInformation(segmentation, showThese, store);
-                mainString = getStringToDisplay(info, false);
+                mainString = getStringToDisplay(info, false, 2);
             }
         } else
             mainString.append("There has been an issue with your teachers file configuration").append("does the file exist?"); //TODO
         mainString.append("</center></html>");
         setDisplayString(mainString.toString());
         mainInfoLabel.setText(getDisplayString(user.getHomeCrs()));
+    }
+
+    public static Date toDate(LocalTime localTime) {
+        Instant instant = localTime.atDate(LocalDate.now())
+                .atZone(ZoneId.systemDefault()).toInstant();
+        return toDate(instant);
+    }
+
+    public static Date toDate(Instant instant) {
+        BigInteger milis = BigInteger.valueOf(instant.getEpochSecond()).multiply(
+                BigInteger.valueOf(1000));
+        milis = milis.add(BigInteger.valueOf(instant.getNano()).divide(
+                BigInteger.valueOf(1_000_000)));
+        return new Date(milis.longValue());
     }
 
     private ItemListener getUpdateHomeCrsComboBoxListener() {
@@ -117,32 +126,36 @@ public class CoreForm extends MessageDisplay {
     }
 
     private String getDisplayString(String crs) {
-        return this.getStringToDisplay(this.info, this.showTrainsForEveryLesson).toString().replace("{crs}", crs);
+        return this.getStringToDisplay(this.differentDayInfo, this.showTrainsForEveryLesson, 2).toString().replace("{crs}", crs);
     }
 
-
-    private StringBuilder getStringToDisplay(List<LessonInfo> info, boolean showTrainsForEveryLesson) {
-        this.info = info;
+    private StringBuilder getStringToDisplay(List<LessonInfo> differentDayInfo, boolean showTrainsForEveryLesson, int maxTrainsPerLesson) {
+        this.differentDayInfo = differentDayInfo;
         this.showTrainsForEveryLesson = showTrainsForEveryLesson;
+
         StringBuilder mainString = new StringBuilder();
         mainString.append("<html><center>");
+
         Date currentDate = new Date(System.currentTimeMillis());
-        for (int i = 0; i < info.size(); i++) {
 
-            LessonInfo newCollegeDay = info.get(i);
-            if (i != 0) mainString.append("<br>");
-            mainString.append(upperFirst(newCollegeDay.getDayOfWeek())).append(":<br>");
+        int totalDaysToShow = differentDayInfo.size();
+        for (int i = 0; i < totalDaysToShow; i++) {
 
-            newCollegeDay.getLessons().forEach(lessonName -> {
+            LessonInfo newCollegeDay = differentDayInfo.get(i);
 
+            if (i != 0 || i != totalDaysToShow - 1)
+                mainString.append(TTrainParser.BREAK); //when its not the first or last day starting, break to avoid the last lesson for prev day
+            mainString.append(upperFirst(newCollegeDay.getDayOfWeek())).append(":"); //Title the data with "{DAY}:\n"
+
+            newCollegeDay.getLessons().forEach(lessonName -> { //This iteration allows 1+ lessons to be accounted for
                 List<LocalTime> startTimes = newCollegeDay.getStartTimes(lessonName);
                 List<LocalTime> finishTimes = newCollegeDay.getFinishTimes(lessonName);
 
                 int startTimesSize = startTimes.size();
                 int lastLesson = startTimesSize - 1;
 
-                for (int k = 0; k < startTimesSize; k++) {
-                    mainString.append("<br>");
+                for (int k = 0; k < startTimesSize; k++) { //This iteration goes through the single/multiple lesson times
+                    mainString.append(TTrainParser.BREAK);
                     LocalTime aLessonsStartTime = startTimes.get(k);
                     Date aLessonsStartDate = toDate(aLessonsStartTime);
 
@@ -156,67 +169,92 @@ public class CoreForm extends MessageDisplay {
 
                         List<Service> idealTrains = null;
                         try {
+
                             idealTrains = IdealTrains.getHomeToLessonServices(
-                                    user.getHomeCrs(), "BCU", currentDate, 8 * 60, aLessonsStartDate);
+                                    user.getHomeCrs(), "BCU", currentDate, 8 * 60, aLessonsStartDate, 120);
                         } catch (SOAPException e) {
                             e.printStackTrace();
                         }
                         if (idealTrains != null) {
-                            mainString.append("<br>From your home station, catch the:<br>");
+                            mainString.append(TTrainParser.BREAK + "From your home station, catch the:" + TTrainParser.BREAK);
                             if (!idealTrains.isEmpty()) {
-                                for (int l = 0; l < idealTrains.size(); l++) {
+                                int done = 0;
+                                for (int l = (idealTrains.size() - 1); l >= 0; l--) { //this iteration goes through fastest [len - 1] to slowest [0]
+                                    if (done == maxTrainsPerLesson) break;
                                     Service service = idealTrains.get(l);
                                     XMLGregorianCalendar xmlEta = service.getEta();
-                                    XMLGregorianCalendar xmlSta = service.getSta();
                                     XMLGregorianCalendar xmlEtd = service.getEtd();
-                                    XMLGregorianCalendar xmlSdt = service.getSdt();
-                                    Date arrivalDate = null;
-                                    if (xmlEta != null) {
-                                        arrivalDate = xmlEta.toGregorianCalendar().getTime();
-                                    } else if (xmlSta != null) { //Eta not in xml response, was null, try sta
-                                        arrivalDate = xmlSta.toGregorianCalendar().getTime();
-                                    }
-                                    if (xmlEtd != null) {
-                                        arrivalDate = xmlEtd.toGregorianCalendar().getTime();
-                                    } else if (xmlSdt != null) {
-                                        arrivalDate = xmlSdt.toGregorianCalendar().getTime();
-                                    }
-                                    if (arrivalDate == null) {
-                                        continue; //Sometimes is null from national rail API? cant really do much?
-                                    }
-                                    long etaMillis = arrivalDate.getTime();
-                                    String etaHoursString = String.valueOf(xmlEta.getHour());
-                                    String etaMinsString = getPrettyMinute(xmlEta.getMinute());
-                                    String etdHoursString = String.valueOf(xmlEtd.getHour());
-                                    String etdMinsString = getPrettyMinute(xmlEtd.getMinute());
-                                    long difFromLesson = service.getToSpareMinutes();
-                                    mainString.append(etdHoursString + ":" + etdMinsString + " from " + getUser().getHomeCrs() + " that arrives @ " + etaHoursString + ":" + etaMinsString + ". (" + difFromLesson + "mins before lesson)<br>");
 
+                                    XMLGregorianCalendar xmlSta = service.getSta();
+                                    XMLGregorianCalendar xmlSdt = service.getSdt();
+
+                                    Calendar departCal = getCalendarFromDate(check(xmlEtd, xmlSdt).getTime());
+                                    Calendar arrivalCal = getCalendarFromDate(check(xmlEta, xmlSta).getTime());
+
+                                    if (arrivalCal == null)
+                                        continue; //API sometimes doesn't have arrival data & is null from national rail
+
+                                    long departMillis = departCal.getTimeInMillis();
+                                    long arriveMillis = arrivalCal.getTimeInMillis();
+
+                                    if (arriveMillis <= departMillis) {
+                                        continue; //Small quantity of times say that arrival time is prior to departure time?
+                                    }
+
+                                    String arrivalHoursString = fixHours(arrivalCal.get(Calendar.HOUR_OF_DAY));
+                                    String departureHoursString = fixHours(departCal.get(Calendar.HOUR_OF_DAY));
+
+                                    String departureMinsString = getPrettyMinute(xmlEtd.getMinute());
+                                    String arrivalMinsString = getPrettyMinute(xmlSta.getMinute());
+
+                                    long difFromLesson = service.getToSpareMinutes();
+                                    mainString.append(departureHoursString + ":" + departureMinsString
+                                            + " from " + getUser().getHomeCrs() +
+                                            " that arrives @ " + arrivalHoursString + ":" + arrivalMinsString +
+                                            ". (" + difFromLesson + "mins before lesson)" + TTrainParser.BREAK);
+                                    done++;
                                 }
                             } else {
                                 mainString.append("No trains found for this lesson...");
                             }
                         }
                     }
+                    //Here is where the end of a lesson's train times iteration breaks,
+                    //checks whether it's the last lesson for that day, if so TTrainParser.BREAK
+                    if (k == lastLesson) {
+                        mainString.append(TTrainParser.BREAK);
+                    }
                 }
+
             });
         }
         mainString.append("</center></html>");
         return mainString;
     }
 
-    public static Date toDate(LocalTime localTime) {
-        Instant instant = localTime.atDate(LocalDate.now())
-                .atZone(ZoneId.systemDefault()).toInstant();
-        return toDate(instant);
+    //Services for example an actual service that departs at 12:50 in the afternoon (not at night) says 00 instead of 12
+    private String fixHours(int hour) {
+        String str = String.valueOf(hour);
+        if (str.startsWith("0")) {
+            str = "12" + str.substring(1);
+        }
+        return str;
     }
 
-    public static Date toDate(Instant instant) {
-        BigInteger milis = BigInteger.valueOf(instant.getEpochSecond()).multiply(
-                BigInteger.valueOf(1000));
-        milis = milis.add(BigInteger.valueOf(instant.getNano()).divide(
-                BigInteger.valueOf(1_000_000)));
-        return new Date(milis.longValue());
+    private Calendar getCalendarFromDate(Date date) {
+        Calendar cal = Calendar.getInstance();
+        cal.setTime(date);
+        return cal;
+    }
+
+    private GregorianCalendar check(XMLGregorianCalendar estimated, XMLGregorianCalendar scheduled) {
+        GregorianCalendar date = null;
+        if (estimated != null) {
+            date = estimated.toGregorianCalendar();
+        } else if (scheduled != null) { //Eta not in xml response, was null, try sta
+            date = scheduled.toGregorianCalendar();
+        }
+        return date;
     }
 
     private ActionListener getUpdateTimetableListener(TTrainParser main) {
@@ -235,7 +273,7 @@ public class CoreForm extends MessageDisplay {
                 if (getUser().hasSqlEntry(SqlConnection.SqlTableName.TIMETABLE_RENEWAL)) { //just incase
                     int forceableUpdatesLeft = getUser().getTableUpdatesLeft();
                     if (currentTimeTakePrevUpload >= updateAfterThisTime) {//7 day period, reset force timetable update number.
-                        getUser().setTableUpdatesLeft(DEFAULT_FORCE_UPDATE_QUANTITY);
+                        getUser().setTableUpdatesLeft(TTrainParser.DEFAULT_FORCE_UPDATE_QUANTITY);
                     } else if (forceableUpdatesLeft > 0) {
                         //removal when has successfully been parsed, not here, when the button is clicked
                     } else {
@@ -295,7 +333,7 @@ public class CoreForm extends MessageDisplay {
 
             LessonInfo lessonInfo = new LessonInfo(words, day);
             if (!lessonInfo.isParsedSuccessfully()) {
-                displayMessage("Sorry, timetable can not be parsed. Did your configure Teacher Names.txt? Perhaps the screenshot came from another monitor, or was too small");
+                displayMessage("Sorry, timetable can not be parsed. Did your configure " + TTrainParser.TEACHERS_FILE_NAME + "? Perhaps the screenshot came from another monitor, or was too small");
                 mainInstance.updateTimetableUpload();
             }
             info.add(lessonInfo);
