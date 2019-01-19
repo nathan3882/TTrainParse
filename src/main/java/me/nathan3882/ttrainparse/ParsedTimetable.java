@@ -7,7 +7,6 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-
 /**
  * @author Nathan Allanson
  * @purpose Gets a timetable/buffered image that's able to be parsed by OCR, cancelling out every piece of futile external information.
@@ -19,17 +18,14 @@ public class ParsedTimetable {
         TOP_BOTTOM_LEFT_RIGHT
     }
 
+    private static List<ComparisonOutput.Response> responsesSoFar = new ArrayList<>(); //I could just iterate through previously stored comparison outputs and
     private BufferedImage firstImage;
     private TTrainParser main;
-
     private List<ComparisonOutput> comparisonOutputs = new ArrayList<>();
-    private static List<ComparisonOutput.Response> responsesSoFar = new ArrayList<>(); //I could just iterate through previously stored comparison outputs and
-
     private int yValueBottomBorder = -1;
     private int yValueTopBorder = -1;
     private int xValueLeftBorder = -1;
     private int xValueRightBorder = -1;
-
     private BufferedImage newImage = null;
 
     public ParsedTimetable(TTrainParser main, BufferedImage firstImage) {
@@ -56,7 +52,6 @@ public class ParsedTimetable {
         doTimetableAnalysis(AnalysisType.TOP_BOTTOM_LEFT_RIGHT,
                 width, height, storedPixels, borderCoordinates, XYPixels);
     }
-
 
     /**
      * Following code determines left and right side border coordinates of the timetable
@@ -109,6 +104,14 @@ public class ParsedTimetable {
         }
     }
 
+    private void logInstantiation(boolean leftRightTopBottom) {
+        if (leftRightTopBottom) {
+            ComparisonOutput.leftRightInstantiations++;
+        } else {
+            ComparisonOutput.topBottomInstantiations++;
+        }
+    }
+
     public BufferedImage getSuccessfullyParsedImage() {
         if (successfullyParsed()) { //Top, bottom, left AND right sides of border all found
             for (ComparisonOutput comparisonOutput : comparisonOutputs) {
@@ -141,8 +144,8 @@ public class ParsedTimetable {
                         yValueBottomBorder);
     }
 
-    private boolean getCondition(int size, int hOrW) {
-        return size >= (hOrW / 3) - 1; //Dividing integers gives absoloute value, ie 9.9 will be 9 so just take 1 away to be accurate
+    private boolean getCondition(int size, int heightOrWidth) {
+        return size >= (heightOrWidth / 3) - 1; //Dividing integers gives absoloute value, ie 9.9 will be 9 so just take 1 away to be accurate
     }
 
     public boolean successfullyParsed() {
@@ -152,7 +155,6 @@ public class ParsedTimetable {
     public BufferedImage getStartingImage() {
         return this.firstImage;
     }
-
 
     public List<ComparisonOutput.Response> getResponses() {
         return responsesSoFar;
