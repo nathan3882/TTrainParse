@@ -1,10 +1,10 @@
 package me.nathan3882.ttrainparse;
 
-import me.nathan3882.data.DataFileInfo;
-import me.nathan3882.data.SqlConnection;
-import me.nathan3882.gui.management.CoreForm;
-import me.nathan3882.gui.management.LoginRegisterForm;
-import me.nathan3882.gui.management.WelcomeForm;
+import me.nathan3882.ttrainparse.data.DataFileInfo;
+import me.nathan3882.ttrainparse.data.SqlConnection;
+import me.nathan3882.ttrainparse.gui.management.CoreForm;
+import me.nathan3882.ttrainparse.gui.management.LoginRegisterForm;
+import me.nathan3882.ttrainparse.gui.management.WelcomeForm;
 import net.sourceforge.tess4j.ITesseract;
 import net.sourceforge.tess4j.Tesseract;
 import net.sourceforge.yamlbeans.YamlException;
@@ -25,16 +25,16 @@ import java.util.regex.Pattern;
 
 public class TTrainParser extends MessageDisplay {
 
-    /*
-     * display live departure board via digital screens, where the information is self-refreshing;
-     * , must say Powered by National Rail Enquiries
-     */
-
+    public static final Calendar GLOBAL_CALENDAR = Calendar.getInstance();
     public static final String USER_DIRECTORY = System.getProperty("user.dir");
     public static final String WELCOME_PANEL = "welcomePanel";
     public static final String CORE_PANEL = "corePanel";
     public static final String LOGIN_REGISTER_PANEL = "loginRegisterPanel";
     public static final String USER_DIRECTORY_FILE_SEP = USER_DIRECTORY + File.separator;
+    public static final String TEACHERS_FILE_NAME = "Teacher Names.txt";
+    public static final int DEFAULT_FORCE_UPDATE_QUANTITY = 3;
+    public static final String BREAK = "<br>";
+    public static final String DOUBLE_BREAK = BREAK + BREAK;
     private static TTrainParser tTrainParser = new TTrainParser();
     private static String activePanel;
     private static ITesseract tesseractInstance = new Tesseract();
@@ -52,6 +52,8 @@ public class TTrainParser extends MessageDisplay {
 
     public static void main(String[] args) {
 
+        GLOBAL_CALENDAR.setTime(new Date());
+
         TTrainParser.debugManager = new DebugManager(System.currentTimeMillis());
 
         instance().sqlConnection = instance().getNewSqlConnection();
@@ -59,20 +61,21 @@ public class TTrainParser extends MessageDisplay {
         fetchIp();
 
         instance().getSqlConnection().openConnection();
+
         String timetableLessons = SqlConnection.SqlTableName.TIMETABLE_LESSONS;
         boolean hasLocallyStoredEmail = instance().hasLocallyStoredEmail();
+
         if (hasLocallyStoredEmail) {
             instance().setUser(new User(tTrainParser, instance().getLocallyStoredEmail()));
         } else {
             instance().setUser(new User(tTrainParser, ""));
         }
 
-        WelcomeForm wForm = new WelcomeForm(tTrainParser, false);
+        WelcomeForm wForm = new WelcomeForm(tTrainParser);
         addPanelToCard(wForm.getPanel(), WELCOME_PANEL);
 
         LoginRegisterForm reg = new LoginRegisterForm(tTrainParser);
         addPanelToCard(reg.getPanel(), LOGIN_REGISTER_PANEL);
-
 
         boolean hasSql = instance().getUser().hasSqlEntry(timetableLessons);
         boolean hasCroppedTimetableFileAlready = instance().hasCroppedTimetableFileAlready(true);
@@ -89,8 +92,8 @@ public class TTrainParser extends MessageDisplay {
         File newTeacherFile = null;
         try {
             ClassLoader classLoader = Thread.currentThread().getContextClassLoader();
-            InputStream is = classLoader.getResourceAsStream("Teacher Names.txt");
-            newTeacherFile = new File(USER_DIRECTORY_FILE_SEP + "Teacher Names.txt");
+            InputStream is = classLoader.getResourceAsStream(TTrainParser.TEACHERS_FILE_NAME);
+            newTeacherFile = new File(USER_DIRECTORY_FILE_SEP + TTrainParser.TEACHERS_FILE_NAME);
             Files.copy(is, newTeacherFile.toPath(), StandardCopyOption.REPLACE_EXISTING);
         } catch (IOException e) {
             e.printStackTrace();
@@ -121,7 +124,7 @@ public class TTrainParser extends MessageDisplay {
 
     public static Map<String, String[]> getSubjectNamesWithMultipleTeachers() {
         Map<String, String[]> subjectNamesWithMultipleTeachers = new HashMap<>();
-        String fileName = "Teacher Names.txt";
+        String fileName = TTrainParser.TEACHERS_FILE_NAME;
         File file = new File(USER_DIRECTORY_FILE_SEP + fileName);
         if (!hasTeachersFile()) {
             generateTeachersFile();
@@ -181,16 +184,14 @@ public class TTrainParser extends MessageDisplay {
         frame.pack();
         frame.setVisible(true);
     }
-
     private static String fetchIp() {
         BufferedReader reader = null;
         try {
-            URL amazonWS = new URL("http://checkip.amazonaws.com");
+            URL amazonWS = new URL("http://checkip.amazonaws.com"); //GET web service that just returns plaintext of users ip
             reader = new BufferedReader(new InputStreamReader(
                     amazonWS.openStream()));
             instance().hasInternet = true;
-            String ip = reader.readLine();
-            return ip;
+            return reader.readLine();
         } catch (Exception e) {
             TTrainParser.getDebugManager().handle(e, "No Internet???");
             instance().hasInternet = false;
@@ -214,8 +215,12 @@ public class TTrainParser extends MessageDisplay {
     }
 
     public static boolean hasTeachersFile() {
-        File file = new File(USER_DIRECTORY_FILE_SEP + "Teacher Names.txt");
+        File file = new File(USER_DIRECTORY_FILE_SEP + TTrainParser.TEACHERS_FILE_NAME);
         return file.exists();
+    }
+
+    public static TTrainParser instance() {
+        return tTrainParser;
     }
 
     private SqlConnection getNewSqlConnection() {
@@ -454,10 +459,6 @@ public class TTrainParser extends MessageDisplay {
         selectHomeCrsBox.addItem("ANF / Ashurst New Forest");
         selectHomeCrsBox.addItem("TTN / Totton");
         selectHomeCrsBox.addItem("LYT / Lymington Town");
-    }
-
-    public static TTrainParser instance() {
-        return tTrainParser;
     }
 
     public void changeCrsComboBoxToCurrentCrs(JComboBox selectHomeCrsBox) {
