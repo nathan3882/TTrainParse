@@ -1,8 +1,8 @@
 package me.nathan3882.ttrainparse;
 
-import me.nathan3882.data.SqlConnection;
-import me.nathan3882.data.SqlQuery;
-import me.nathan3882.data.SqlUpdate;
+import me.nathan3882.ttrainparse.data.SqlConnection;
+import me.nathan3882.ttrainparse.data.SqlQuery;
+import me.nathan3882.ttrainparse.data.SqlUpdate;
 
 import java.sql.ResultSet;
 import java.sql.SQLException;

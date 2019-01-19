@@ -1,11 +1,11 @@
-package me.nathan3882.gui.management;
+package me.nathan3882.ttrainparse.gui.management;
 
-import me.nathan3882.data.DataFileInfo;
-import me.nathan3882.data.SqlConnection;
 import me.nathan3882.ttrainparse.MessageDisplay;
 import me.nathan3882.ttrainparse.ParsedTimetable;
 import me.nathan3882.ttrainparse.TTrainParser;
 import me.nathan3882.ttrainparse.User;
+import me.nathan3882.ttrainparse.data.DataFileInfo;
+import me.nathan3882.ttrainparse.data.SqlConnection;
 import net.sourceforge.yamlbeans.YamlException;
 import net.sourceforge.yamlbeans.YamlWriter;
 
@@ -23,10 +23,9 @@ import java.io.IOException;
 
 public class WelcomeForm extends MessageDisplay {
 
-    private boolean isUpdating;
     public JPanel welcomePanel;
     public JLabel welcomeLabel;
-
+    private boolean isUpdating;
     private JFileChooser timetableFileChooser;
     private JButton selectFile;
     private JCheckBox confirmValidTimetable;
@@ -36,6 +35,10 @@ public class WelcomeForm extends MessageDisplay {
     private File selectedFile;
 
     private boolean isValidFile = false;
+
+    public WelcomeForm(TTrainParser main) {
+        this(main, false);
+    }
 
     public WelcomeForm(TTrainParser main, boolean isUpdating) {
         this.mainInstance = main;
@@ -51,10 +54,17 @@ public class WelcomeForm extends MessageDisplay {
         advanceToLoginButton.addActionListener(createAdvanceToLoginListener(main));
     }
 
+    private static String getDefaultHeaderText() {
+        return "<html><center>Welcome!<br>We've sensed you haven't got a timetable stored already...<br>Click the button below to do so!</center></html>";
+    }
+
+    private static String getUpdatingHeaderText() {
+        return "<html><center>Welcome!<br>We've sensed you've had previously had a timetable...<br>But would like to update it!<br>Click the button below to do so!</center></html>";
+    }
+
     public void setHeaderText(String string) {
         this.welcomeLabel.setText(string);
     }
-
 
     /**
      * generates a new cropped PDF file if doesnt already exist
@@ -63,7 +73,7 @@ public class WelcomeForm extends MessageDisplay {
         return new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent event) {
-                boolean successfullyParsed = false;
+                boolean successfullyParsed;
                 BufferedImage selectedFileImage;
                 long start = 0;
                 if (advanceToLoginButton.isEnabled() && isValidFile) {
@@ -81,7 +91,7 @@ public class WelcomeForm extends MessageDisplay {
                     DataFileInfo info = new DataFileInfo();
                     info.setDefaults();
 
-                    if (isUpdating() || !main.hasCroppedTimetableFileAlready(false)) { //is updating or hasn't got a pdf
+                    if (isUpdatingTimetable() || !main.hasCroppedTimetableFileAlready(false)) { //is updating or hasn't got a pdf
                         start = System.currentTimeMillis();
                         ParsedTimetable timetable = new ParsedTimetable(main, selectedFileImage); //parses jpg
                         successfullyParsed = timetable.successfullyParsed();
@@ -102,13 +112,13 @@ public class WelcomeForm extends MessageDisplay {
                             TTrainParser.getDebugManager().handle(e);
                             e.printStackTrace();
                         }
-                        if (isUpdating()) {
+                        if (isUpdatingTimetable()) {
                             User user = main.getUser();
 
                             main.getSqlConnection().openConnection();
                             if (!user.hasSqlEntry(SqlConnection.SqlTableName.TIMETABLE_RENEWAL)) {
                                 user.generateDefaultRenewValues();
-                                user.setTableUpdatesLeft(CoreForm.DEFAULT_FORCE_UPDATE_QUANTITY);
+                                user.setTableUpdatesLeft(TTrainParser.DEFAULT_FORCE_UPDATE_QUANTITY);
                             }
                             mainInstance.getUser().setTableUpdatesLeft(mainInstance.getUser().getTableUpdatesLeft() - 1);
                             user.setPreviousUploadTime(System.currentTimeMillis());
@@ -128,7 +138,7 @@ public class WelcomeForm extends MessageDisplay {
 
                         YamlWriter writer = null;
                         try {
-                            writer = new YamlWriter(new FileWriter(main.USER_DIRECTORY_FILE_SEP + "data.yml"));
+                            writer = new YamlWriter(new FileWriter(TTrainParser.USER_DIRECTORY_FILE_SEP + "data.yml"));
                             writer.write(info); //writes previously collected data about jpg & pdf file names
                             writer.close();
                         } catch (IOException | YamlException e) {
@@ -183,6 +193,7 @@ public class WelcomeForm extends MessageDisplay {
         confirmValidTimetable.setEnabled(false);
         isValidFile = false;
     }
+
     @Override
     public JPanel getPanel() {
         return this.welcomePanel;
@@ -193,15 +204,7 @@ public class WelcomeForm extends MessageDisplay {
         return "welcomePanel";
     }
 
-    public static String getDefaultHeaderText() {
-        return "<html><center>Welcome!<br>We've sensed you haven't got a timetable stored already...<br>Click the button below to do so!</center></html>";
-    }
-
-    public static String getUpdatingHeaderText() {
-        return "<html><center>Welcome!<br>We've sensed you've had previously had a timetable...<br>But would like to update it!<br>Click the button below to do so!</center></html>";
-    }
-
-    public boolean isUpdating() {
+    public boolean isUpdatingTimetable() {
         return isUpdating;
     }
 
