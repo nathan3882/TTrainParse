@@ -183,14 +183,7 @@ public class User {
         SqlQuery query = new SqlQuery(connection);
         query.executeQuery("SELECT password FROM {table} WHERE userEmail = '" + email + "'",
                 SqlConnection.SqlTableName.TIMETABLE_USERDATA);
-        ResultSet set = query.getResultSet();
-        try {
-            if (!set.next()) return "invalid email";
-            return set.getString(1);
-        } catch (SQLException e) {
-            e.printStackTrace();
-        }
-        return null;
+        return getString(query);
     }
 
     public void storeEmailAndPasswordWithCrs(String email, byte[] password, byte[] salt, String CRS) {
@@ -205,6 +198,10 @@ public class User {
         SqlQuery query = new SqlQuery(connection);
         query.executeQuery("SELECT salt FROM {table} WHERE userEmail = '" + email + "'",
                 SqlConnection.SqlTableName.TIMETABLE_USERDATA);
+        return getString(query);
+    }
+
+    private String getString(SqlQuery query) {
         ResultSet set = query.getResultSet();
         try {
             if (!set.next()) return "invalid email";
