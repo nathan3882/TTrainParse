@@ -462,9 +462,11 @@ public class TTrainParser extends MessageDisplay {
     }
 
     public void changeCrsComboBoxToCurrentCrs(JComboBox selectHomeCrsBox) {
+        String homeCrs = user.getHomeCrs();
+        if (homeCrs == null) return;
         for (int i = 0; i < selectHomeCrsBox.getItemCount(); i++) {
             String item = (String) selectHomeCrsBox.getItemAt(i);
-            if (item.startsWith(user.getHomeCrs())) {
+            if (item.startsWith(homeCrs)) {
                 selectHomeCrsBox.setSelectedItem(item);
                 break;
             }
