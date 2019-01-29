@@ -1,10 +1,5 @@
 Business studies --- Fiona Davies
 Computer Science --- Charlie Brown
-Biology --- Rachel Hughes
-A2 Tutorial --- Catrin Williams
-//If a line starts with two slashes, it will be ignored
-//In order to get the program showing you the trains you need to get, you must
-//configure lines like the last line in this file except without the //
-//Please note that subjects can have unlimited words, for example: Biology and Government and Politics will both work
-//Additionally, more than one teacher may be configured, just seperate each teacher with a comma
-//<Subject Name> --- <teacher1 first name> <teacher1 second name>, <teacher2 first name> <teacher2 second name>
+German --- Sibylle Egle-Gleed
+A2 Tutorial --- Wendy Shemmell
+Direct Study --- Directed Study

@@ -114,8 +114,11 @@ public class ParsedTimetable {
 
     public BufferedImage getSuccessfullyParsedImage() {
         if (successfullyParsed()) { //Top, bottom, left AND right sides of border all found
+            comparisonOutputs.removeIf((ComparisonOutput output) -> output.getResponse() == null);
             for (ComparisonOutput comparisonOutput : comparisonOutputs) {
+
                 ComparisonOutput.Response response = comparisonOutput.getResponse();
+
                 switch (response) {
                     case VALID_TOP_BORDER:
                         this.yValueTopBorder = comparisonOutput.getValue();
@@ -149,6 +152,7 @@ public class ParsedTimetable {
     }
 
     public boolean successfullyParsed() {
+        getResponses().removeIf((ComparisonOutput.Response response) -> response == null); //removes the response if its null
         return getResponses().size() == 4;
     }
 

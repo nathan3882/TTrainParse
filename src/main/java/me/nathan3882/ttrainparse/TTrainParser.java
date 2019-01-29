@@ -139,7 +139,7 @@ public class TTrainParser extends MessageDisplay {
         }
 
         while (true) {
-            String subjectWithTeachers = null; //Biology - name1, name2, name3
+            String subjectWithTeachers = null; //Biology --- name1, name2, name3
             try {
                 subjectWithTeachers = reader.readLine();
                 if (subjectWithTeachers == null) {
@@ -184,6 +184,7 @@ public class TTrainParser extends MessageDisplay {
         frame.pack();
         frame.setVisible(true);
     }
+
     private static String fetchIp() {
         BufferedReader reader = null;
         try {
@@ -317,6 +318,7 @@ public class TTrainParser extends MessageDisplay {
      * - room names with support for tutorial sessions for example "Yr2 in SO1" or A2 Tutorial "in MO1"
      */
     public String depleteFutileInfo(String ocrResult, boolean oneSpaceBetweenAllInfo) {
+        String depletedText = "";
         ocrResult = ocrResult/*class names or numbers**/
                 .replaceAll("[\\[\\(].*[\\]\\)]", "")//[ or a ( followed by anything then a ] or )
                 .replaceAll("/", "")
@@ -326,23 +328,60 @@ public class TTrainParser extends MessageDisplay {
 
         String[] words = ocrResult.split("\\s+"); //one or more spaces
 
-        List<String> removeStrings = new ArrayList<>();
-
+        List<Integer> removeStrings = new ArrayList<>();
+        int dsLog = 0;
+        List<Integer> indexesOfA2sToReplaceWithYr = new ArrayList<>();
+        /*
+        Example input string:
+        Wednesday  A2 Tutorial in 830 10:05 - 11:10na Wendy Shem mell  Direct Study - A2 in LRC Directed Study bd11:30 - 12:35 Directed Study  swt = Business studies --- Fiona Davies
+         */
         for (String[] teachers : TTrainParser.getSubjectNamesWithMultipleTeachers().values()) {
-            for (String teacher : teachers) {
-                if (teacher == null) continue;
+            for (String scanningForThisTeacher : teachers) {
+                if (scanningForThisTeacher == null) continue;
+                int index = 0;
                 for (String wordInOcr : words) {
-                    for (String teacherFirstOrLastName : teacher.split(" ")) {
+                    for (String teacherFirstOrLastName : scanningForThisTeacher.split(" ")) {
                         if (teacherFirstOrLastName.equalsIgnoreCase("UNKNOWN")) continue;
-                        if (calculateDistance(wordInOcr, teacherFirstOrLastName) < 3) { //less than three characters changed
-                            removeStrings.add(wordInOcr);
+                        boolean wordSimilarToTeacher = calculateDistance(wordInOcr, teacherFirstOrLastName.toLowerCase().startsWith("direct") ? "Directe" : teacherFirstOrLastName) < 3; //"directe" is imbetween Directed and Direct, so good compromise
+                        if (scanningForThisTeacher.equals("Directed Study")) {
+                            if (wordSimilarToTeacher) { //Word similar to DirectedStudy
+                                if (dsLog < 2) { //Disregard the Lesson Identifier "Directed Study"
+                                    dsLog++;
+                                    continue;
+                                } else if (dsLog == 3 || dsLog == 4 || dsLog == 5 || dsLog == 6) { //"Directed" found x2 and "study" been found x2
+                                    removeStrings.add(index); //Remove them
+                                    dsLog++; //is now 4, 5, 6 or 7
+                                    if (dsLog == 7) {
+                                        dsLog = 0;  //when 5, has done something with all 3 of the directed studies (why there is 3 i do not know)
+                                    }
+                                }
+                            } else if (dsLog == 2 && wordInOcr.equals("A2")) { //Has come accross first "Directed Study" and is now on "-" or "A2"
+                                dsLog++;
+                                indexesOfA2sToReplaceWithYr.add(index); // the A2
+                                removeStrings.add(index - 1); //removes the dash before from timetable
+                            }
+
+                        } else if (wordSimilarToTeacher) { //less than three characters changed between word & a teacher name
+                            removeStrings.add(index); //"adding " + wordInOcr + " that was at index " + index + " to removals because teacher wasnt directed study & was part of a teachers name
                         }
                     }
+                    index++;
                 }
             }
         }
-        for (String wordToRemove : removeStrings) {
-            ocrResult = ocrResult.replace(wordToRemove, "");
+
+        indexesOfA2sToReplaceWithYr.forEach(index -> {
+            //Replace index with yr2 in the ocrResult strnig
+            words[index] = "Yr2";
+        });
+
+        for (int wordToRemove : removeStrings) {
+            words[wordToRemove] = "";
+        }
+
+        for (String word : words) {
+            if (word.equals("")) continue;
+            depletedText += word + " ";
         }
 
         String pastSevenChars = "       "; //7 spaces
@@ -350,8 +389,8 @@ public class TTrainParser extends MessageDisplay {
         int beforeColon;
         boolean tutorialCondition = false;
         boolean setTutorBound = false;
-        for (int j = 0; j < ocrResult.length(); j++) {
-            char charAt = ocrResult.charAt(j);
+        for (int j = 0; j < depletedText.length(); j++) {
+            char charAt = depletedText.charAt(j);
             pastSevenChars = pastSevenChars.substring(1) + charAt; //removes pastSeven[0], adds charAt to end
             String pastThreeChars = pastSevenChars.substring(4);
 
@@ -368,18 +407,15 @@ public class TTrainParser extends MessageDisplay {
 
             if (charAt == ':' && beforeYr != -1) { //will be -1 when it doesnt contain Yr, disregard & continue search
                 beforeColon = j - 2;
-                ocrResult = ocrResult.substring(0, beforeYr) + (tutorialCondition ? " " : "") + ocrResult.substring(beforeColon);
+                depletedText = depletedText.substring(0, beforeYr) + (tutorialCondition ? " " : "") + depletedText.substring(beforeColon);
                 if (tutorialCondition) {
                     beforeYr = -1;
                     tutorialCondition = false;
                 }
             }
         }
-        if (oneSpaceBetweenAllInfo) ocrResult = ocrResult.replaceAll("\n", "").replaceAll("\\s{2,}", " ").trim();
-        ocrResult = ocrResult.replaceAll("( Yr(0-9)?)", ""); //Due to an unknown reason, a singular "Yr" still exists sometimes.
-        return ocrResult;
+        return depletedText;
     }
-
     /**
      * Recursive levenshtein distance following 3 functions
      **/

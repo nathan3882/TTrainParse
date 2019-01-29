@@ -2,6 +2,7 @@ package me.nathan3882.ttrainparse;
 
 import java.time.DayOfWeek;
 import java.time.LocalTime;
+import java.time.format.DateTimeParseException;
 import java.util.*;
 
 /**
@@ -57,7 +58,7 @@ public class LessonInfo {
                 orderedLessons.add(subject);
             }
             String[] valueSplit = oneBound.split(", ");
-            int lowerOrDifferenceBound = prs(valueSplit[0]);
+            int lowerOrDifferenceBound = parseInt(valueSplit[0]);
             if (previousLowerBound != -1) {
                 lowerOrDifferenceBound = previousLowerBound + lowerOrDifferenceBound;
             } else {
@@ -71,16 +72,47 @@ public class LessonInfo {
             int upperBoundForJustTimes = subjectNameUpperBound + 3;
 
             String timeString = "";
-            for (int i = lowerBoundForJustTimes; i <= upperBoundForJustTimes; i++)
+            for (int i = lowerBoundForJustTimes; i <= upperBoundForJustTimes; i++) {
                 timeString += words.get(i);
+            }
 
-            String[] startFinish = timeString.split("-"); //"10:05-11:10" left is start, right is finish
-            LocalTime startTime = LocalTime.parse(startFinish[0]);
-            LocalTime finishTime = LocalTime.parse(startFinish[1]);
+            System.out.println("initial timeString = " + timeString);
+            String[] startFinish = timeStringSplit(timeString); //"10:05-11:10" left is start, right is finish
+            if (startFinish.length == 1) { //Sometimes has just been one, down to dodgy ocr
+                timeString += words.get(upperBoundForJustTimes + 1); //Add next few words
+                startFinish = timeStringSplit(timeString);
+            }
+            LocalTime startTime = parse(startFinish[0], false);
+            LocalTime finishTime = parse(startFinish[1], false);
 
             addToList(subject, subjectAndBounds, orderedSubjectStartTimes, startTime);
             addToList(subject, subjectAndBounds, orderedSubjectFinishTimes, finishTime);
         }
+    }
+
+    private String[] timeStringSplit(String toSplit) {
+        return toSplit.split("-");
+    }
+
+    public static boolean tried = false;
+
+    //Allows "LRCed11:30-12:35ed" to be parsed into start time 11:30  and end time  12:35 easily
+    private LocalTime parse(String timeString, boolean recursivelyCalled) {
+        LocalTime parsed = null;
+        try {
+            parsed = LocalTime.parse(timeString);
+        } catch (DateTimeParseException | IndexOutOfBoundsException exception) {
+            int indexOfColon = timeString.indexOf(":");
+            String newString = null;
+            if (recursivelyCalled) {
+                //Has excepted on the supposedly "fixed" & parsable string, now try removing the end of the string
+                newString = timeString.substring(indexOfColon - 2, indexOfColon + 3); //ie "12:30blabla" would return "12:30"
+            } else {
+                newString = timeString.substring(indexOfColon - 2);
+            }
+            return parse(newString, true);
+        }
+        return parsed;
     }
 
     private void addToList(String subject, Map<String, List<String>> subjectAndBounds, Map<String, LinkedList<LocalTime>> orderedSubjectTimes, LocalTime finishTime) {
@@ -130,7 +162,7 @@ public class LessonInfo {
         return subjectAndBounds;
     }
 
-    private int prs(String s) {
+    private int parseInt(String s) {
         return Integer.parseInt(s);
     }
 
