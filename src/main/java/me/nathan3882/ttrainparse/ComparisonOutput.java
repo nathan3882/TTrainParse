@@ -57,7 +57,12 @@ public class ComparisonOutput {
                 } else if (!timetable.getResponsesSoFar().contains(last)) { //is left-right or top-bottom so else is equivalent to the right/bottom border
                     toSet = last;
                 }
-                int con = 325 + (50 * timetable.getPrevDone());
+                /**
+                 * because a line in the middle of the table could be similar in pixel border colour quantity than
+                 * the actual border, this narrows it down in small intervals to allow the user to keep trying until
+                 * it finds the line with the most quantity of border colour in it's pixels
+                 */
+                int con = 400 - (25 * timetable.getPrevDone());
                 if (occurences <= con) { //if first retry, increase 50, if second, add 100 etc
 //                    System.out.println("Occurences of what would've been " + toSet.name() + " is lower than " + con + " at" + occurences + "in the" + xOrY);
                     this.setResponse(Response.MIDDLE_NOT_A_BORDER);
@@ -65,14 +70,41 @@ public class ComparisonOutput {
                 }
 
                 setValue(xOrY);
-                timetable.addNewResponse(toSet);
-                setResponse(toSet);
+                doResponse(toSet, xOrY, timetable);
 //                if (toSet != null) {
 //                    System.out.println("New response with " + occurences + " occurences is " + toSet.name() + " in the " + xOrY);
 //                }
                 return; //terminate on first iteration because we only want the first / most common
             }
         }
+    }
+
+    public void doResponse(Response response, int value, ParsedTimetable timetable) {
+        int timetableHeight = timetable.getStartingImage().getHeight(); //Arbitary val for explanation = 100
+        double specificity = .30;
+        boolean bottomBorderCondition = value > (timetableHeight * (1 - specificity)); //dont allow if bottom border isn't above 30% of height
+        boolean topBorderCondition = value < (timetableHeight * specificity); //dont allow if top border val isnt below 30% of height
+        int timetableWidth = timetable.getStartingImage().getWidth();
+        boolean leftBorderCondition = value < (timetableWidth * specificity);
+        boolean rightBorderCondition = value > (timetableWidth * (1 - specificity));
+        if (!isCalculatingLeftRightBorder()) {
+            switch (response) {
+                case VALID_BOTTOM_BORDER:
+                    if (!bottomBorderCondition) response = Response.MIDDLE_NOT_A_BORDER;
+                    break;
+                case VALID_TOP_BORDER:
+                    if (!topBorderCondition) response = Response.MIDDLE_NOT_A_BORDER;
+                    break;
+                case VALID_LEFT_BORDER:
+                    if (!leftBorderCondition) response = Response.MIDDLE_NOT_A_BORDER;
+                    break;
+                case VALID_RIGHT_BORDER:
+                    if (!rightBorderCondition) response = Response.MIDDLE_NOT_A_BORDER;
+                    break;
+            }
+        }
+        timetable.addNewResponse(response);
+        setResponse(response);
     }
 
     private LinkedHashMap<Integer, Integer> getBorderQuantities(Map<Integer, List<String>> map) { //fed x/y value with all associated colours
