@@ -15,10 +15,11 @@ public class SqlConnection {
     private TTrainParser main;
     private boolean open;
     private TaskManager closeConnectionTask;
-    private String host = "localhost";
-    private String databaseName = "userdata";
-    private int port = 3306;
-    private String username = "root";
+
+    private String host = "51.77.194.49";
+    private String databaseName = "ttrainparseUserdata";
+    private int port = 3307;
+    private String username = "";
     private String password = "";
     private Connection connection;
 
@@ -54,6 +55,7 @@ public class SqlConnection {
             establishConnection();
         }
         if (connectionEstablished()) {
+            System.out.println("con est");
             if (closeConnectionTask == null) {
                 closeConnectionTask = new TaskManager(new Timer()) {
                     @Override
@@ -79,6 +81,8 @@ public class SqlConnection {
                 TTrainParser.getDebugManager().handle(e);
                 e.printStackTrace();
             }
+        } else {
+            System.out.println("con not est");
         }
     }
 

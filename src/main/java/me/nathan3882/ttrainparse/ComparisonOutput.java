@@ -10,24 +10,14 @@ import java.util.Map.Entry;
  */
 public class ComparisonOutput {
 
-    public enum Response {
-        VALID_LEFT_BORDER,
-        VALID_RIGHT_BORDER,
-        VALID_TOP_BORDER,
-        VALID_BOTTOM_BORDER,
-        MIDDLE_NOT_A_BORDER
-    }
-
     public static int leftRightInstantiations = 0;
     public static int topBottomInstantiations = 0;
-
     private Response response;
     private TTrainParser main;
     private Map<Integer, List<String>> xOrYPixels;
     private Map<Integer, Integer> quantitiesOfBorder; //First integer is the x / y value,
     private boolean calculatingLeftRightBorder;
     private int value;
-
     public ComparisonOutput(TTrainParser main, ParsedTimetable timetable, Map<Integer, List<String>> previousXYPixels, boolean calculatingLeftRightBorder, HashMap<Integer, Integer> borderCoordinates) {
         this.main = main;
         this.calculatingLeftRightBorder = calculatingLeftRightBorder;
@@ -37,7 +27,7 @@ public class ComparisonOutput {
 
         /*
          * Following code determines whether a high % of the analysed pixel's colour is the same as the table's border colour
-         * if it is, there is 99% probability of this xOrYValue being the border of the table
+         * if it is, there is a high probability of this xOrYValue being the border of the table
          */
         for (int xOrYValue : xOrYPixels.keySet()) {
             int upperBound = 0;
@@ -56,29 +46,34 @@ public class ComparisonOutput {
 
             for (Integer xOrY : sortedQuantities.keySet()) { //to instance the first entry in the map
                 int occurences = sortedQuantities.get(xOrY);
-                if (occurences <= 300) {
-                    this.setResponse(Response.MIDDLE_NOT_A_BORDER);
-                    return;
-                }
 
                 Response first = calculatingLeftRightBorder ? Response.VALID_LEFT_BORDER : Response.VALID_TOP_BORDER;
                 Response last = calculatingLeftRightBorder ? Response.VALID_RIGHT_BORDER : Response.VALID_BOTTOM_BORDER;
 
                 Response toSet = null;
 
-                if (!timetable.getResponses().contains(first)) { //doesnt contain left or top border, hasnt been found yet
+                if (!timetable.getResponsesSoFar().contains(first)) { //doesnt contain left or top border, hasnt been found yet
                     toSet = first;
-                } else if (!timetable.getResponses().contains(last)) { //is left-right or top-bottom so else is equivalent to the right/bottom border
+                } else if (!timetable.getResponsesSoFar().contains(last)) { //is left-right or top-bottom so else is equivalent to the right/bottom border
                     toSet = last;
                 }
+                int con = 325 + (50 * timetable.getPrevDone());
+                if (occurences <= con) { //if first retry, increase 50, if second, add 100 etc
+//                    System.out.println("Occurences of what would've been " + toSet.name() + " is lower than " + con + " at" + occurences + "in the" + xOrY);
+                    this.setResponse(Response.MIDDLE_NOT_A_BORDER);
+                    return;
+                }
+
                 setValue(xOrY);
                 timetable.addNewResponse(toSet);
                 setResponse(toSet);
+//                if (toSet != null) {
+//                    System.out.println("New response with " + occurences + " occurences is " + toSet.name() + " in the " + xOrY);
+//                }
                 return; //terminate on first iteration because we only want the first / most common
             }
         }
     }
-
 
     private LinkedHashMap<Integer, Integer> getBorderQuantities(Map<Integer, List<String>> map) { //fed x/y value with all associated colours
         LinkedHashMap<Integer, Integer> aMap = new LinkedHashMap<>();
@@ -117,19 +112,27 @@ public class ComparisonOutput {
         return this.calculatingLeftRightBorder;
     }
 
+    public Response getResponse() {
+        return this.response;
+    }
+
     public void setResponse(Response output) {
         this.response = output;
     }
 
-    public Response getResponse() {
-        return this.response;
+    public int getValue() {
+        return this.value;
     }
 
     public void setValue(int value) {
         this.value = value;
     }
 
-    public int getValue() {
-        return this.value;
+    public enum Response {
+        VALID_LEFT_BORDER,
+        VALID_RIGHT_BORDER,
+        VALID_TOP_BORDER,
+        VALID_BOTTOM_BORDER,
+        MIDDLE_NOT_A_BORDER
     }
 }

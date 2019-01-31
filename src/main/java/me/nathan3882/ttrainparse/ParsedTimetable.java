@@ -13,12 +13,8 @@ import java.util.Map;
  */
 public class ParsedTimetable {
 
-    private enum AnalysisType {
-        LEFT_RIGHT_TOP_BOTTOM,
-        TOP_BOTTOM_LEFT_RIGHT
-    }
-
     private static List<ComparisonOutput.Response> responsesSoFar = new ArrayList<>(); //I could just iterate through previously stored comparison outputs and
+    private int prevDone = 0;
     private BufferedImage firstImage;
     private TTrainParser main;
     private List<ComparisonOutput> comparisonOutputs = new ArrayList<>();
@@ -28,7 +24,7 @@ public class ParsedTimetable {
     private int xValueRightBorder = -1;
     private BufferedImage newImage = null;
 
-    public ParsedTimetable(TTrainParser main, BufferedImage firstImage) {
+    public ParsedTimetable(TTrainParser main, BufferedImage firstImage, List<AnalysisType> todos, int previousPrevDone) {
         ComparisonOutput.topBottomInstantiations = 0;
         ComparisonOutput.leftRightInstantiations = 0;
         responsesSoFar.clear();
@@ -42,23 +38,25 @@ public class ParsedTimetable {
         Map<Integer, Integer> borderCoordinates = new HashMap<>();
         Map<Integer, List<String>> XYPixels = new HashMap<>(); //Integer = X Coordinate of the correlating list of pixels
 
-        doTimetableAnalysis(AnalysisType.LEFT_RIGHT_TOP_BOTTOM,
-                width, height, storedPixels, borderCoordinates, XYPixels);
+        for (AnalysisType type : todos) {
+            doTimetableAnalysis(type,
+                    width, height, storedPixels, borderCoordinates, XYPixels);
+            storedPixels.clear();
+            borderCoordinates.clear();
+            XYPixels.clear();
+        }
+        this.prevDone = previousPrevDone + 1;
+    }
 
-        storedPixels.clear();
-        borderCoordinates.clear();
-        XYPixels.clear();
-
-        doTimetableAnalysis(AnalysisType.TOP_BOTTOM_LEFT_RIGHT,
-                width, height, storedPixels, borderCoordinates, XYPixels);
+    public int getPrevDone() {
+        return this.prevDone;
     }
 
     /**
      * Following code determines left and right side border coordinates of the timetable
-     * Not sure how to do this in a non duplicative fashion?
      */
     private void doTimetableAnalysis(AnalysisType analysisType, int width, int height, List<String> storedXorYPixels, Map<Integer, Integer> borderCoordinates, Map<Integer, List<String>> XYPixels) {
-        if (analysisType.equals(AnalysisType.LEFT_RIGHT_TOP_BOTTOM)) {
+        if (analysisType.equals(AnalysisType.LEFT_RIGHT_BORDERS)) {
             for (int currentXPixel = 0; currentXPixel < width; currentXPixel++) { //going from left to right
                 for (int currentYPixel = 0; currentYPixel < height; currentYPixel++) {  //then going from bottom to top
                     String currentPixelString = main.pixelRGBToString(new Color(firstImage.getRGB(currentXPixel, currentYPixel)));
@@ -73,13 +71,14 @@ public class ParsedTimetable {
                     storedXorYPixels.add(currentPixelString);
                     if (getCondition(XYPixels.size(), width - 2)) { //analyses third of all pixels for left and right border
                         ComparisonOutput.leftRightInstantiations++;
-                        comparisonOutputs.add( //New comparison output for previous 1/3rd of pixel data
-                                new ComparisonOutput(main, this, new HashMap<>(XYPixels), true, new HashMap<>(borderCoordinates)));
+                        ComparisonOutput output = //New comparison output for previous 1/3rd of pixel data
+                                new ComparisonOutput(main, this, new HashMap<>(XYPixels), true, new HashMap<>(borderCoordinates));
+                        addComparisonOutput(output);
                         XYPixels.clear(); //Clears previous 1/3 of pixel data
                     }
                 }
             }
-        } else if (analysisType.equals(AnalysisType.TOP_BOTTOM_LEFT_RIGHT)) {
+        } else if (analysisType.equals(AnalysisType.TOP_BOTTOM_BORDERS)) {
             for (int currentYPixel = 0; currentYPixel < height; currentYPixel++) {  //going from bottom to top
                 for (int currentXPixel = 0; currentXPixel < width; currentXPixel++) { //then going from left to right
                     String currentPixelString = main.pixelRGBToString(new Color(firstImage.getRGB(currentXPixel, currentYPixel)));
@@ -96,12 +95,18 @@ public class ParsedTimetable {
                     if (getCondition(XYPixels.size(), height)) {
                         ComparisonOutput.topBottomInstantiations++;
                         //New comparison output for previous 1/3rd of pixel data
-                        comparisonOutputs.add(new ComparisonOutput(main, this, new HashMap<>(XYPixels), false, new HashMap<>(borderCoordinates)));
+                        ComparisonOutput output = new ComparisonOutput(main, this, new HashMap<>(XYPixels), false, new HashMap<>(borderCoordinates));
+                        addComparisonOutput(output);
                         XYPixels.clear(); //Clears previous 1/3 of pixel data
                     }
                 }
             }
         }
+    }
+
+    public void addComparisonOutput(ComparisonOutput output) {
+        if (output.getResponse() == null) return;
+        comparisonOutputs.add(output);
     }
 
     private void logInstantiation(boolean leftRightTopBottom) {
@@ -114,7 +119,6 @@ public class ParsedTimetable {
 
     public BufferedImage getSuccessfullyParsedImage() {
         if (successfullyParsed()) { //Top, bottom, left AND right sides of border all found
-            comparisonOutputs.removeIf((ComparisonOutput output) -> output.getResponse() == null);
             for (ComparisonOutput comparisonOutput : comparisonOutputs) {
 
                 ComparisonOutput.Response response = comparisonOutput.getResponse();
@@ -152,20 +156,25 @@ public class ParsedTimetable {
     }
 
     public boolean successfullyParsed() {
-        getResponses().removeIf((ComparisonOutput.Response response) -> response == null); //removes the response if its null
-        return getResponses().size() == 4;
+        return getResponsesSoFar().size() == 4;
     }
 
     public BufferedImage getStartingImage() {
         return this.firstImage;
     }
 
-    public List<ComparisonOutput.Response> getResponses() {
+    public List<ComparisonOutput.Response> getResponsesSoFar() {
         return responsesSoFar;
     }
 
     public void addNewResponse(ComparisonOutput.Response response) {
+        if (response == null) return;
         responsesSoFar.add(response);
+    }
+
+    public enum AnalysisType {
+        LEFT_RIGHT_BORDERS,
+        TOP_BOTTOM_BORDERS
     }
 
 }

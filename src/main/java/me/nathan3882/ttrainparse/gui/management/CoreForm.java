@@ -320,7 +320,7 @@ public class CoreForm extends MessageDisplay {
                 continue; /*No Lessons*/
             }
 
-            ocrText = mainInstance.depleteFutileInfo(ocrText, true);
+            ocrText = mainInstance.depleteFutileInfo(ocrText);
 
             if (store)
                 user.storeOcrText(ocrText, day, hasInternet); //store depleted text, for example Tuesday Computer Science 12:00 13:00

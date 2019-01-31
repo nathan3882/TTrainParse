@@ -1,9 +1,6 @@
 package me.nathan3882.ttrainparse.gui.management;
 
-import me.nathan3882.ttrainparse.MessageDisplay;
-import me.nathan3882.ttrainparse.ParsedTimetable;
-import me.nathan3882.ttrainparse.TTrainParser;
-import me.nathan3882.ttrainparse.User;
+import me.nathan3882.ttrainparse.*;
 import me.nathan3882.ttrainparse.data.DataFileInfo;
 import me.nathan3882.ttrainparse.data.SqlConnection;
 import net.sourceforge.yamlbeans.YamlException;
@@ -19,6 +16,9 @@ import java.awt.image.BufferedImage;
 import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
 
 
 public class WelcomeForm extends MessageDisplay {
@@ -35,6 +35,7 @@ public class WelcomeForm extends MessageDisplay {
     private File selectedFile;
 
     private boolean isValidFile = false;
+    private ParsedTimetable timetable = null;
 
     public WelcomeForm(TTrainParser main) {
         this(main, false);
@@ -93,11 +94,20 @@ public class WelcomeForm extends MessageDisplay {
 
                     if (isUpdatingTimetable() || !main.hasCroppedTimetableFileAlready(false)) { //is updating or hasn't got a pdf
                         start = System.currentTimeMillis();
-                        ParsedTimetable timetable = new ParsedTimetable(main, selectedFileImage); //parses jpg
+                        if (timetable != null) { //Has been instantiated before, has at least some responses
+                            List<ComparisonOutput.Response> responsesSoFar = timetable.getResponsesSoFar();
+                            List<ParsedTimetable.AnalysisType> todos = getTodos(responsesSoFar);
+                            int previousPrevDone = timetable.getPrevDone();
+                            timetable = new ParsedTimetable(main, selectedFileImage, todos, previousPrevDone); //parses jpg
+                        } else {
+                            timetable = new ParsedTimetable(main, selectedFileImage,
+                                    Arrays.asList(ParsedTimetable.AnalysisType.LEFT_RIGHT_BORDERS, ParsedTimetable.AnalysisType.TOP_BOTTOM_BORDERS),
+                                    -1);
+                        }
                         successfullyParsed = timetable.successfullyParsed();
                         if (!successfullyParsed) {
                             resetWelcomeButtons();
-                            displayMessage("Error occurred while cropping borders.");
+                            displayMessage("Due to timetable variety, this parsing has failed - click again to try again with lower specificity.");
                             return;
                         }
 
@@ -150,6 +160,18 @@ public class WelcomeForm extends MessageDisplay {
                 }
             }
         };
+    }
+
+    private List<ParsedTimetable.AnalysisType> getTodos(List<ComparisonOutput.Response> responsesSoFar) {
+        List<ParsedTimetable.AnalysisType> todos = new ArrayList<>();
+
+        if (!responsesSoFar.contains(ComparisonOutput.Response.VALID_BOTTOM_BORDER) || !responsesSoFar.contains(ComparisonOutput.Response.VALID_TOP_BORDER)) {
+            todos.add(ParsedTimetable.AnalysisType.TOP_BOTTOM_BORDERS);
+        }
+        if (!responsesSoFar.contains(ComparisonOutput.Response.VALID_LEFT_BORDER) || !responsesSoFar.contains(ComparisonOutput.Response.VALID_RIGHT_BORDER)) {
+            todos.add(ParsedTimetable.AnalysisType.LEFT_RIGHT_BORDERS);
+        }
+        return todos;
     }
 
     private ItemListener createConfirmValidTimetableListener() {

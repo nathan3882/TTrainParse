@@ -316,14 +316,18 @@ public class TTrainParser extends MessageDisplay {
      * - duplicate whitespace and new line characters
      * - teacher names
      * - room names with support for tutorial sessions for example "Yr2 in SO1" or A2 Tutorial "in MO1"
+     * - any random Optically read text that would ruin the parsing process.
      */
-    public String depleteFutileInfo(String ocrResult, boolean oneSpaceBetweenAllInfo) {
+    public String depleteFutileInfo(String ocrResult) {
         String depletedText = "";
         ocrResult = ocrResult/*class names or numbers**/
-                .replaceAll("[\\[\\(].*[\\]\\)]", "")//[ or a ( followed by anything then a ] or )
-                .replaceAll("/", "")
-                .replaceAll("\\?", "") //If you don't turn up to lesson, '?' appears
+                .replaceAll("[\\[\\(].*[\\]\\)]", "")//[ or a ( followed by anything then a ] or ) room names
+                .replaceAll("\\s?/\\s?", "") //Removing the / for being present.
+                .replaceAll("\\s?M\\s?", "") //Removing the M for being medical
+                .replaceAll("\\s?L\\s?", "") //Removing the L for being late
+                .replaceAll("\\?", "") //Removing the ? for not being present
                 .replaceAll("\\.", ":") //Has been a time where string has contained this "09.00 - 10:05"
+                .replaceAll("A(([Ll])?)((\\s)?)evel", "") //the 'l' has been lost sometimes so "Aevel" and "A evel" will both still work
                 .replaceAll("A [Ll]evel", ""); //Some subjects viz Computer Science have lower case l for some reason?
 
         String[] words = ocrResult.split("\\s+"); //one or more spaces
