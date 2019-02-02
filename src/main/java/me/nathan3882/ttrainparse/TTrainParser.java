@@ -115,6 +115,15 @@ public class TTrainParser extends MessageDisplay {
         }
     }
 
+
+    public JPanel getCards() {
+        return cards;
+    }
+
+    public void setCards(JPanel cards) {
+        this.cards = cards;
+    }
+
     private static void addPanelToCard(JPanel panel, String welcomePanel) {
         if (instance().getCards() == null) {
             instance().setCards(new JPanel(new CardLayout()));
@@ -513,12 +522,11 @@ public class TTrainParser extends MessageDisplay {
         }
     }
 
-    public JPanel getCards() {
-        return cards;
+    public String upperFirst(String string) {
+        return string.substring(0, 1).toUpperCase() + string.substring(1).toLowerCase();
     }
 
-    public void setCards(JPanel cards) {
-        this.cards = cards;
+    public int getCurrentDay() {
+        return GLOBAL_CALENDAR.get(Calendar.DAY_OF_WEEK);
     }
-
 }

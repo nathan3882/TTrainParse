@@ -1,6 +1,7 @@
 package me.nathan3882.ttrainparse;
 
 import java.time.DayOfWeek;
+import java.time.LocalDate;
 import java.time.LocalTime;
 import java.time.format.DateTimeParseException;
 import java.util.*;
@@ -13,9 +14,9 @@ import java.util.*;
 
 public class LessonInfo {
 
+    public static boolean tried = false;
     private DayOfWeek dayOfWeek;
     private int lessonCount;
-
     private LinkedList<String> orderedLessons = new LinkedList<>();
     private Map<String, LinkedList<LocalTime>> orderedSubjectStartTimes = new LinkedHashMap<>();
     private Map<String, LinkedList<LocalTime>> orderedSubjectFinishTimes = new LinkedHashMap<>();
@@ -72,14 +73,21 @@ public class LessonInfo {
             int upperBoundForJustTimes = subjectNameUpperBound + 3;
 
             String timeString = "";
+            try {
+                words.get(upperBoundForJustTimes);
+            } catch (IndexOutOfBoundsException e) {
+                upperBoundForJustTimes = words.size() - 1; //-2 because iteration below is < and = aswell.
+                lowerBoundForJustTimes = words.size() - 3; //This part of code will rely on the "parse" function to do its job as this situation likely arose from text being merged together by ocr
+            }
             for (int i = lowerBoundForJustTimes; i <= upperBoundForJustTimes; i++) {
                 timeString += words.get(i);
             }
 
-            System.out.println("initial timeString = " + timeString);
             String[] startFinish = timeStringSplit(timeString); //"10:05-11:10" left is start, right is finish
-            if (startFinish.length == 1) { //Sometimes has just been one, down to dodgy ocr
+            if (getColonCount(timeString) == 1) { //Sometimes has just been one, down to dodgy ocr
                 timeString += words.get(upperBoundForJustTimes + 1); //Add next few words
+                String addingBefore = words.get(lowerBoundForJustTimes - 1);
+                timeString = addingBefore + timeString;
                 startFinish = timeStringSplit(timeString);
             }
             LocalTime startTime = parse(startFinish[0], false);
@@ -90,11 +98,17 @@ public class LessonInfo {
         }
     }
 
+    private int getColonCount(String timeString) {
+        int colonCount = 0;
+        for (char c : timeString.toCharArray()) {
+            if (c == ':') colonCount++;
+        }
+        return colonCount;
+    }
+
     private String[] timeStringSplit(String toSplit) {
         return toSplit.split("-");
     }
-
-    public static boolean tried = false;
 
     //Allows "LRCed11:30-12:35ed" to be parsed into start time 11:30  and end time  12:35 easily
     private LocalTime parse(String timeString, boolean recursivelyCalled) {
@@ -182,11 +196,27 @@ public class LessonInfo {
         return this.dayOfWeek;
     }
 
+    public boolean isParsedSuccessfully() {
+        return parsedSuccessfully;
+    }
+
     public void setParsedSuccessfully(boolean parsedSuccessfully) {
         this.parsedSuccessfully = parsedSuccessfully;
     }
 
-    public boolean isParsedSuccessfully() {
-        return parsedSuccessfully;
+    public LocalDate getLocalDateOfLesson() {
+        Calendar cal = TTrainParser.GLOBAL_CALENDAR;
+        int today = TTrainParser.instance().getCurrentDay();
+        int lessonDay = getDayOfWeek().getValue();
+        if (!(lessonDay < today)) {
+            //is this week, either today or tomorrow etc
+            if (lessonDay != today) {
+                //return future date
+                int todayOfMonth = cal.get(Calendar.DAY_OF_MONTH);
+                int dif = lessonDay - today;
+                return LocalDate.now().withDayOfMonth(todayOfMonth + dif);
+            }
+        }
+        return LocalDate.now();
     }
 }

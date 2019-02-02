@@ -2,6 +2,7 @@ package me.nathan3882.ttrainparse;
 
 import java.awt.*;
 import java.awt.image.BufferedImage;
+import java.text.DecimalFormat;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -14,7 +15,13 @@ import java.util.Map;
 public class ParsedTimetable {
 
     private static List<ComparisonOutput.Response> responsesSoFar = new ArrayList<>(); //I could just iterate through previously stored comparison outputs and
-    private int prevDone = 0;
+    private static DecimalFormat decimalFormat = new DecimalFormat();
+
+    static {
+        decimalFormat.setMaximumFractionDigits(2);
+    }
+
+    private int prevDone;
     private BufferedImage firstImage;
     private TTrainParser main;
     private List<ComparisonOutput> comparisonOutputs = new ArrayList<>();
@@ -24,7 +31,8 @@ public class ParsedTimetable {
     private int xValueRightBorder = -1;
     private BufferedImage newImage = null;
 
-    public ParsedTimetable(TTrainParser main, BufferedImage firstImage, List<AnalysisType> todos, int previousPrevDone) {
+    public ParsedTimetable(TTrainParser main, MessageDisplay messageDisplay, BufferedImage firstImage, int previousPrevDone) {
+        this.prevDone = previousPrevDone + 1;
         ComparisonOutput.topBottomInstantiations = 0;
         ComparisonOutput.leftRightInstantiations = 0;
         responsesSoFar.clear();
@@ -38,14 +46,18 @@ public class ParsedTimetable {
         Map<Integer, Integer> borderCoordinates = new HashMap<>();
         Map<Integer, List<String>> XYPixels = new HashMap<>(); //Integer = X Coordinate of the correlating list of pixels
 
-        for (AnalysisType type : todos) {
+        int decByEveryTime = (ComparisonOutput.OCCURENCES_DECREASE_BY * this.getPrevDone());
+        float percentage = ((float) decByEveryTime / (float) ComparisonOutput.OCCURENCES_START_CHECK) * 100;
+        if (getPrevDone() > 0) {
+            messageDisplay.displayMessage("Finding with the chance being force increased by %" + decimalFormat.format(percentage));
+        }
+        for (AnalysisType type : AnalysisType.values()) {
             doTimetableAnalysis(type,
                     width, height, storedPixels, borderCoordinates, XYPixels);
             storedPixels.clear();
             borderCoordinates.clear();
             XYPixels.clear();
         }
-        this.prevDone = previousPrevDone + 1;
     }
 
     public int getPrevDone() {

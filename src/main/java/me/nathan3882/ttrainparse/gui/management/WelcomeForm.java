@@ -17,7 +17,6 @@ import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.List;
 
 
@@ -31,6 +30,7 @@ public class WelcomeForm extends MessageDisplay {
     private JCheckBox confirmValidTimetable;
     private JButton advanceToLoginButton;
     private TTrainParser mainInstance;
+    private WelcomeForm instance = this;
 
     private File selectedFile;
 
@@ -98,16 +98,14 @@ public class WelcomeForm extends MessageDisplay {
                             List<ComparisonOutput.Response> responsesSoFar = timetable.getResponsesSoFar();
                             List<ParsedTimetable.AnalysisType> todos = getTodos(responsesSoFar);
                             int previousPrevDone = timetable.getPrevDone();
-                            timetable = new ParsedTimetable(main, selectedFileImage, todos, previousPrevDone); //parses jpg
+                            timetable = new ParsedTimetable(main, instance, selectedFileImage, previousPrevDone); //parses jpg
                         } else {
-                            timetable = new ParsedTimetable(main, selectedFileImage,
-                                    Arrays.asList(ParsedTimetable.AnalysisType.LEFT_RIGHT_BORDERS, ParsedTimetable.AnalysisType.TOP_BOTTOM_BORDERS),
-                                    -1);
+                            timetable = new ParsedTimetable(main, instance, selectedFileImage, -1);
                         }
                         successfullyParsed = timetable.successfullyParsed();
                         if (!successfullyParsed) {
+                            displayMessage("Click the button to increase chances of finding borders");
                             resetWelcomeButtons();
-                            displayMessage("Due to timetable variety, this parsing has failed - click again to try again with lower specificity.");
                             return;
                         }
 

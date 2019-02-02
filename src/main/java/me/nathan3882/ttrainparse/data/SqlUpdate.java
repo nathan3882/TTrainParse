@@ -36,7 +36,6 @@ public class SqlUpdate {
                 preparedStatement = connection.prepareStatement(
                         sql.replace("{table}", name),
                         Statement.RETURN_GENERATED_KEYS);
-
                 preparedStatement.executeUpdate();
                 close(preparedStatement);
             } catch (SQLException e) {

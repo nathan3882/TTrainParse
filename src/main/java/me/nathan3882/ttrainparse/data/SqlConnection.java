@@ -19,8 +19,8 @@ public class SqlConnection {
     private String host = "51.77.194.49";
     private String databaseName = "ttrainparseUserdata";
     private int port = 3307;
-    private String username = "";
-    private String password = "";
+    private String username = "nathan";
+    private String password = "password";
     private Connection connection;
 
     public SqlConnection(TTrainParser main) {

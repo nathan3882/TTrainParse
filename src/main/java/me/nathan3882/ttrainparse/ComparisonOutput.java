@@ -10,6 +10,10 @@ import java.util.Map.Entry;
  */
 public class ComparisonOutput {
 
+    private static final double RESPONSE_SPECIFICITY = .30;
+    ;
+    public static final int OCCURENCES_START_CHECK = 400;
+    public static final int OCCURENCES_DECREASE_BY = 30;
     public static int leftRightInstantiations = 0;
     public static int topBottomInstantiations = 0;
     private Response response;
@@ -62,31 +66,32 @@ public class ComparisonOutput {
                  * the actual border, this narrows it down in small intervals to allow the user to keep trying until
                  * it finds the line with the most quantity of border colour in it's pixels
                  */
-                int con = 400 - (25 * timetable.getPrevDone());
+                int decByEveryTime = (OCCURENCES_DECREASE_BY * timetable.getPrevDone());
+                double percentage = (decByEveryTime / OCCURENCES_START_CHECK) * 100;
+                int con = OCCURENCES_START_CHECK - decByEveryTime;
                 if (occurences <= con) { //if first retry, increase 50, if second, add 100 etc
-//                    System.out.println("Occurences of what would've been " + toSet.name() + " is lower than " + con + " at" + occurences + "in the" + xOrY);
+                    System.out.println("Occurences of what would've been " + toSet.name() + " is lower than " + con + " at" + occurences + "in the" + xOrY);
                     this.setResponse(Response.MIDDLE_NOT_A_BORDER);
                     return;
                 }
 
                 setValue(xOrY);
                 doResponse(toSet, xOrY, timetable);
-//                if (toSet != null) {
-//                    System.out.println("New response with " + occurences + " occurences is " + toSet.name() + " in the " + xOrY);
-//                }
+                if (toSet != null) {
+                    System.out.println("New response with " + occurences + " occurences is " + toSet.name() + " in the " + xOrY);
+                }
                 return; //terminate on first iteration because we only want the first / most common
             }
         }
     }
 
     public void doResponse(Response response, int value, ParsedTimetable timetable) {
-        int timetableHeight = timetable.getStartingImage().getHeight(); //Arbitary val for explanation = 100
-        double specificity = .30;
-        boolean bottomBorderCondition = value > (timetableHeight * (1 - specificity)); //dont allow if bottom border isn't above 30% of height
-        boolean topBorderCondition = value < (timetableHeight * specificity); //dont allow if top border val isnt below 30% of height
+        int timetableHeight = timetable.getStartingImage().getHeight();
+        boolean bottomBorderCondition = value > (timetableHeight * (1 - RESPONSE_SPECIFICITY)); //dont allow if bottom border isn't above 30% of height
+        boolean topBorderCondition = value < (timetableHeight * RESPONSE_SPECIFICITY); //dont allow if top border val isnt below 30% of height
         int timetableWidth = timetable.getStartingImage().getWidth();
-        boolean leftBorderCondition = value < (timetableWidth * specificity);
-        boolean rightBorderCondition = value > (timetableWidth * (1 - specificity));
+        boolean leftBorderCondition = value < (timetableWidth * RESPONSE_SPECIFICITY);
+        boolean rightBorderCondition = value > (timetableWidth * (1 - RESPONSE_SPECIFICITY));
         if (!isCalculatingLeftRightBorder()) {
             switch (response) {
                 case VALID_BOTTOM_BORDER:
