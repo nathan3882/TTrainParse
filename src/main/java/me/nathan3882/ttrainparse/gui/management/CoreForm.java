@@ -64,8 +64,7 @@ public class CoreForm extends MessageDisplay {
             updateTimetableInfoLabel.setText("<html><center>You either don't have internet or no sql connection has been established.<br>Timetable updates disabled until fixed...</center></html>");
             updateTimetableButton.setEnabled(false);
         }
-        int currentDay = TTrainParser.GLOBAL_CALENDAR.get(Calendar.DAY_OF_WEEK);
-        DayOfWeek[] showThese = getDaysToShow(currentDay);
+        DayOfWeek[] showThese = getDaysToShow(TTrainParser.instance().getCurrentDay());
 
         StringBuilder mainString = new StringBuilder("<html><center>Here are all of your lessons + train times :)" + TTrainParser.DOUBLE_BREAK);
 
@@ -93,8 +92,8 @@ public class CoreForm extends MessageDisplay {
         mainInfoLabel.setText(getDisplayString(user.getHomeCrs()));
     }
 
-    public static Date toDate(LocalTime localTime) {
-        Instant instant = localTime.atDate(LocalDate.now())
+    public static Date toDate(LocalTime localTime, LocalDate date) {
+        Instant instant = localTime.atDate(date)
                 .atZone(ZoneId.systemDefault()).toInstant();
         return toDate(instant);
     }
@@ -145,7 +144,7 @@ public class CoreForm extends MessageDisplay {
 
             if (i != 0 || i != totalDaysToShow - 1)
                 mainString.append(TTrainParser.BREAK); //when its not the first or last day starting, break to avoid the last lesson for prev day
-            mainString.append(upperFirst(newCollegeDay.getDayOfWeek())).append(":"); //Title the data with "{DAY}:\n"
+            mainString.append(mainInstance.upperFirst(newCollegeDay.getDayOfWeek().name())).append(":"); //Title the data with "{DAY}:\n"
 
             newCollegeDay.getLessons().forEach(lessonName -> { //This iteration allows 1+ lessons to be accounted for
                 List<LocalTime> startTimes = newCollegeDay.getStartTimes(lessonName);
@@ -157,7 +156,8 @@ public class CoreForm extends MessageDisplay {
                 for (int k = 0; k < startTimesSize; k++) { //This iteration goes through the single/multiple lesson times
                     mainString.append(TTrainParser.BREAK);
                     LocalTime aLessonsStartTime = startTimes.get(k);
-                    Date aLessonsStartDate = toDate(aLessonsStartTime);
+                    LocalDate localDate = newCollegeDay.getLocalDateOfLesson();
+                    Date aLessonsStartDate = toDate(aLessonsStartTime, localDate);
 
                     LocalTime finishTime = finishTimes.get(k);
 
@@ -170,7 +170,7 @@ public class CoreForm extends MessageDisplay {
                         List<Service> idealTrains = null;
                         try {
 
-                            idealTrains = IdealTrains.getHomeToLessonServices(
+                            idealTrains = IdealTrains.getHomeToLessonServices(//
                                     user.getHomeCrs(), "BCU", currentDate, 8 * 60, aLessonsStartDate, 120);
                         } catch (SOAPException e) {
                             e.printStackTrace();
@@ -316,7 +316,7 @@ public class CoreForm extends MessageDisplay {
             assert ocrText != null;
 
             if (ocrText.length() < 30) { //Would assume 30 chars or less means no lessons
-                displayMessage("You don't have any lessons on " + upperFirst(day));
+                displayMessage("You don't have any lessons on " + mainInstance.upperFirst(day.name()));
                 continue; /*No Lessons*/
             }
 
@@ -379,11 +379,6 @@ public class CoreForm extends MessageDisplay {
         String prettyMinute = String.valueOf(minute);
         if (minute < 10) prettyMinute = "0" + prettyMinute;
         return prettyMinute;
-    }
-
-    private String upperFirst(DayOfWeek dayOfWeek) {
-        String string = dayOfWeek.name();
-        return string.substring(0, 1).toUpperCase() + string.substring(1).toLowerCase();
     }
 
     @Override
