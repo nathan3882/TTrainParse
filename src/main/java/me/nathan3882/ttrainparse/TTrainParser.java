@@ -402,14 +402,15 @@ public class TTrainParser extends MessageDisplay {
         int beforeColon;
         boolean tutorialCondition = false;
         boolean setTutorBound = false;
+        Pattern inPattern = Pattern.compile("\\s(in)\\s");
         for (int j = 0; j < depletedText.length(); j++) {
             char charAt = depletedText.charAt(j);
             pastSevenChars = pastSevenChars.substring(1) + charAt; //removes pastSeven[0], adds charAt to end
             String pastThreeChars = pastSevenChars.substring(4);
 
             if (!setTutorBound) { //false, dont potentially update to false when waiting for the colon
-                Matcher m = Pattern.compile("\\s(in)\\s").matcher(pastSevenChars);
-                tutorialCondition = !pastSevenChars.contains("Yr") && m.find() && pastThreeChars.startsWith("in");
+                Matcher matcher = inPattern.matcher(pastSevenChars);
+                tutorialCondition = !pastSevenChars.contains("Yr") && matcher.find() && pastThreeChars.startsWith("in");
             }
             if (pastThreeChars.startsWith("Yr")) { //will only begin with in if it's tutor
                 beforeYr = j - 2;
@@ -436,13 +437,16 @@ public class TTrainParser extends MessageDisplay {
         if (x.isEmpty()) return y.length();
         if (y.isEmpty()) return x.length();
 
-        int substitution = calculateDistance(x.substring(1), y.substring(1)) + cost(x.charAt(0), y.charAt(0));
-        int insertion = calculateDistance(x, y.substring(1)) + 1;
-        int deletion = calculateDistance(x.substring(1), y) + 1;
+        String xSubOne = x.substring(1);
+        String ySubOne = y.substring(1);
+
+        int substitution = calculateDistance(xSubOne, ySubOne) + getCostOf(x.charAt(0), y.charAt(0));
+        int insertion = calculateDistance(x, ySubOne) + 1;
+        int deletion = calculateDistance(xSubOne, y) + 1;
         return min(substitution, insertion, deletion);
     }
 
-    private int cost(char first, char last) {
+    private int getCostOf(char first, char last) {
         return first == last ? 0 : 1;
     }
 
