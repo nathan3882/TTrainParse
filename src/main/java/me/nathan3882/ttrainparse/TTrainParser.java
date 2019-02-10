@@ -3,7 +3,9 @@
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
- * in the Software. Permissions giving you the right to use, copy, modify, merge,
+ * in the Software. Permissions giving you the right to use and publish the application.
+
+ * Permission is NOT granted to profit, monetise or monetise any modified versions of the Software
  * publish and distribute subject to the following conditions:
  *
  * This permission notice shall be included in all copies or substantial portions of the Software.
@@ -17,7 +19,6 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
  * SOFTWARE.
  */
-
 package me.nathan3882.ttrainparse;
 
 import me.nathan3882.ttrainparse.data.DataFileInfo;
