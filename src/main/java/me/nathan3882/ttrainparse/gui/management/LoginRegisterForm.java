@@ -74,6 +74,7 @@ public class LoginRegisterForm extends MessageDisplay {
                     mainInstance.createDataFileIfNotPresent();
                     DataFileInfo info = mainInstance.getYamlReadDatafile();
                     mainInstance.getUser().setEmail(emailText);
+                    mainInstance.getSqlConnection().openConnection();
                     if (mainInstance.hasInternet() && mainInstance.getSqlConnection().connectionEstablished()) {
                         boolean noEmailStored = !User.hasSqlEntry(mainInstance, SqlConnection.SqlTableName.TIMETABLE_USERDATA, emailText);
                         if (noEmailStored) { //No account stored for entered email
@@ -180,7 +181,7 @@ public class LoginRegisterForm extends MessageDisplay {
         return new MouseAdapter() {
             @Override
             public void mouseClicked(MouseEvent e) {
-                if (emailTextField.getText().equalsIgnoreCase("Enter email")) {
+                if (emailTextField.getText().contains("Enter email")) {
                     emailTextField.setText("");
                 }
             }
