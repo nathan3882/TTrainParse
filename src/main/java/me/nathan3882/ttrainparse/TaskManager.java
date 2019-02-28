@@ -19,12 +19,12 @@ public class TaskManager extends TimerTask {
         timer.scheduleAtFixedRate(task, delay, period);
     }
 
-    public Timer setTimer(Timer timer) {
+    private Timer setTimer(Timer timer) {
         this.timer = timer;
         return timer;
     }
 
-    public void terminate() {
+    protected void terminate() {
         timer.cancel();
     }
 }

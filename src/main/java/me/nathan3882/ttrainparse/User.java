@@ -23,6 +23,15 @@ public class User {
         this.connection = main.getSqlConnection();
     }
 
+    public static boolean hasSqlEntry(TTrainParser tTrainParser, String table, String userEmail) {
+        SqlConnection connection = tTrainParser.getSqlConnection();
+        if (!tTrainParser.hasInternet() || !connection.connectionEstablished()) return false;
+        SqlQuery query = new SqlQuery(connection);
+        query.executeQuery("SELECT * FROM {table} WHERE userEmail = '" + userEmail + "'", table);
+        boolean has = query.next(false);
+        return has;
+    }
+
     public boolean hasSqlEntry(String table, String column) {
         return hasSqlEntry(main, table, column);
     }
@@ -109,7 +118,6 @@ public class User {
         update.executeUpdate(updateStr, table);
     }
 
-
     public void generateDefaultRenewValues() {
         SqlUpdate defaultValues = new SqlUpdate(connection);
         defaultValues.executeUpdate(
@@ -160,14 +168,17 @@ public class User {
     public void storeOcrText(String ocrText, DayOfWeek day, boolean hasInternet) {
         if (hasInternet && connection.connectionEstablished()) {
             connection.openConnection();
+            String table = SqlConnection.SqlTableName.TIMETABLE_LESSONS;
             SqlUpdate storeUpdate = new SqlUpdate(connection);
-            //if (hasOcrTextStored(day)) {
-                storeUpdate.executeUpdate("UPDATE {table} SET " + day.name() + " = \"" + ocrText + "\"" + " WHERE userEmail = \"" + getUserEmail() + "\"",
-                        SqlConnection.SqlTableName.TIMETABLE_LESSONS);
-//            } else {
-//                storeUpdate.executeUpdate("INSERT INTO {table} (userEmail, " + day.name() + ") VALUES (\"" + getUserEmail() + "\", \"" + ocrText + "\")",
-//                        SqlConnection.SqlTableName.TIMETABLE_LESSONS);
-//            }
+            if (hasSqlEntry(table)) {
+                if (!hasOcrTextStored(day)) {
+                    storeUpdate.executeUpdate("UPDATE {table} SET " + day.name() + " = \"" + ocrText + "\"" + " WHERE userEmail = \"" + getUserEmail() + "\"",
+                            table);
+                }
+            } else {
+                storeUpdate.executeUpdate("INSERT INTO {table} (userEmail, " + day.name() + ") VALUES (\"" + getUserEmail() + "\", \"" + ocrText + "\")",
+                        table);
+            }
         }
     }
 
@@ -235,15 +246,6 @@ public class User {
             e.printStackTrace();
         }
         return null;
-    }
-
-    public static boolean hasSqlEntry(TTrainParser tTrainParser, String table, String userEmail) {
-        SqlConnection connection = tTrainParser.getSqlConnection();
-        if (!tTrainParser.hasInternet() || !connection.connectionEstablished()) return false;
-        SqlQuery query = new SqlQuery(connection);
-        query.executeQuery("SELECT * FROM {table} WHERE userEmail = '" + userEmail + "'", table);
-        boolean has = query.next(false);
-        return has;
     }
 
 

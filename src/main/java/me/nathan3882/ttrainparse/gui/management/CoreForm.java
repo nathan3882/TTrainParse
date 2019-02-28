@@ -39,20 +39,20 @@ public class CoreForm extends MessageDisplay {
 
         this.mainInstance = main;
 
-        mainInstance.coreForm = this;
+        getMainInstance().coreForm = this;
         updateHomeCrsHelpLabel.setText("<html><center>^ New home? Update it above ^</center></html>");
-        mainInstance.configureCrsComboBox(updateHomeCrsComboBox);
-        mainInstance.changeCrsComboBoxToCurrentCrs(updateHomeCrsComboBox);
+        getMainInstance().configureCrsComboBox(updateHomeCrsComboBox);
+        getMainInstance().changeCrsComboBoxToCurrentCrs(updateHomeCrsComboBox);
 
         updateHomeCrsComboBox.addItemListener(getUpdateHomeCrsComboBoxListener());
-        this.user = mainInstance.getUser();
+        this.user = getMainInstance().getUser();
         boolean hasInternet = user.hasInternet();
 
         int left;
         Date renewDate;
 
         if (hasInternet && main.getSqlConnection().connectionEstablished()) {
-            mainInstance.getSqlConnection().openConnection();
+            getMainInstance().getSqlConnection().openConnection();
             if (!user.hasSqlEntry(SqlConnection.SqlTableName.TIMETABLE_RENEWAL)) {
                 user.generateDefaultRenewValues();
             }
@@ -69,7 +69,7 @@ public class CoreForm extends MessageDisplay {
         StringBuilder mainString = new StringBuilder("<html><center>Here are all of your lessons + train times :)" + TTrainParser.DOUBLE_BREAK);
 
         boolean hasOcrTextStored = user.hasOcrTextStored(showThese);
-        boolean isUpdating = mainInstance.welcomeForm.isUpdatingTimetable();
+        boolean isUpdating = getMainInstance().welcomeForm.isUpdatingTimetable();
         boolean segment = true;
         boolean store = false;
         if (hasInternet) {
@@ -144,7 +144,7 @@ public class CoreForm extends MessageDisplay {
 
             if (i != 0 || i != totalDaysToShow - 1)
                 mainString.append(TTrainParser.BREAK); //when its not the first or last day starting, break to avoid the last lesson for prev day
-            mainString.append(mainInstance.upperFirst(newCollegeDay.getDayOfWeek().name())).append(":"); //Title the data with "{DAY}:\n"
+            mainString.append(upperFirst(newCollegeDay.getDayOfWeek().name())).append(":"); //Title the data with "{DAY}:\n"
 
             newCollegeDay.getLessons().forEach(lessonName -> { //This iteration allows 1+ lessons to be accounted for
                 List<LocalTime> startTimes = newCollegeDay.getStartTimes(lessonName);
@@ -316,11 +316,11 @@ public class CoreForm extends MessageDisplay {
             assert ocrText != null;
 
             if (ocrText.length() < 30) { //Would assume 30 chars or less means no lessons
-                displayMessage("You don't have any lessons on " + mainInstance.upperFirst(day.name()));
+                displayMessage("You don't have any lessons on " + upperFirst(day.name()));
                 continue; /*No Lessons*/
             }
 
-            ocrText = mainInstance.depleteFutileInfo(ocrText);
+            ocrText = getMainInstance().depleteFutileInfo(ocrText);
 
             if (store)
                 user.storeOcrText(ocrText, day, hasInternet); //store depleted text, for example Tuesday Computer Science 12:00 13:00
@@ -334,7 +334,7 @@ public class CoreForm extends MessageDisplay {
             LessonInfo lessonInfo = new LessonInfo(words, day);
             if (!lessonInfo.isParsedSuccessfully()) {
                 displayMessage("Sorry, timetable can not be parsed. Did your configure " + TTrainParser.TEACHERS_FILE_NAME + "? Perhaps the screenshot came from another monitor, or was too small");
-                mainInstance.updateTimetableUpload();
+                updateTimetableUpload();
             }
             info.add(lessonInfo);
             mFile.deleteAllMade();
@@ -343,8 +343,8 @@ public class CoreForm extends MessageDisplay {
             this.task = new TaskManager(new Timer()) {
                 @Override
                 public void run() {
-                    if (user.hasInternet() && mainInstance.getSqlConnection().connectionEstablished()) {
-                        mainInstance.getSqlConnection().openConnection();
+                    if (user.hasInternet() && getMainInstance().getSqlConnection().connectionEstablished()) {
+                        getMainInstance().getSqlConnection().openConnection();
                         for (DayOfWeek day : showThese) {
                             if (!user.hasOcrTextStored(showThese)) {
                                 user.storeOcrText(texts.get(day), day, true);
@@ -357,6 +357,19 @@ public class CoreForm extends MessageDisplay {
             task.runTaskSynchronously(task, 5000, 5000);
         }
         return info;
+    }
+
+    public TTrainParser getMainInstance() {
+        return mainInstance;
+    }
+
+    private void updateTimetableUpload() {
+        getMainInstance().openPanel(TTrainParser.WELCOME_PANEL);
+        getMainInstance().welcomeForm.setUpdating(true);
+    }
+
+    private String upperFirst(String string) {
+        return string.substring(0, 1).toUpperCase() + string.substring(1).toLowerCase();
     }
 
     private DayOfWeek[] getDaysToShow(int currentDay) {

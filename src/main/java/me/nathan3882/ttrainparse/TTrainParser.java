@@ -503,10 +503,6 @@ public class TTrainParser extends MessageDisplay {
         this.user = user;
     }
 
-    public void updateTimetableUpload() {
-        welcomeForm.setUpdating(true);
-        openPanel(TTrainParser.WELCOME_PANEL);
-    }
 
     public DataFileInfo getYamlReadDatafile() {
         DataFileInfo info;
@@ -546,10 +542,6 @@ public class TTrainParser extends MessageDisplay {
                 break;
             }
         }
-    }
-
-    public String upperFirst(String string) {
-        return string.substring(0, 1).toUpperCase() + string.substring(1).toLowerCase();
     }
 
     public int getCurrentDay() {

@@ -1,5 +1,7 @@
 package me.nathan3882.ttrainparse;
 
+import com.sun.istack.internal.Nullable;
+
 import javax.swing.*;
 
 public class MessageDisplay {
@@ -8,7 +10,8 @@ public class MessageDisplay {
         JOptionPane.showMessageDialog(getPanel(), message);
     }
 
-    public JPanel getPanel() {
+    @Nullable
+    protected JPanel getPanel() {
         return null;
     }
 }

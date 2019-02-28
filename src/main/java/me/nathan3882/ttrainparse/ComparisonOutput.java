@@ -11,7 +11,6 @@ import java.util.Map.Entry;
 public class ComparisonOutput {
 
     private static final double RESPONSE_SPECIFICITY = .30;
-    ;
     public static final int OCCURENCES_START_CHECK = 400;
     public static final int OCCURENCES_DECREASE_BY = 30;
     public static int leftRightInstantiations = 0;
@@ -145,7 +144,7 @@ public class ComparisonOutput {
         return sorted;
     }
 
-    public boolean isCalculatingLeftRightBorder() {
+    private boolean isCalculatingLeftRightBorder() {
         return this.calculatingLeftRightBorder;
     }
 
@@ -153,7 +152,7 @@ public class ComparisonOutput {
         return this.response;
     }
 
-    public void setResponse(Response output) {
+    private void setResponse(Response output) {
         this.response = output;
     }
 

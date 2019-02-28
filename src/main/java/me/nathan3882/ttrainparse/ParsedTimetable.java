@@ -32,9 +32,9 @@ public class ParsedTimetable {
     private BufferedImage newImage = null;
 
     public ParsedTimetable(TTrainParser main, MessageDisplay messageDisplay, BufferedImage firstImage, int previousPrevDone) {
-        this.prevDone = previousPrevDone + 1;
         ComparisonOutput.topBottomInstantiations = 0;
         ComparisonOutput.leftRightInstantiations = 0;
+        this.prevDone = previousPrevDone + 1;
         responsesSoFar.clear();
         this.main = main;
         this.firstImage = firstImage;
@@ -47,7 +47,7 @@ public class ParsedTimetable {
         Map<Integer, List<String>> XYPixels = new HashMap<>(); //Integer = X Coordinate of the correlating list of pixels
 
         int decByEveryTime = (ComparisonOutput.OCCURENCES_DECREASE_BY * this.getPrevDone());
-        float percentage = ((float) decByEveryTime / (float) ComparisonOutput.OCCURENCES_START_CHECK) * 100;
+        float percentage = ((float) decByEveryTime / (float) ComparisonOutput.OCCURENCES_START_CHECK) * 100; //Must cast both values to float for accurate percentage.
         if (getPrevDone() > 0) {
             messageDisplay.displayMessage("Finding with the chance being force increased by %" + decimalFormat.format(percentage));
         }
@@ -71,9 +71,9 @@ public class ParsedTimetable {
         if (analysisType.equals(AnalysisType.LEFT_RIGHT_BORDERS)) {
             for (int currentXPixel = 0; currentXPixel < width; currentXPixel++) { //going from left to right
                 for (int currentYPixel = 0; currentYPixel < height; currentYPixel++) {  //then going from bottom to top
-                    String currentPixelString = main.pixelRGBToString(new Color(firstImage.getRGB(currentXPixel, currentYPixel)));
+                    String currentPixelString = getMainInstance().pixelRGBToString(new Color(firstImage.getRGB(currentXPixel, currentYPixel)));
 
-                    if (main.getTableType(currentPixelString).equals(TablePart.BORDER))
+                    if (getMainInstance().getTableType(currentPixelString).equals(TablePart.BORDER))
                         borderCoordinates.put(currentXPixel, currentYPixel);
 
                     if (storedXorYPixels.size() == height) { //Reached bottom of the pixels, iteration is top -> bottom
@@ -81,7 +81,7 @@ public class ParsedTimetable {
                         storedXorYPixels.clear();
                     }
                     storedXorYPixels.add(currentPixelString);
-                    if (getCondition(XYPixels.size(), width - 2)) { //analyses third of all pixels for left and right border
+                    if (canReinstantiate(XYPixels.size(), width - 2)) { //analyses third of all pixels for left and right border
                         ComparisonOutput.leftRightInstantiations++;
                         ComparisonOutput output = //New comparison output for previous 1/3rd of pixel data
                                 new ComparisonOutput(main, this, new HashMap<>(XYPixels), true, new HashMap<>(borderCoordinates));
@@ -93,9 +93,9 @@ public class ParsedTimetable {
         } else if (analysisType.equals(AnalysisType.TOP_BOTTOM_BORDERS)) {
             for (int currentYPixel = 0; currentYPixel < height; currentYPixel++) {  //going from bottom to top
                 for (int currentXPixel = 0; currentXPixel < width; currentXPixel++) { //then going from left to right
-                    String currentPixelString = main.pixelRGBToString(new Color(firstImage.getRGB(currentXPixel, currentYPixel)));
+                    String currentPixelString = getMainInstance().pixelRGBToString(new Color(firstImage.getRGB(currentXPixel, currentYPixel)));
 
-                    if (main.getTableType(currentPixelString).equals(TablePart.BORDER))
+                    if (getMainInstance().getTableType(currentPixelString).equals(TablePart.BORDER))
                         borderCoordinates.put(currentXPixel, currentYPixel); //Is a border
 
                     if (storedXorYPixels.size() == width) {
@@ -104,10 +104,10 @@ public class ParsedTimetable {
                     }
                     storedXorYPixels.add(currentPixelString);
 
-                    if (getCondition(XYPixels.size(), height)) {
+                    if (canReinstantiate(XYPixels.size(), height)) {
                         ComparisonOutput.topBottomInstantiations++;
                         //New comparison output for previous 1/3rd of pixel data
-                        ComparisonOutput output = new ComparisonOutput(main, this, new HashMap<>(XYPixels), false, new HashMap<>(borderCoordinates));
+                        ComparisonOutput output = new ComparisonOutput(getMainInstance(), this, new HashMap<>(XYPixels), false, new HashMap<>(borderCoordinates));
                         addComparisonOutput(output);
                         XYPixels.clear(); //Clears previous 1/3 of pixel data
                     }
@@ -116,17 +116,13 @@ public class ParsedTimetable {
         }
     }
 
+    private TTrainParser getMainInstance() {
+        return this.main;
+    }
+
     public void addComparisonOutput(ComparisonOutput output) {
         if (output.getResponse() == null) return;
         comparisonOutputs.add(output);
-    }
-
-    private void logInstantiation(boolean leftRightTopBottom) {
-        if (leftRightTopBottom) {
-            ComparisonOutput.leftRightInstantiations++;
-        } else {
-            ComparisonOutput.topBottomInstantiations++;
-        }
     }
 
     public BufferedImage getSuccessfullyParsedImage() {
@@ -143,7 +139,7 @@ public class ParsedTimetable {
                         this.yValueBottomBorder = comparisonOutput.getValue();
                         break;
                     case VALID_LEFT_BORDER:
-                        this.xValueLeftBorder = comparisonOutput.getValue() + 10; // take five away so in segmentation
+                        this.xValueLeftBorder = comparisonOutput.getValue() + 10;
                         break;
                     case VALID_RIGHT_BORDER:
                         this.xValueRightBorder = comparisonOutput.getValue();
@@ -163,8 +159,8 @@ public class ParsedTimetable {
                         yValueBottomBorder);
     }
 
-    private boolean getCondition(int size, int heightOrWidth) {
-        return size >= (heightOrWidth / 3) - 1; //Dividing integers gives absoloute value, ie 9.9 will be 9 so just take 1 away to be accurate
+    private boolean canReinstantiate(int size, int heightOrWidth) {
+        return size >= (heightOrWidth / 3) - 1; //Dividing integers gives absolute value, ie 9.9 will be 9 so just take 1 away to be accurate
     }
 
     public boolean successfullyParsed() {
