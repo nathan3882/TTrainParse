@@ -121,11 +121,11 @@ public class User {
     public void generateDefaultRenewValues() {
         SqlUpdate defaultValues = new SqlUpdate(connection);
         defaultValues.executeUpdate(
-                "INSERT INTO {table} (userEmail, renewsLeft, lastRenewMillis) VALUES ('" + getUserEmail() + "', 3, " + System.currentTimeMillis() + ")",
+                "INSERT INTO {table} (userEmail, renewsLeft, lastRenewMillis) VALUES ('" + getUserEmail() + "', " + TTrainParser.DEFAULT_FORCE_UPDATE_QUANTITY + ", " + System.currentTimeMillis() + ")",
                 SqlConnection.SqlTableName.TIMETABLE_RENEWAL);
     }
 
-    public Date getTableRenewDate(boolean close) {
+    public Date getTableRenewDate() {
         Date date = new Date();
         date.setTime(getPreviousUploadTime() + TimeUnit.DAYS.toMillis(DEFAULT_RENEW_COOLDOWN_DAYS));
         return date;
@@ -135,22 +135,20 @@ public class User {
         if (!hasInternet() || !connection.connectionEstablished() || !hasSqlEntry(SqlConnection.SqlTableName.TIMETABLE_LESSONS)) {
             return false;
         }
-        boolean hasEntry = false;
         SqlQuery query = new SqlQuery(connection);
         query.executeQuery("SELECT " + day.name() + " FROM {table} WHERE userEmail = '" + getUserEmail() + "'",
                 SqlConnection.SqlTableName.TIMETABLE_LESSONS);
-        String str = "ding don";
         boolean next = query.next(false);
+        ResultSet rs = query.getResultSet();
         try {
-            str = query.getResultSet().getString(day.name());
+            String str = rs.getString(day.name());
+            if (!rs.wasNull() && str != null && next) {
+                return true;
+            }
         } catch (SQLException e) {
             e.printStackTrace();
         }
-        if (next && str != null) {
-            System.out.println("HAS FOR " + day.name() + " str = " + str);
-            hasEntry = true;
-        }
-        return hasEntry;
+        return false;
     }
 
     public boolean hasOcrTextStored(DayOfWeek... days) {
@@ -170,13 +168,14 @@ public class User {
             connection.openConnection();
             String table = SqlConnection.SqlTableName.TIMETABLE_LESSONS;
             SqlUpdate storeUpdate = new SqlUpdate(connection);
+            String dayName = day.name();
             if (hasSqlEntry(table)) {
                 if (!hasOcrTextStored(day)) {
-                    storeUpdate.executeUpdate("UPDATE {table} SET " + day.name() + " = \"" + ocrText + "\"" + " WHERE userEmail = \"" + getUserEmail() + "\"",
+                    storeUpdate.executeUpdate("UPDATE {table} SET " + dayName + " = \"" + ocrText + "\"" + " WHERE userEmail = \"" + getUserEmail() + "\"",
                             table);
                 }
             } else {
-                storeUpdate.executeUpdate("INSERT INTO {table} (userEmail, " + day.name() + ") VALUES (\"" + getUserEmail() + "\", \"" + ocrText + "\")",
+                storeUpdate.executeUpdate("INSERT INTO {table} (userEmail, " + dayName + ") VALUES (\"" + getUserEmail() + "\", \"" + ocrText + "\") ON DUPLICATE KEY UPDATE " + dayName + "='" + ocrText + "'",
                         table);
             }
         }
