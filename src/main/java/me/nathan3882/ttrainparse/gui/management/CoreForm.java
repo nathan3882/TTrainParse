@@ -1,9 +1,12 @@
 package me.nathan3882.ttrainparse.gui.management;
 
-import me.nathan3882.idealtrains.IdealTrains;
-import me.nathan3882.idealtrains.Service;
+import me.nathan3882.idealtrains.*;
 import me.nathan3882.ttrainparse.*;
 import me.nathan3882.ttrainparse.data.SqlConnection;
+import me.nathan3882.ttrainparse.data.SqlQuery;
+import me.nathan3882.ttrainparse.data.SqlUpdate;
+import org.json.JSONObject;
+import org.json.simple.parser.JSONParser;
 
 import javax.swing.*;
 import javax.xml.datatype.XMLGregorianCalendar;
@@ -15,13 +18,16 @@ import java.awt.event.ItemListener;
 import java.awt.image.BufferedImage;
 import java.io.File;
 import java.math.BigInteger;
+import java.sql.SQLException;
 import java.time.*;
-import java.util.Timer;
 import java.util.*;
+import java.util.Timer;
+import java.util.Map.Entry;
 import java.util.concurrent.TimeUnit;
 
 public class CoreForm extends MessageDisplay {
 
+    private static final int DAY_TRAIN_RELEARN_COUNT = 30;
     private final TTrainParser mainInstance;
     private TaskManager task;
     private User user;
@@ -38,7 +44,7 @@ public class CoreForm extends MessageDisplay {
     public CoreForm(TTrainParser main) {
 
         this.mainInstance = main;
-
+        getMainInstance().getSqlConnection().openConnection();
         getMainInstance().coreForm = this;
         updateHomeCrsHelpLabel.setText("<html><center>^ New home? Update it above ^</center></html>");
         getMainInstance().configureCrsComboBox(updateHomeCrsComboBox);
@@ -57,7 +63,7 @@ public class CoreForm extends MessageDisplay {
                 user.generateDefaultRenewValues();
             }
             left = getUser().getTableUpdatesLeft();
-            renewDate = getUser().getTableRenewDate(false);
+            renewDate = getUser().getTableRenewDate();
             updateTimetableButton.addActionListener(getUpdateTimetableListener(main));
             updateTimetableInfoLabel.setText("<html><center>" + left + " timetable update/s available until..." + TTrainParser.DOUBLE_BREAK + renewDate + "..." + TTrainParser.BREAK + TTrainParser.BREAK + "when it will refresh :)</center></html>");
         } else {
@@ -131,19 +137,26 @@ public class CoreForm extends MessageDisplay {
     private StringBuilder getStringToDisplay(List<LessonInfo> differentDayInfo, boolean showTrainsForEveryLesson, int maxTrainsPerLesson) {
         this.differentDayInfo = differentDayInfo;
         this.showTrainsForEveryLesson = showTrainsForEveryLesson;
-
+        long currentMillis = System.currentTimeMillis();
         StringBuilder mainString = new StringBuilder();
         mainString.append("<html><center>");
 
-        Date currentDate = new Date(System.currentTimeMillis());
+        Date currentDate = new Date();
+        Calendar calendar = Calendar.getInstance();
+        calendar.setTime(currentDate);
 
         int totalDaysToShow = differentDayInfo.size();
+
+        Calendar lessonTimeCal = Calendar.getInstance();
+        lessonTimeCal.setTime(currentDate);
+
         for (int i = 0; i < totalDaysToShow; i++) {
 
             LessonInfo newCollegeDay = differentDayInfo.get(i);
 
-            if (i != 0 || i != totalDaysToShow - 1)
+            if (i != 0 || i != totalDaysToShow - 1) {
                 mainString.append(TTrainParser.BREAK); //when its not the first or last day starting, break to avoid the last lesson for prev day
+            }
             mainString.append(upperFirst(newCollegeDay.getDayOfWeek().name())).append(":"); //Title the data with "{DAY}:\n"
 
             newCollegeDay.getLessons().forEach(lessonName -> { //This iteration allows 1+ lessons to be accounted for
@@ -156,67 +169,115 @@ public class CoreForm extends MessageDisplay {
                 for (int k = 0; k < startTimesSize; k++) { //This iteration goes through the single/multiple lesson times
                     mainString.append(TTrainParser.BREAK);
                     LocalTime aLessonsStartTime = startTimes.get(k);
-                    LocalDate localDate = newCollegeDay.getLocalDateOfLesson();
-                    Date aLessonsStartDate = toDate(aLessonsStartTime, localDate);
+
+                    DayOfWeek today = DayOfWeek.of(calendar.get(Calendar.DAY_OF_WEEK));
+                    DayOfWeek dayOfLesson = newCollegeDay.getDayOfWeek();
+                    int dif = dayOfLesson.getValue() - today.getValue();
+                    lessonTimeCal.set(Calendar.HOUR_OF_DAY, aLessonsStartTime.getHour());
+                    lessonTimeCal.set(Calendar.MINUTE, aLessonsStartTime.getMinute());
+                    lessonTimeCal.set(Calendar.SECOND, aLessonsStartTime.getSecond());
+                    lessonTimeCal.set(Calendar.DAY_OF_MONTH, calendar.get(Calendar.DAY_OF_MONTH) + dif);
+
+                    Date aLessonsStartDate = lessonTimeCal.getTime();
 
                     LocalTime finishTime = finishTimes.get(k);
 
-                    String startString = getPrettyMinute(aLessonsStartTime.getMinute());
-                    String endString = getPrettyMinute(finishTime.getMinute());
+                    String prettyStartMinutesString = IdealTrains.getPrettyMinute(aLessonsStartTime.getMinute());
+                    String prettyEndMinutesString = IdealTrains.getPrettyMinute(finishTime.getMinute());
 
-                    mainString.append(lessonName + " lesson number " + (k + 1) + " starts at " + aLessonsStartTime.getHour() + ":" + startString + " and ends at " + finishTime.getHour() + ":" + endString);
+                    String startsAtPrettyString = aLessonsStartTime.getHour() + ":" + prettyStartMinutesString;
+                    String finishesAtPrettyString = finishTime.getHour() + ":" + prettyEndMinutesString;
+                    mainString.append(lessonName + " lesson number " + (k + 1) + " starts at " + startsAtPrettyString + " and ends at " + finishesAtPrettyString + TTrainParser.BREAK);
+                    boolean hasTrains = false;
                     if (showTrainsForEveryLesson || k == 0 || k == lastLesson) {
+                        LinkedList<LinkedList<JSONObject>> learned = getLearnedTrains(user.getHomeCrs(), aLessonsStartDate);
+                        if (learned.isEmpty()) {
+                            List<Service> idealTrains = null;
+                            try {
+                                idealTrains = IdealTrains.getHomeToLessonServices(//
+                                        user.getHomeCrs(), "BCU", currentDate, 8 * 60, aLessonsStartDate, 120);
+                                Collections.reverse(idealTrains); //Get trains and reverse
+                            } catch (SOAPException e) {
+                                e.printStackTrace();
+                            }
+                            hasTrains = idealTrains != null && !idealTrains.isEmpty();
+                            if (hasTrains) {
 
-                        List<Service> idealTrains = null;
-                        try {
+                                mainString.append(TTrainParser.BREAK + "From your home station, catch the:" + TTrainParser.BREAK);
 
-                            idealTrains = IdealTrains.getHomeToLessonServices(//
-                                    user.getHomeCrs(), "BCU", currentDate, 8 * 60, aLessonsStartDate, 120);
-                        } catch (SOAPException e) {
-                            e.printStackTrace();
-                        }
-                        if (idealTrains != null) {
-                            mainString.append(TTrainParser.BREAK + "From your home station, catch the:" + TTrainParser.BREAK);
-                            if (!idealTrains.isEmpty()) {
                                 int done = 0;
-                                for (int l = (idealTrains.size() - 1); l >= 0; l--) { //this iteration goes through fastest [len - 1] to slowest [0]
+                                String columnToReference = startsAtPrettyString.replace(":", "");
+                                String servicesAsJson = "";
+                                for (Service service : idealTrains) { //this iteration goes through fastest [len - 1] to slowest [0]
                                     if (done == maxTrainsPerLesson) break;
-                                    Service service = idealTrains.get(l);
-                                    XMLGregorianCalendar xmlEta = service.getEta();
-                                    XMLGregorianCalendar xmlEtd = service.getEtd();
-
-                                    XMLGregorianCalendar xmlSta = service.getSta();
-                                    XMLGregorianCalendar xmlSdt = service.getSdt();
-
-                                    Calendar departCal = getCalendarFromDate(check(xmlEtd, xmlSdt).getTime());
-                                    Calendar arrivalCal = getCalendarFromDate(check(xmlEta, xmlSta).getTime());
-
-                                    if (arrivalCal == null)
-                                        continue; //API sometimes doesn't have arrival data & is null from national rail
-
-                                    long departMillis = departCal.getTimeInMillis();
-                                    long arriveMillis = arrivalCal.getTimeInMillis();
-
-                                    if (arriveMillis <= departMillis) {
-                                        continue; //Small quantity of times say that arrival time is prior to departure time?
+                                    Departure departure = service.getDeparture();
+                                    Arrival arrival = service.getArrival();
+                                    if (departure.isNullSingular() || arrival.isNullSingular()) {
+                                        //Both estimated and scheduled are null
+                                        continue;
                                     }
-
-                                    String arrivalHoursString = fixHours(arrivalCal.get(Calendar.HOUR_OF_DAY));
-                                    String departureHoursString = fixHours(departCal.get(Calendar.HOUR_OF_DAY));
-
-                                    String departureMinsString = getPrettyMinute(xmlEtd.getMinute());
-                                    String arrivalMinsString = getPrettyMinute(xmlSta.getMinute());
+                                    TrainDate departureDate = departure.singular();
+                                    TrainDate arrivalDate = arrival.singular();
 
                                     long difFromLesson = service.getToSpareMinutes();
-                                    mainString.append(departureHoursString + ":" + departureMinsString
-                                            + " from " + getUser().getHomeCrs() +
-                                            " that arrives @ " + arrivalHoursString + ":" + arrivalMinsString +
-                                            ". (" + difFromLesson + "mins before lesson)" + TTrainParser.BREAK);
+                                    String serviceAsJsonString = service.toString(difFromLesson) + " sep ";
+
+                                    servicesAsJson += serviceAsJsonString;
+                                    appendTrainToDisplayStr(mainString, departureDate.withColon(), arrivalDate.withColon(), difFromLesson);
                                     done++;
                                 }
-                            } else {
-                                mainString.append("No trains found for this lesson...");
+
+                                try {
+                                    SqlQuery query = new SqlQuery(getMainInstance().getSqlConnection());
+                                    SqlUpdate update = new SqlUpdate(getMainInstance().getSqlConnection());
+                                    String checkString = "SELECT " + columnToReference + "" +
+                                            " FROM {table} WHERE insertTimestamp = '" + currentMillis + "'";
+
+                                    query.executeQuery(checkString, SqlConnection.SqlTableName.TRAINS);
+
+                                    if (!query.getResultSet().next()) { //don't have an entry
+
+                                        String insertString = "INSERT INTO {table}" + //create entry
+                                                "(`insertTimestamp`, `homeCrs`, `900`, `1005`, `1130`, `1305`, `1410`, `1515`) " +
+                                                "VALUES (" + currentMillis + ",\"" + user.getHomeCrs() + "\",NULL,NULL,NULL,NULL,NULL,NULL)";
+                                        update.executeUpdate(insertString, SqlConnection.SqlTableName.TRAINS);
+                                        //update here to update the 900 etc
+                                    }
+                                    String updateString = ("UPDATE {table} SET" +
+                                            " `" + columnToReference + "`='" + servicesAsJson + "'" +
+                                            " WHERE `insertTimestamp`='" + currentMillis + "'");
+
+                                    update.executeUpdate(updateString, SqlConnection.SqlTableName.TRAINS);
+
+                                    query.close();
+                                } catch (SQLException e) {
+                                    displayMessage("An error occurred whilst inserting train data to learn for the future!");
+                                    e.printStackTrace();
+                                }
                             }
+                        } else {
+                            Map<String, Integer> frequencies = new HashMap<>(); //String is "{departure time}, {arrival time}", Integer is amount
+                            for (LinkedList<JSONObject> oneSqlEntrysTwoBestTrains : learned) {
+                                oneSqlEntrysTwoBestTrains.forEach(aBestTrain -> {
+                                    String freqString = aBestTrain.get("departure") + ", " + aBestTrain.get("arrival") + ", " + aBestTrain.get("walk");
+                                    int currentFreq = frequencies.getOrDefault(freqString, 0);
+                                    frequencies.put(freqString, currentFreq + 1);
+                                });
+                            }
+                            LinkedList<Entry<String, Integer>> sortedFrequencyEntries = new LinkedList<>(frequencies.entrySet());
+                            if (!sortedFrequencyEntries.isEmpty()) {
+                                sortedFrequencyEntries.sort(Comparator.comparing(Entry::getValue));
+                                for (int m = 0; m < sortedFrequencyEntries.size(); m++) {
+                                    Entry<String, Integer> entry = sortedFrequencyEntries.get(m);
+                                    String[] keySplit = entry.getKey().split(", "); //"{departure time}, {arrival time}, {walk}"
+                                    appendTrainToDisplayStr(mainString, keySplit[0], keySplit[1], Long.parseLong(keySplit[2]));
+                                    if (m + 1 == maxTrainsPerLesson) break;
+                                }
+                                hasTrains = true;
+                            }
+                        }
+                        if (!hasTrains) {
+                            mainString.append("<br>No trains found for this lesson...");
                         }
                     }
                     //Here is where the end of a lesson's train times iteration breaks,
@@ -231,6 +292,65 @@ public class CoreForm extends MessageDisplay {
         mainString.append("</center></html>");
         return mainString;
     }
+
+    private void appendTrainToDisplayStr(StringBuilder mainString, String departureString, String arrivalString, long difFromLesson) {
+        mainString.append(departureString
+                + " from " + getUser().getHomeCrs() +
+                " that arrives @ " + arrivalString +
+                ". (" + difFromLesson + "mins before lesson)" + TTrainParser.BREAK);
+    }
+
+    /**
+     * @returns a list of (lists that contain 2 best trains)
+     */
+    private LinkedList<LinkedList<JSONObject>> getLearnedTrains(String homeCrs, Date aLessonsStartDate) {
+        LinkedList<LinkedList<JSONObject>> learned = new LinkedList<>();
+        TrainDate trainDate = new TrainDate(aLessonsStartDate);
+
+        String columnName = trainDate.withoutColon();
+
+        long currentMillis = System.currentTimeMillis();
+
+        long aMonthInMillis = TimeUnit.DAYS.toMillis(DAY_TRAIN_RELEARN_COUNT);
+
+        /**
+         * Selects the time column for example 900 for 9am lesson which contains json object like this:
+         "{ crs: "BMH" departure: "10:05", arrival: "11:05", walk: "8"};" //crs = homeCrs, d = departure time, a = arrival to brock time, walk: different in mins between arrival and lesson start time
+         */
+        SqlQuery query = new SqlQuery(getMainInstance().getSqlConnection());
+        String queryString = "SELECT `" + columnName + "`" +
+                " FROM {table} WHERE `homeCrs`='" + homeCrs + "'" +
+                " AND " + currentMillis + " - insertTimestamp <= " + aMonthInMillis;
+        System.out.println("QueryString = " + queryString);
+        query.executeQuery(queryString, SqlConnection.SqlTableName.TRAINS); //Select if a month hasn't passed
+        //The most common train for this lesson is XXX - although our app thinks otherwise, perhaps the train's have changed (XXX that arrives at XXX)
+        JSONParser parser = new JSONParser();
+        try {
+            System.out.println("try");
+            int count = 1;
+            while (query.getResultSet().next() && !query.getResultSet().wasNull()) { //go through responses containing homeCrs, and the train data for 900 1005 etc
+                String string = null;
+                try {
+                    string = query.getString(count);
+                } catch (Exception exception) {
+                    break;
+                }
+                if (string == null) continue;
+                String[] listOfTrains = string.split(" sep ");
+                System.out.println("While... has " + listOfTrains[0]);
+                LinkedList<JSONObject> temp = new LinkedList<>();
+                for (String aTrainJson : listOfTrains) {
+                    temp.add(new JSONObject(aTrainJson));
+                }
+                learned.add(temp);
+                count++;
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+        return learned;
+    }
+
 
     //Services for example an actual service that departs at 12:50 in the afternoon (not at night) says 00 instead of 12
     private String fixHours(int hour) {
@@ -334,7 +454,7 @@ public class CoreForm extends MessageDisplay {
             LessonInfo lessonInfo = new LessonInfo(words, day);
             if (!lessonInfo.isParsedSuccessfully()) {
                 displayMessage("Sorry, timetable can not be parsed. Did your configure " + TTrainParser.TEACHERS_FILE_NAME + "? Perhaps the screenshot came from another monitor, or was too small");
-                updateTimetableUpload();
+                initiateTimetableChange();
             }
             info.add(lessonInfo);
             mFile.deleteAllMade();
@@ -363,7 +483,7 @@ public class CoreForm extends MessageDisplay {
         return mainInstance;
     }
 
-    private void updateTimetableUpload() {
+    private void initiateTimetableChange() {
         getMainInstance().openPanel(TTrainParser.WELCOME_PANEL);
         getMainInstance().welcomeForm.setUpdating(true);
     }
@@ -386,12 +506,6 @@ public class CoreForm extends MessageDisplay {
             showThese[1] = DayOfWeek.of(currentDay + 1);
         }
         return showThese;
-    }
-
-    private String getPrettyMinute(int minute) {
-        String prettyMinute = String.valueOf(minute);
-        if (minute < 10) prettyMinute = "0" + prettyMinute;
-        return prettyMinute;
     }
 
     @Override
