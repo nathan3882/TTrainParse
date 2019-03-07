@@ -173,10 +173,8 @@ public class CoreForm extends MessageDisplay {
                     DayOfWeek today = DayOfWeek.of(calendar.get(Calendar.DAY_OF_WEEK));
                     DayOfWeek dayOfLesson = newCollegeDay.getDayOfWeek();
                     int dif = dayOfLesson.getValue() - today.getValue();
-                    lessonTimeCal.set(Calendar.HOUR_OF_DAY, aLessonsStartTime.getHour());
-                    lessonTimeCal.set(Calendar.MINUTE, aLessonsStartTime.getMinute());
-                    lessonTimeCal.set(Calendar.SECOND, aLessonsStartTime.getSecond());
-                    lessonTimeCal.set(Calendar.DAY_OF_MONTH, calendar.get(Calendar.DAY_OF_MONTH) + dif);
+
+                    updateLessonCalendar(calendar, lessonTimeCal, aLessonsStartTime, dif);
 
                     Date aLessonsStartDate = lessonTimeCal.getTime();
 
@@ -187,6 +185,7 @@ public class CoreForm extends MessageDisplay {
 
                     String startsAtPrettyString = aLessonsStartTime.getHour() + ":" + prettyStartMinutesString;
                     String finishesAtPrettyString = finishTime.getHour() + ":" + prettyEndMinutesString;
+
                     mainString.append(lessonName + " lesson number " + (k + 1) + " starts at " + startsAtPrettyString + " and ends at " + finishesAtPrettyString + TTrainParser.BREAK);
                     boolean hasTrains = false;
                     if (showTrainsForEveryLesson || k == 0 || k == lastLesson) {
@@ -202,79 +201,21 @@ public class CoreForm extends MessageDisplay {
                             }
                             hasTrains = idealTrains != null && !idealTrains.isEmpty();
                             if (hasTrains) {
-
                                 mainString.append(TTrainParser.BREAK + "From your home station, catch the:" + TTrainParser.BREAK);
 
-                                int done = 0;
                                 String columnToReference = startsAtPrettyString.replace(":", "");
-                                String servicesAsJson = "";
-                                for (Service service : idealTrains) { //this iteration goes through fastest [len - 1] to slowest [0]
-                                    if (done == maxTrainsPerLesson) break;
-                                    Departure departure = service.getDeparture();
-                                    Arrival arrival = service.getArrival();
-                                    if (departure.isNullSingular() || arrival.isNullSingular()) {
-                                        //Both estimated and scheduled are null
-                                        continue;
-                                    }
-                                    TrainDate departureDate = departure.singular();
-                                    TrainDate arrivalDate = arrival.singular();
 
-                                    long difFromLesson = service.getToSpareMinutes();
-                                    String serviceAsJsonString = service.toString(difFromLesson) + " sep ";
-
-                                    servicesAsJson += serviceAsJsonString;
-                                    appendTrainToDisplayStr(mainString, departureDate.withColon(), arrivalDate.withColon(), difFromLesson);
-                                    done++;
-                                }
+                                String servicesAsJson = appendBestTrains(maxTrainsPerLesson, mainString, idealTrains);
 
                                 try {
-                                    SqlQuery query = new SqlQuery(getMainInstance().getSqlConnection());
-                                    SqlUpdate update = new SqlUpdate(getMainInstance().getSqlConnection());
-                                    String checkString = "SELECT " + columnToReference + "" +
-                                            " FROM {table} WHERE insertTimestamp = '" + currentMillis + "'";
-
-                                    query.executeQuery(checkString, SqlConnection.SqlTableName.TRAINS);
-
-                                    if (!query.getResultSet().next()) { //don't have an entry
-
-                                        String insertString = "INSERT INTO {table}" + //create entry
-                                                "(`insertTimestamp`, `homeCrs`, `900`, `1005`, `1130`, `1305`, `1410`, `1515`) " +
-                                                "VALUES (" + currentMillis + ",\"" + user.getHomeCrs() + "\",NULL,NULL,NULL,NULL,NULL,NULL)";
-                                        update.executeUpdate(insertString, SqlConnection.SqlTableName.TRAINS);
-                                        //update here to update the 900 etc
-                                    }
-                                    String updateString = ("UPDATE {table} SET" +
-                                            " `" + columnToReference + "`='" + servicesAsJson + "'" +
-                                            " WHERE `insertTimestamp`='" + currentMillis + "'");
-
-                                    update.executeUpdate(updateString, SqlConnection.SqlTableName.TRAINS);
-
-                                    query.close();
+                                    performTrainSql(currentMillis, columnToReference, servicesAsJson);
                                 } catch (SQLException e) {
                                     displayMessage("An error occurred whilst inserting train data to learn for the future!");
                                     e.printStackTrace();
                                 }
                             }
                         } else {
-                            Map<String, Integer> frequencies = new HashMap<>(); //String is "{departure time}, {arrival time}", Integer is amount
-                            for (LinkedList<JSONObject> oneSqlEntrysTwoBestTrains : learned) {
-                                oneSqlEntrysTwoBestTrains.forEach(aBestTrain -> {
-                                    String freqString = aBestTrain.get("departure") + ", " + aBestTrain.get("arrival") + ", " + aBestTrain.get("walk");
-                                    int currentFreq = frequencies.getOrDefault(freqString, 0);
-                                    frequencies.put(freqString, currentFreq + 1);
-                                });
-                            }
-                            LinkedList<Entry<String, Integer>> sortedFrequencyEntries = new LinkedList<>(frequencies.entrySet());
-                            if (!sortedFrequencyEntries.isEmpty()) {
-                                sortedFrequencyEntries.sort(Comparator.comparing(Entry::getValue));
-                                for (int m = 0; m < sortedFrequencyEntries.size(); m++) {
-                                    Entry<String, Integer> entry = sortedFrequencyEntries.get(m);
-                                    String[] keySplit = entry.getKey().split(", "); //"{departure time}, {arrival time}, {walk}"
-                                    appendTrainToDisplayStr(mainString, keySplit[0], keySplit[1], Long.parseLong(keySplit[2]));
-                                    if (m + 1 == maxTrainsPerLesson) break;
-                                }
-                                hasTrains = true;
-                            }
+                            hasTrains = performTrainAnalysis(maxTrainsPerLesson, mainString, learned);
                         }
                         if (!hasTrains) {
                             mainString.append("<br>No trains found for this lesson...");
@@ -291,6 +232,88 @@ public class CoreForm extends MessageDisplay {
         }
         mainString.append("</center></html>");
         return mainString;
+    }
+
+    private String appendBestTrains(int maxTrainsPerLesson, StringBuilder mainString, List<Service> idealTrains) {
+        String servicesAsJson = "";
+        int done = 0;
+        for (Service service : idealTrains) { //this iteration goes through fastest [len - 1] to slowest [0]
+            if (done == maxTrainsPerLesson) break;
+            Departure departure = service.getDeparture();
+            Arrival arrival = service.getArrival();
+            if (departure.isNullSingular() || arrival.isNullSingular()) {
+                //Both estimated and scheduled are null
+                continue;
+            }
+            TrainDate departureDate = departure.singular();
+            TrainDate arrivalDate = arrival.singular();
+
+            long difFromLesson = service.getToSpareMinutes();
+            String serviceAsJsonString = service.toString(difFromLesson) + " sep ";
+
+            servicesAsJson += serviceAsJsonString;
+            appendTrainToDisplayStr(mainString, departureDate.withColon(), arrivalDate.withColon(), difFromLesson);
+            done++;
+        }
+        return servicesAsJson;
+    }
+
+    private void updateLessonCalendar(Calendar calendar, Calendar lessonTimeCal, LocalTime aLessonsStartTime, int dif) {
+        lessonTimeCal.set(Calendar.HOUR_OF_DAY, aLessonsStartTime.getHour());
+        lessonTimeCal.set(Calendar.MINUTE, aLessonsStartTime.getMinute());
+        lessonTimeCal.set(Calendar.SECOND, aLessonsStartTime.getSecond());
+        lessonTimeCal.set(Calendar.DAY_OF_MONTH, calendar.get(Calendar.DAY_OF_MONTH) + dif);
+    }
+
+    private boolean performTrainAnalysis(int maxTrainsPerLesson, StringBuilder mainString, LinkedList<LinkedList<JSONObject>> learned) {
+        Map<String, Integer> frequencies = new HashMap<>(); //String is "{departure time}, {arrival time}", Integer is amount
+        for (LinkedList<JSONObject> oneSqlEntrysTwoBestTrains : learned) {
+            oneSqlEntrysTwoBestTrains.forEach(aBestTrain -> {
+                String freqString = aBestTrain.get("departure") + ", " + aBestTrain.get("arrival") + ", " + aBestTrain.get("walk");
+                int currentFreq = frequencies.getOrDefault(freqString, 0);
+                frequencies.put(freqString, currentFreq + 1);
+            });
+        }
+        LinkedList<Entry<String, Integer>> sortedFrequencyEntries = new LinkedList<>(frequencies.entrySet());
+        if (!sortedFrequencyEntries.isEmpty()) {
+            sortedFrequencyEntries.sort(Comparator.comparing(Entry::getValue));
+            for (int m = 0; m < sortedFrequencyEntries.size(); m++) {
+                Entry<String, Integer> entry = sortedFrequencyEntries.get(m);
+                String[] keySplit = entry.getKey().split(", "); //"{departure time}, {arrival time}, {walk}"
+                appendTrainToDisplayStr(mainString, keySplit[0], keySplit[1], Long.parseLong(keySplit[2]));
+                if (m + 1 == maxTrainsPerLesson) break;
+            }
+            return true;
+        }
+        return false;
+    }
+
+    /**
+     * {crs: "BMH", arrival: "8:52", departure: "8:25",walk: "8"}; sep {crs: "BMH", arrival: "8:39", departure: "8:10",walk: "21"}; sep
+     */
+    private void performTrainSql(long currentMillis, String columnToReference, String servicesAsJson) throws SQLException {
+        SqlQuery query = new SqlQuery(getMainInstance().getSqlConnection());
+        SqlUpdate update = new SqlUpdate(getMainInstance().getSqlConnection());
+        String checkString = "SELECT " + columnToReference + "" +
+                " FROM {table} WHERE insertTimestamp = '" + currentMillis + "'";
+
+        query.executeQuery(checkString, SqlConnection.SqlTableName.TRAINS);
+
+        if (!query.getResultSet().next()) { //don't have an entry
+
+            String insertString = "INSERT INTO {table}" + //create entry
+                    "(`insertTimestamp`, `homeCrs`, `900`, `1005`, `1130`, `1305`, `1410`, `1515`) " +
+                    "VALUES (" + currentMillis + ",\"" + user.getHomeCrs() + "\",NULL,NULL,NULL,NULL,NULL,NULL)";
+            update.executeUpdate(insertString, SqlConnection.SqlTableName.TRAINS);
+            //update here to update the 900 etc
+        }
+        String updateString = ("UPDATE {table} SET" +
+                " `" + columnToReference + "`='" + servicesAsJson + "'" +
+                " WHERE `insertTimestamp`='" + currentMillis + "'");
+
+        update.executeUpdate(updateString, SqlConnection.SqlTableName.TRAINS);
+
+        query.close();
     }
 
     private void appendTrainToDisplayStr(StringBuilder mainString, String departureString, String arrivalString, long difFromLesson) {
