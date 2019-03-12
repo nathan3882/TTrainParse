@@ -49,7 +49,7 @@ public class ParsedTimetable {
         int decByEveryTime = (ComparisonOutput.OCCURENCES_DECREASE_BY * this.getPrevDone());
         float percentage = ((float) decByEveryTime / (float) ComparisonOutput.OCCURENCES_START_CHECK) * 100; //Must cast both values to float for accurate percentage.
         if (getPrevDone() > 0) {
-            messageDisplay.displayMessage("Finding with the chance being force increased by %" + decimalFormat.format(percentage));
+            messageDisplay.displayMessage("Starting first parse with leniency being increased by " + decimalFormat.format(percentage) + "%!");
         }
         for (AnalysisType type : AnalysisType.values()) {
             doTimetableAnalysis(type,
@@ -159,8 +159,8 @@ public class ParsedTimetable {
                         yValueBottomBorder);
     }
 
-    private boolean canReinstantiate(int size, int heightOrWidth) {
-        return size >= (heightOrWidth / 3) - 1; //Dividing integers gives absolute value, ie 9.9 will be 9 so just take 1 away to be accurate
+    private boolean canReinstantiate(int value, int heightOrWidth) {
+        return value >= (heightOrWidth / 3) - 1; //Dividing integers gives absolute value, ie 9.9 will be 9 so just take 1 away to be accurate
     }
 
     public boolean successfullyParsed() {
