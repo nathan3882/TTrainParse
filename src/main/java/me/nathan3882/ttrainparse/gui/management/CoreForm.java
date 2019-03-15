@@ -6,10 +6,8 @@ import me.nathan3882.ttrainparse.data.SqlConnection;
 import me.nathan3882.ttrainparse.data.SqlQuery;
 import me.nathan3882.ttrainparse.data.SqlUpdate;
 import org.json.JSONObject;
-import org.json.simple.parser.JSONParser;
 
 import javax.swing.*;
-import javax.xml.datatype.XMLGregorianCalendar;
 import javax.xml.soap.SOAPException;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
@@ -110,6 +108,19 @@ public class CoreForm extends MessageDisplay {
         milis = milis.add(BigInteger.valueOf(instant.getNano()).divide(
                 BigInteger.valueOf(1_000_000)));
         return new Date(milis.longValue());
+    }
+
+    public TTrainParser getMainInstance() {
+        return mainInstance;
+    }
+
+    public User getUser() {
+        return user;
+    }
+
+    @Override
+    public JPanel getPanel() {
+        return this.coreFormPanel;
     }
 
     private ItemListener getUpdateHomeCrsComboBoxListener() {
@@ -347,12 +358,10 @@ public class CoreForm extends MessageDisplay {
         System.out.println("QueryString = " + queryString);
         query.executeQuery(queryString, SqlConnection.SqlTableName.TRAINS); //Select if a month hasn't passed
         //The most common train for this lesson is XXX - although our app thinks otherwise, perhaps the train's have changed (XXX that arrives at XXX)
-        JSONParser parser = new JSONParser();
         try {
-            System.out.println("try");
             int count = 1;
             while (query.getResultSet().next() && !query.getResultSet().wasNull()) { //go through responses containing homeCrs, and the train data for 900 1005 etc
-                String string = null;
+                String string;
                 try {
                     string = query.getString(count);
                 } catch (Exception exception) {
@@ -365,6 +374,20 @@ public class CoreForm extends MessageDisplay {
                 for (String aTrainJson : listOfTrains) {
                     temp.add(new JSONObject(aTrainJson));
                 }
+                //Example returned data for function is:
+                /*
+                [
+                 [
+                  {crs: "BMH" departure: "10:05", arrival: "11:05", walk: "8"},
+                  {crs: "BMH" departure: "10:27", arrival: "11:30", walk: "12"}
+                 ],
+                 [
+                  {crs: "BMH" departure: "10:05", arrival: "11:05", walk: "8"},
+                  {crs: "BMH" departure: "10:27", arrival: "11:12", walk: "12"}
+                 ]
+                ]
+
+                 */
                 learned.add(temp);
                 count++;
             }
@@ -372,32 +395,6 @@ public class CoreForm extends MessageDisplay {
             e.printStackTrace();
         }
         return learned;
-    }
-
-
-    //Services for example an actual service that departs at 12:50 in the afternoon (not at night) says 00 instead of 12
-    private String fixHours(int hour) {
-        String str = String.valueOf(hour);
-        if (str.startsWith("0")) {
-            str = "12" + str.substring(1);
-        }
-        return str;
-    }
-
-    private Calendar getCalendarFromDate(Date date) {
-        Calendar cal = Calendar.getInstance();
-        cal.setTime(date);
-        return cal;
-    }
-
-    private GregorianCalendar check(XMLGregorianCalendar estimated, XMLGregorianCalendar scheduled) {
-        GregorianCalendar date = null;
-        if (estimated != null) {
-            date = estimated.toGregorianCalendar();
-        } else if (scheduled != null) { //Eta not in xml response, was null, try sta
-            date = scheduled.toGregorianCalendar();
-        }
-        return date;
     }
 
     private ActionListener getUpdateTimetableListener(TTrainParser main) {
@@ -432,7 +429,6 @@ public class CoreForm extends MessageDisplay {
             }
         };
     }
-
 
     private List<LessonInfo> getLessonInformation(Segmentation segmentation, DayOfWeek[] showThese, boolean store) {
         List<LessonInfo> info = new LinkedList<>();
@@ -502,10 +498,6 @@ public class CoreForm extends MessageDisplay {
         return info;
     }
 
-    public TTrainParser getMainInstance() {
-        return mainInstance;
-    }
-
     private void initiateTimetableChange() {
         getMainInstance().openPanel(TTrainParser.WELCOME_PANEL);
         getMainInstance().welcomeForm.setUpdating(true);
@@ -529,14 +521,5 @@ public class CoreForm extends MessageDisplay {
             showThese[1] = DayOfWeek.of(currentDay + 1);
         }
         return showThese;
-    }
-
-    @Override
-    public JPanel getPanel() {
-        return this.coreFormPanel;
-    }
-
-    public User getUser() {
-        return user;
     }
 }

@@ -136,15 +136,6 @@ public class TTrainParser extends MessageDisplay {
         }
     }
 
-
-    public JPanel getCards() {
-        return cards;
-    }
-
-    public void setCards(JPanel cards) {
-        this.cards = cards;
-    }
-
     private static void addPanelToCard(JPanel panel, String welcomePanel) {
         if (instance().getCards() == null) {
             instance().setCards(new JPanel(new CardLayout()));
@@ -254,8 +245,12 @@ public class TTrainParser extends MessageDisplay {
         return tTrainParser;
     }
 
-    private SqlConnection getNewSqlConnection() {
-        return new SqlConnection(tTrainParser);
+    public JPanel getCards() {
+        return cards;
+    }
+
+    public void setCards(JPanel cards) {
+        this.cards = cards;
     }
 
     public TablePart getTableType(String rgbString) {
@@ -276,12 +271,6 @@ public class TTrainParser extends MessageDisplay {
         }
         return tableType;
 
-    }
-
-    private boolean wb(int number, int ofThisNumber, int within) {
-        int lower = ofThisNumber - within;
-        int upper = ofThisNumber + within;
-        return (number >= lower) && (number <= upper);
     }
 
     public String pixelRGBToString(Color colour) {
@@ -452,30 +441,6 @@ public class TTrainParser extends MessageDisplay {
         return depletedText;
     }
 
-    /**
-     * Recursive levenshtein distance following 3 functions
-     **/
-    private int calculateDistance(String x, String y) {
-        if (x.isEmpty()) return y.length();
-        if (y.isEmpty()) return x.length();
-
-        String xSubOne = x.substring(1);
-        String ySubOne = y.substring(1);
-
-        int substitution = calculateDistance(xSubOne, ySubOne) + getCostOf(x.charAt(0), y.charAt(0));
-        int insertion = calculateDistance(x, ySubOne) + 1;
-        int deletion = calculateDistance(xSubOne, y) + 1;
-        return min(substitution, insertion, deletion);
-    }
-
-    private int getCostOf(char first, char last) {
-        return first == last ? 0 : 1;
-    }
-
-    private int min(int... numbers) {
-        return Arrays.stream(numbers).min().orElse(Integer.MAX_VALUE);
-    }
-
     public void openPanel(String panelName) {
         if (panelName.equals(CORE_PANEL)) { //Latest tesseractInstance
             coreForm = new CoreForm(tTrainParser);
@@ -502,7 +467,6 @@ public class TTrainParser extends MessageDisplay {
     public void setUser(User user) {
         this.user = user;
     }
-
 
     public DataFileInfo getYamlReadDatafile() {
         DataFileInfo info;
@@ -546,5 +510,39 @@ public class TTrainParser extends MessageDisplay {
 
     public int getCurrentDay() {
         return GLOBAL_CALENDAR.get(Calendar.DAY_OF_WEEK);
+    }
+
+    private SqlConnection getNewSqlConnection() {
+        return new SqlConnection(tTrainParser);
+    }
+
+    private boolean wb(int number, int ofThisNumber, int within) {
+        int lower = ofThisNumber - within;
+        int upper = ofThisNumber + within;
+        return (number >= lower) && (number <= upper);
+    }
+
+    /**
+     * Recursive levenshtein distance following 3 functions
+     **/
+    private int calculateDistance(String x, String y) {
+        if (x.isEmpty()) return y.length();
+        if (y.isEmpty()) return x.length();
+
+        String xSubOne = x.substring(1);
+        String ySubOne = y.substring(1);
+
+        int substitution = calculateDistance(xSubOne, ySubOne) + getCostOf(x.charAt(0), y.charAt(0));
+        int insertion = calculateDistance(x, ySubOne) + 1;
+        int deletion = calculateDistance(xSubOne, y) + 1;
+        return min(substitution, insertion, deletion);
+    }
+
+    private int getCostOf(char first, char last) {
+        return first == last ? 0 : 1;
+    }
+
+    private int min(int... numbers) {
+        return Arrays.stream(numbers).min().orElse(Integer.MAX_VALUE);
     }
 }

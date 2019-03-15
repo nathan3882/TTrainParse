@@ -12,6 +12,7 @@ public class SqlUpdate {
     private final Connection connection;
     private final TTrainParser main;
 
+
     public SqlUpdate(SqlConnection sqlConnection) {
         this.main = sqlConnection.getTTrainParser();
         this.connection = sqlConnection.getConnection();
@@ -47,7 +48,7 @@ public class SqlUpdate {
         return true;
     }
 
-    private void close(AutoCloseable resource) {
+    public void close(AutoCloseable resource) {
         try {
             resource.close();
         } catch (Exception e) {

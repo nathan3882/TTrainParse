@@ -64,6 +64,62 @@ public class ParsedTimetable {
         return this.prevDone;
     }
 
+    public void addComparisonOutput(ComparisonOutput output) {
+        if (output.getResponse() == null) return;
+        comparisonOutputs.add(output);
+    }
+
+    public BufferedImage getSuccessfullyParsedImage() {
+        if (successfullyParsed()) { //Top, bottom, left AND right sides of border all found
+            for (ComparisonOutput comparisonOutput : comparisonOutputs) {
+
+                ComparisonOutput.Response response = comparisonOutput.getResponse();
+
+                switch (response) {
+                    case VALID_TOP_BORDER:
+                        this.yValueTopBorder = comparisonOutput.getValue();
+                        break;
+                    case VALID_BOTTOM_BORDER:
+                        this.yValueBottomBorder = comparisonOutput.getValue();
+                        break;
+                    case VALID_LEFT_BORDER:
+                        this.xValueLeftBorder = comparisonOutput.getValue() + 10;
+                        break;
+                    case VALID_RIGHT_BORDER:
+                        this.xValueRightBorder = comparisonOutput.getValue();
+                        break;
+                    case MIDDLE_NOT_A_BORDER:
+                        break;
+                    default:
+                        break;
+                }
+            }
+        }
+        return this.newImage != null ? this.newImage :
+                TTrainParser.getNewImage(firstImage,
+                        xValueLeftBorder,
+                        yValueTopBorder,
+                        xValueRightBorder,
+                        yValueBottomBorder);
+    }
+
+    public boolean successfullyParsed() {
+        return getResponsesSoFar().size() == 4;
+    }
+
+    public BufferedImage getStartingImage() {
+        return this.firstImage;
+    }
+
+    public List<ComparisonOutput.Response> getResponsesSoFar() {
+        return responsesSoFar;
+    }
+
+    public void addNewResponse(ComparisonOutput.Response response) {
+        if (response == null) return;
+        responsesSoFar.add(response);
+    }
+
     /**
      * Following code determines left and right side border coordinates of the timetable
      */
@@ -120,64 +176,8 @@ public class ParsedTimetable {
         return this.main;
     }
 
-    public void addComparisonOutput(ComparisonOutput output) {
-        if (output.getResponse() == null) return;
-        comparisonOutputs.add(output);
-    }
-
-    public BufferedImage getSuccessfullyParsedImage() {
-        if (successfullyParsed()) { //Top, bottom, left AND right sides of border all found
-            for (ComparisonOutput comparisonOutput : comparisonOutputs) {
-
-                ComparisonOutput.Response response = comparisonOutput.getResponse();
-
-                switch (response) {
-                    case VALID_TOP_BORDER:
-                        this.yValueTopBorder = comparisonOutput.getValue();
-                        break;
-                    case VALID_BOTTOM_BORDER:
-                        this.yValueBottomBorder = comparisonOutput.getValue();
-                        break;
-                    case VALID_LEFT_BORDER:
-                        this.xValueLeftBorder = comparisonOutput.getValue() + 10;
-                        break;
-                    case VALID_RIGHT_BORDER:
-                        this.xValueRightBorder = comparisonOutput.getValue();
-                        break;
-                    case MIDDLE_NOT_A_BORDER:
-                        break;
-                    default:
-                        break;
-                }
-            }
-        }
-        return this.newImage != null ? this.newImage :
-                TTrainParser.getNewImage(firstImage,
-                        xValueLeftBorder,
-                        yValueTopBorder,
-                        xValueRightBorder,
-                        yValueBottomBorder);
-    }
-
     private boolean canReinstantiate(int value, int heightOrWidth) {
         return value >= (heightOrWidth / 3) - 1; //Dividing integers gives absolute value, ie 9.9 will be 9 so just take 1 away to be accurate
-    }
-
-    public boolean successfullyParsed() {
-        return getResponsesSoFar().size() == 4;
-    }
-
-    public BufferedImage getStartingImage() {
-        return this.firstImage;
-    }
-
-    public List<ComparisonOutput.Response> getResponsesSoFar() {
-        return responsesSoFar;
-    }
-
-    public void addNewResponse(ComparisonOutput.Response response) {
-        if (response == null) return;
-        responsesSoFar.add(response);
     }
 
     public enum AnalysisType {

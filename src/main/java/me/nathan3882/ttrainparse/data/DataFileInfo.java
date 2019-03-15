@@ -13,10 +13,6 @@ public class DataFileInfo {
     public String email;
     public String timetableCroppedPngFileName;
 
-    public void setEmail(String email) {
-        this.email = email;
-    }
-
     public void setTimetableCroppedPdfFileName(String fileNameWithExtension) {
         this.timetableCroppedPdfFileName = fileNameWithExtension;
     }
@@ -27,6 +23,10 @@ public class DataFileInfo {
 
     public String getEmail() {
         return email;
+    }
+
+    public void setEmail(String email) {
+        this.email = email;
     }
 
     public void setDefaults() {

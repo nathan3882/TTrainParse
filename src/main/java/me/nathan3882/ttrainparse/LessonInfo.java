@@ -1,7 +1,6 @@
 package me.nathan3882.ttrainparse;
 
 import java.time.DayOfWeek;
-import java.time.LocalDate;
 import java.time.LocalTime;
 import java.time.format.DateTimeParseException;
 import java.util.*;
@@ -15,7 +14,6 @@ import java.util.*;
 public class LessonInfo {
 
     public static boolean tried = false;
-    private DayOfWeek dayOfWeek;
     private int lessonCount;
     private LinkedList<String> orderedLessons = new LinkedList<>();
     private Map<String, LinkedList<LocalTime>> orderedSubjectStartTimes = new LinkedHashMap<>();
@@ -23,6 +21,7 @@ public class LessonInfo {
     private String lastLesson;
     private String firstLesson;
     private boolean parsedSuccessfully = true;
+    private DayOfWeek dayOfWeek;
 
     public LessonInfo(List<String> words, DayOfWeek dayOfWeek) {
         this.dayOfWeek = dayOfWeek;
@@ -48,6 +47,42 @@ public class LessonInfo {
             TTrainParser.getDebugManager().handle(e);
             e.printStackTrace();
         }
+    }
+
+    public LinkedList<String> getOrderedLessons() {
+        return orderedLessons;
+    }
+
+    public String getLastLesson() {
+        return lastLesson;
+    }
+
+    public String getFirstLesson() {
+        return firstLesson;
+    }
+
+    public LinkedList<LocalTime> getStartTimes(String lesson) {
+        return this.orderedSubjectStartTimes.get(lesson);
+    }
+
+    public LinkedList<LocalTime> getFinishTimes(String lesson) {
+        return this.orderedSubjectFinishTimes.get(lesson);
+    }
+
+    public LinkedList<String> getLessons() {
+        return this.orderedLessons;
+    }
+
+    public DayOfWeek getDayOfWeek() {
+        return this.dayOfWeek;
+    }
+
+    public boolean isParsedSuccessfully() {
+        return parsedSuccessfully;
+    }
+
+    private void setParsedSuccessfully(boolean parsedSuccessfully) {
+        this.parsedSuccessfully = parsedSuccessfully;
     }
 
     private void storeStartEndTimes(String subject, List<String> words, Map<String, List<String>> subjectAndBounds, Map<String, LinkedList<LocalTime>> orderedSubjectStartTimes, Map<String, LinkedList<LocalTime>> orderedSubjectFinishTimes) {
@@ -153,7 +188,7 @@ public class LessonInfo {
 
                         endBoundIndex = lowerBound + (split.size() - 1);
 
-                        String boundString = String.valueOf(lowerBound + ", " + endBoundIndex);
+                        String boundString = lowerBound + ", " + endBoundIndex;
 
                         List<String> bounds = subjectAndBounds.containsKey(aSubject) ? subjectAndBounds.get(aSubject) : new ArrayList<>(Arrays.asList(boundString));
                         if (subjectAndBounds.containsKey(aSubject)) {
@@ -163,7 +198,7 @@ public class LessonInfo {
 
                     }
                 } else if (aSubject.equals(currentWord)) {
-                    String boundString = String.valueOf(i + ", " + i);
+                    String boundString = i + ", " + i;
                     List<String> bounds = subjectAndBounds.containsKey(aSubject) ? subjectAndBounds.get(aSubject) : new ArrayList<>(Arrays.asList(boundString));
                     if (subjectAndBounds.containsKey(aSubject)) {
                         bounds.add(boundString);
@@ -178,45 +213,5 @@ public class LessonInfo {
 
     private int parseInt(String s) {
         return Integer.parseInt(s);
-    }
-
-    public LinkedList<LocalTime> getStartTimes(String lesson) {
-        return this.orderedSubjectStartTimes.get(lesson);
-    }
-
-    public LinkedList<LocalTime> getFinishTimes(String lesson) {
-        return this.orderedSubjectFinishTimes.get(lesson);
-    }
-
-    public LinkedList<String> getLessons() {
-        return this.orderedLessons;
-    }
-
-    public DayOfWeek getDayOfWeek() {
-        return this.dayOfWeek;
-    }
-
-    public boolean isParsedSuccessfully() {
-        return parsedSuccessfully;
-    }
-
-    public void setParsedSuccessfully(boolean parsedSuccessfully) {
-        this.parsedSuccessfully = parsedSuccessfully;
-    }
-
-    public LocalDate getLocalDateOfLesson() {
-        Calendar cal = TTrainParser.GLOBAL_CALENDAR;
-        int today = TTrainParser.instance().getCurrentDay();
-        int lessonDay = getDayOfWeek().getValue();
-        if (!(lessonDay < today)) {
-            //is this week, either today or tomorrow etc
-            if (lessonDay != today) {
-                //return future date
-                int todayOfMonth = cal.get(Calendar.DAY_OF_MONTH);
-                int dif = lessonDay - today;
-                return LocalDate.now().withDayOfMonth(todayOfMonth + dif);
-            }
-        }
-        return LocalDate.now();
     }
 }

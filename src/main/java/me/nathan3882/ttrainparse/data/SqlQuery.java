@@ -10,13 +10,12 @@ import java.sql.SQLException;
 public class SqlQuery {
 
     private final TTrainParser main;
+    private final Connection connection;
     private String host = "localhost";
     private String databaseName = "userdata";
     private int port = 3306;
     private String username = "root";
     private String password = "";
-
-    private final Connection connection;
     private PreparedStatement preparedStatement;
     private ResultSet resultSet = null;
 
@@ -73,6 +72,16 @@ public class SqlQuery {
     public String getString(String columnName) {
         try {
             return resultSet.getString(columnName);
+        } catch (SQLException e) {
+            TTrainParser.getDebugManager().handle(e);
+            e.printStackTrace();
+        }
+        return null;
+    }
+
+    public String getString(int column) {
+        try {
+            return resultSet.getString(column);
         } catch (SQLException e) {
             TTrainParser.getDebugManager().handle(e);
             e.printStackTrace();

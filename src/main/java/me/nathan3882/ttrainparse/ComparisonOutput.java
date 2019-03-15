@@ -10,9 +10,9 @@ import java.util.Map.Entry;
  */
 public class ComparisonOutput {
 
-    private static final double RESPONSE_SPECIFICITY = .30;
     public static final int OCCURENCES_START_CHECK = 400;
     public static final int OCCURENCES_DECREASE_BY = 30;
+    private static final double RESPONSE_SPECIFICITY = .30;
     public static int leftRightInstantiations = 0;
     public static int topBottomInstantiations = 0;
     private Response response;
@@ -21,6 +21,7 @@ public class ComparisonOutput {
     private Map<Integer, Integer> quantitiesOfBorder; //First integer is the x / y value,
     private boolean calculatingLeftRightBorder;
     private int value;
+
     public ComparisonOutput(TTrainParser main, ParsedTimetable timetable, Map<Integer, List<String>> previousXYPixels, boolean calculatingLeftRightBorder, HashMap<Integer, Integer> borderCoordinates) {
         this.main = main;
         this.calculatingLeftRightBorder = calculatingLeftRightBorder;
@@ -88,6 +89,7 @@ public class ComparisonOutput {
         int timetableHeight = timetable.getStartingImage().getHeight();
         boolean bottomBorderCondition = value > (timetableHeight * (1 - RESPONSE_SPECIFICITY)); //dont allow if bottom border isn't above 30% of height
         boolean topBorderCondition = value < (timetableHeight * RESPONSE_SPECIFICITY); //dont allow if top border val isnt below 30% of height
+
         int timetableWidth = timetable.getStartingImage().getWidth();
         boolean leftBorderCondition = value < (timetableWidth * RESPONSE_SPECIFICITY);
         boolean rightBorderCondition = value > (timetableWidth * (1 - RESPONSE_SPECIFICITY));
@@ -111,6 +113,22 @@ public class ComparisonOutput {
         setResponse(response);
     }
 
+    public Response getResponse() {
+        return this.response;
+    }
+
+    private void setResponse(Response output) {
+        this.response = output;
+    }
+
+    public int getValue() {
+        return this.value;
+    }
+
+    public void setValue(int value) {
+        this.value = value;
+    }
+
     private LinkedHashMap<Integer, Integer> getBorderQuantities(Map<Integer, List<String>> map) { //fed x/y value with all associated colours
         LinkedHashMap<Integer, Integer> aMap = new LinkedHashMap<>();
         for (int xOrYValue : map.keySet()) {
@@ -132,7 +150,7 @@ public class ComparisonOutput {
      */
     private LinkedHashMap<Integer, Integer> sortQuantitiesOfBorder(Map<Integer, Integer> toSort) {
         List<Entry<Integer, Integer>> list = new LinkedList<Entry<Integer, Integer>>(toSort.entrySet());
-        Collections.sort(list, new Comparator<Entry<Integer, Integer>>() {
+        list.sort(new Comparator<Entry<Integer, Integer>>() {
             public int compare(Entry<Integer, Integer> entryOne, Entry<Integer, Integer> entryTwo) {
                 return entryTwo.getValue().compareTo(entryOne.getValue()); //highest -> lowest
             }
@@ -146,22 +164,6 @@ public class ComparisonOutput {
 
     private boolean isCalculatingLeftRightBorder() {
         return this.calculatingLeftRightBorder;
-    }
-
-    public Response getResponse() {
-        return this.response;
-    }
-
-    private void setResponse(Response output) {
-        this.response = output;
-    }
-
-    public int getValue() {
-        return this.value;
-    }
-
-    public void setValue(int value) {
-        this.value = value;
     }
 
     public enum Response {

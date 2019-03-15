@@ -1,6 +1,9 @@
 package me.nathan3882.ttrainparse.gui.management;
 
-import me.nathan3882.ttrainparse.*;
+import me.nathan3882.ttrainparse.MessageDisplay;
+import me.nathan3882.ttrainparse.ParsedTimetable;
+import me.nathan3882.ttrainparse.TTrainParser;
+import me.nathan3882.ttrainparse.User;
 import me.nathan3882.ttrainparse.data.DataFileInfo;
 import me.nathan3882.ttrainparse.data.SqlConnection;
 import net.sourceforge.yamlbeans.YamlException;
@@ -16,8 +19,6 @@ import java.awt.image.BufferedImage;
 import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
-import java.util.ArrayList;
-import java.util.List;
 
 
 public class WelcomeForm extends MessageDisplay {
@@ -67,6 +68,30 @@ public class WelcomeForm extends MessageDisplay {
         this.welcomeLabel.setText(string);
     }
 
+    public boolean isUpdatingTimetable() {
+        return isUpdating;
+    }
+
+    public void setUpdating(boolean isUpdating) {
+        this.isUpdating = isUpdating;
+        if (isUpdating) {
+            setHeaderText(getUpdatingHeaderText());
+            resetWelcomeButtons();
+        } else {
+            setHeaderText(getDefaultHeaderText());
+        }
+    }
+
+    @Override
+    public JPanel getPanel() {
+        return this.welcomePanel;
+    }
+
+    @Override
+    public String toString() {
+        return "welcomePanel";
+    }
+
     /**
      * generates a new cropped PDF file if doesnt already exist
      */
@@ -95,8 +120,6 @@ public class WelcomeForm extends MessageDisplay {
                     if (isUpdatingTimetable() || !main.hasCroppedTimetableFileAlready(false)) { //is updating or hasn't got a pdf
                         start = System.currentTimeMillis();
                         if (timetable != null) { //Has been instantiated before, has at least some responses
-                            List<ComparisonOutput.Response> responsesSoFar = timetable.getResponsesSoFar();
-                            List<ParsedTimetable.AnalysisType> todos = getTodos(responsesSoFar);
                             int previousPrevDone = timetable.getPrevDone();
                             timetable = new ParsedTimetable(main, instance, selectedFileImage, previousPrevDone); //parses jpg
                         } else {
@@ -104,7 +127,7 @@ public class WelcomeForm extends MessageDisplay {
                         }
                         successfullyParsed = timetable.successfullyParsed();
                         if (!successfullyParsed) {
-                            displayMessage("Click the button to increase chances of finding borders");
+                            displayMessage("Cropping failed - click the advance button again to further increase chances of the timetable being parsed.");
                             resetWelcomeButtons();
                             return;
                         }
@@ -112,29 +135,9 @@ public class WelcomeForm extends MessageDisplay {
                         BufferedImage allDayCroppedImage = timetable.getSuccessfullyParsedImage(); //variable equal to cropped image now
                         main.allDayCroppedImage = allDayCroppedImage;
 
-                        String nesPngPath = selectedFile.getName().split("\\.")[0] + ".png";
-                        info.setTimetableCroppedPngFileName(nesPngPath);
-                        try {
-                            ImageIO.write(allDayCroppedImage, "png", new File(TTrainParser.USER_DIRECTORY_FILE_SEP + nesPngPath)); //overwrites the uncropped jpg/png to cropped png
-                        } catch (IOException e) {
-                            TTrainParser.getDebugManager().handle(e);
-                            e.printStackTrace();
-                        }
-                        if (isUpdatingTimetable()) {
-                            User user = main.getUser();
+                        writeToPng(info, allDayCroppedImage);
 
-                            main.getSqlConnection().openConnection();
-                            if (!user.hasSqlEntry(SqlConnection.SqlTableName.TIMETABLE_RENEWAL)) {
-                                user.generateDefaultRenewValues();
-                                user.setTableUpdatesLeft(TTrainParser.DEFAULT_FORCE_UPDATE_QUANTITY);
-                            }
-                            mainInstance.getUser().setTableUpdatesLeft(mainInstance.getUser().getTableUpdatesLeft() - 1);
-                            user.setPreviousUploadTime(System.currentTimeMillis());
-
-                            main.openPanel(TTrainParser.CORE_PANEL);
-                        } else {
-                            main.openPanel(TTrainParser.LOGIN_REGISTER_PANEL);
-                        }
+                        openNextForm(main);
                     } else {
                         successfullyParsed = true;
                     }
@@ -143,33 +146,52 @@ public class WelcomeForm extends MessageDisplay {
                         displayMessage("Parsing was not successfull! Does the provided image contain timetable borders?");
                         return;
                     } else { //Update data file
-
-                        YamlWriter writer = null;
-                        try {
-                            writer = new YamlWriter(new FileWriter(TTrainParser.USER_DIRECTORY_FILE_SEP + "data.yml"));
-                            writer.write(info); //writes previously collected data about jpg & pdf file names
-                            writer.close();
-                        } catch (IOException | YamlException e) {
-                            TTrainParser.getDebugManager().handle(e);
-                            e.printStackTrace();
-                        }
+                        writeDataFile(info);
                     }
-                    displayMessage("Timetable parsed successfully!\nThis took" + (System.currentTimeMillis() - start) + "ms");
+                    displayMessage("Timetable parsed successfully! \nThis took " + (System.currentTimeMillis() - start) + "ms");
                 }
             }
         };
     }
 
-    private List<ParsedTimetable.AnalysisType> getTodos(List<ComparisonOutput.Response> responsesSoFar) {
-        List<ParsedTimetable.AnalysisType> todos = new ArrayList<>();
+    private void writeDataFile(DataFileInfo info) {
+        YamlWriter writer = null;
+        try {
+            writer = new YamlWriter(new FileWriter(TTrainParser.USER_DIRECTORY_FILE_SEP + "data.yml"));
+            writer.write(info); //writes previously collected data about jpg & pdf file names
+            writer.close();
+        } catch (IOException | YamlException e) {
+            TTrainParser.getDebugManager().handle(e);
+            e.printStackTrace();
+        }
+    }
 
-        if (!responsesSoFar.contains(ComparisonOutput.Response.VALID_BOTTOM_BORDER) || !responsesSoFar.contains(ComparisonOutput.Response.VALID_TOP_BORDER)) {
-            todos.add(ParsedTimetable.AnalysisType.TOP_BOTTOM_BORDERS);
+    private void openNextForm(TTrainParser main) {
+        if (isUpdatingTimetable()) {
+            User user = main.getUser();
+
+            main.getSqlConnection().openConnection();
+            if (!user.hasSqlEntry(SqlConnection.SqlTableName.TIMETABLE_RENEWAL)) {
+                user.generateDefaultRenewValues();
+            }
+            mainInstance.getUser().setTableUpdatesLeft(mainInstance.getUser().getTableUpdatesLeft() - 1);
+            user.setPreviousUploadTime(System.currentTimeMillis());
+
+            main.openPanel(TTrainParser.CORE_PANEL);
+        } else {
+            main.openPanel(TTrainParser.LOGIN_REGISTER_PANEL);
         }
-        if (!responsesSoFar.contains(ComparisonOutput.Response.VALID_LEFT_BORDER) || !responsesSoFar.contains(ComparisonOutput.Response.VALID_RIGHT_BORDER)) {
-            todos.add(ParsedTimetable.AnalysisType.LEFT_RIGHT_BORDERS);
+    }
+
+    private void writeToPng(DataFileInfo info, BufferedImage allDayCroppedImage) {
+        String nesPngPath = selectedFile.getName().split("\\.")[0] + ".png";
+        info.setTimetableCroppedPngFileName(nesPngPath);
+        try {
+            ImageIO.write(allDayCroppedImage, "png", new File(TTrainParser.USER_DIRECTORY_FILE_SEP + nesPngPath)); //overwrites the uncropped jpg/png to cropped png
+        } catch (IOException e) {
+            TTrainParser.getDebugManager().handle(e);
+            e.printStackTrace();
         }
-        return todos;
     }
 
     private ItemListener createConfirmValidTimetableListener() {
@@ -212,29 +234,5 @@ public class WelcomeForm extends MessageDisplay {
         confirmValidTimetable.setSelected(false);
         confirmValidTimetable.setEnabled(false);
         isValidFile = false;
-    }
-
-    @Override
-    public JPanel getPanel() {
-        return this.welcomePanel;
-    }
-
-    @Override
-    public String toString() {
-        return "welcomePanel";
-    }
-
-    public boolean isUpdatingTimetable() {
-        return isUpdating;
-    }
-
-    public void setUpdating(boolean isUpdating) {
-        this.isUpdating = isUpdating;
-        if (isUpdating) {
-            setHeaderText(getUpdatingHeaderText());
-            resetWelcomeButtons();
-        } else {
-            setHeaderText(getDefaultHeaderText());
-        }
     }
 }

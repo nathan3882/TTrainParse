@@ -211,17 +211,6 @@ public class User {
         return getString(query);
     }
 
-    private String getString(SqlQuery query) {
-        ResultSet set = query.getResultSet();
-        try {
-            if (!set.next()) return "invalid email";
-            return set.getString(1);
-        } catch (SQLException e) {
-            e.printStackTrace();
-        }
-        return null;
-    }
-
     public boolean hasEmailPwAndHomeData() {
         return hasSqlEntry(SqlConnection.SqlTableName.TIMETABLE_USERDATA);
     }
@@ -241,6 +230,17 @@ public class User {
             if (set.next()) {
                 return set.getString(1);
             }
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+        return null;
+    }
+
+    private String getString(SqlQuery query) {
+        ResultSet set = query.getResultSet();
+        try {
+            if (!set.next()) return "invalid email";
+            return set.getString(1);
         } catch (SQLException e) {
             e.printStackTrace();
         }

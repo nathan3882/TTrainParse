@@ -32,15 +32,6 @@ public class Encryption {
         }
     }
 
-    public byte[] getSalt() {
-        return this.salt;
-    }
-
-    private String getOriginalPassword() {
-        return this.originalPassword;
-    }
-
-
     public static boolean authenticate(String attemptedPassword, String encodedStoredPasswordEncrypted, String encodedStoredSalt) {
         byte[] encryptedAttemptedPassword;
         String encodedAndEncryptedAttempted = "";
@@ -55,35 +46,18 @@ public class Encryption {
 
     }
 
-    public boolean authenticateWith(byte[] anotherEncryption, byte[] anotherSalt) {
-        // Encrypts password using same salt that originalPassword pw used
-        return Arrays.equals(anotherEncryption, getOriginalEncrypted());
-    }
-
-    public byte[] getOriginalEncrypted() {
-        return this.originalEncrypted;
-    }
-
     private static byte[] encrypt(String password, byte[] salt) throws NoSuchAlgorithmException, InvalidKeySpecException {
-        // PBKDF2 with SHA-1 as the hashing algorithm. Note that the NIST
-        // specifically names SHA-1 as an acceptable hashing algorithm for PBKDF2
 
-        String algorithm = "PBKDF2WithHmacSHA1";
+        int derivedKeyLength = 160; //160 bits
 
-        // SHA-1 generates 160 bit hashes, so that's what makes sense here
-        int derivedKeyLength = 160;
-
-        // The NIST recommends at least 1,000 iterations:
-        // iOS 4.x reportedly uses 10,000:
         int iterations = 10000;
 
-        KeySpec keySpec = new PBEKeySpec(password.toCharArray(), salt, iterations, derivedKeyLength);
+        KeySpec specification = new PBEKeySpec(password.toCharArray(), salt, iterations, derivedKeyLength);
 
-        SecretKeyFactory secretKeyFactory = SecretKeyFactory.getInstance(algorithm);
+        SecretKeyFactory keyGenerator = SecretKeyFactory.getInstance("PBKDF2WithHmacSHA1");
 
-        SecretKey secretKey = secretKeyFactory.generateSecret(keySpec);
-        byte[] encrypted = secretKey.getEncoded();
-        return encrypted;
+        SecretKey generatedSecretKey = keyGenerator.generateSecret(specification);
+        return generatedSecretKey.getEncoded();
     }
 
     public static byte[] generateSalt() {
@@ -101,7 +75,24 @@ public class Encryption {
         return salt;
     }
 
+    public byte[] getSalt() {
+        return this.salt;
+    }
+
     public void setSalt(byte[] originalSalt) {
         this.salt = originalSalt;
+    }
+
+    public boolean authenticateWith(byte[] anotherEncryption, byte[] anotherSalt) {
+        // Encrypts password using same salt that originalPassword pw used
+        return Arrays.equals(anotherEncryption, getOriginalEncrypted());
+    }
+
+    public byte[] getOriginalEncrypted() {
+        return this.originalEncrypted;
+    }
+
+    private String getOriginalPassword() {
+        return this.originalPassword;
     }
 }

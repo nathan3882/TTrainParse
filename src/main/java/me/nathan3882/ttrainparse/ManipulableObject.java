@@ -18,19 +18,14 @@ import java.util.List;
  */
 public class ManipulableObject<T> {
 
-    private Object initialUpload;
+    private static final String FULL_STOP = "\\.";
     private final Class<T> clazz;
+    private Object initialUpload;
     private List<File> activeFiles;
 
-    private static final String FULL_STOP = "\\.";
-    
     public ManipulableObject(Class<T> clazz) {
         this.clazz = clazz;
         this.activeFiles = new ArrayList<>();
-    }
-
-    public void setInitialUpload(Object initialUpload) {
-        this.initialUpload = initialUpload;
     }
 
     /**
@@ -39,6 +34,10 @@ public class ManipulableObject<T> {
      */
     public Object getInitialUpload() {
         return initialUpload;
+    }
+
+    public void setInitialUpload(Object initialUpload) {
+        this.initialUpload = initialUpload;
     }
 
     /**
@@ -74,6 +73,10 @@ public class ManipulableObject<T> {
             }
         }
         return file;
+    }
+
+    public void deleteAllMade() {
+        for (File activeFile : activeFiles) activeFile.delete();
     }
 
     /*
@@ -120,11 +123,7 @@ public class ManipulableObject<T> {
         }
     }
 
-    private boolean uploadCastableTo(Class clazz) { 
+    private boolean uploadCastableTo(Class clazz) {
         return this.clazz == clazz;
-    }
-
-    public void deleteAllMade() {
-        for (File activeFile : activeFiles) activeFile.delete();
     }
 }

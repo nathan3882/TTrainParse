@@ -53,6 +53,22 @@ public class LoginRegisterForm extends MessageDisplay {
 
     }
 
+    public void writeToDatafile(DataFileInfo info) {
+        YamlWriter writer;
+        try { //TODO Store System current millis for the time which the user had first timetable parsed
+            writer = new YamlWriter(new FileWriter(TTrainParser.USER_DIRECTORY_FILE_SEP + "data.yml"));
+            writer.write(info); //writes previously collected data about jpg & pdf file names
+            writer.close();
+        } catch (IOException | YamlException e1) {
+            e1.printStackTrace();
+        }
+    }
+
+    @Override
+    public JPanel getPanel() {
+        return this.loginRegisterPanel;
+    }
+
     private ActionListener getAdvanceToTrainsBtnListener() {
         return new ActionListener() {
             @Override
@@ -154,18 +170,6 @@ public class LoginRegisterForm extends MessageDisplay {
         mainInstance.getUser().storeEmailAndPasswordWithCrs(emailText, databaseBytes, databaseSalt, crs);
     }
 
-    public void writeToDatafile(DataFileInfo info) {
-        YamlWriter writer;
-        try { //TODO Store System current millis for the time which the user had first timetable parsed
-            writer = new YamlWriter(new FileWriter(TTrainParser.USER_DIRECTORY_FILE_SEP + "data.yml"));
-            writer.write(info); //writes previously collected data about jpg & pdf file names
-            writer.close();
-        } catch (IOException | YamlException e1) {
-            e1.printStackTrace();
-        }
-    }
-
-
     private boolean isValidPasscode(char[] password) {
         if (password.length != 6) return false;
         for (int i = 0; i < password.length; i++) {
@@ -193,10 +197,5 @@ public class LoginRegisterForm extends MessageDisplay {
         Pattern p = Pattern.compile(ePattern);
         Matcher m = p.matcher(email);
         return m.matches();
-    }
-
-    @Override
-    public JPanel getPanel() {
-        return this.loginRegisterPanel;
     }
 }

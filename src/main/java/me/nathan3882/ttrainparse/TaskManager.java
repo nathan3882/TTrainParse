@@ -11,12 +11,12 @@ public class TaskManager extends TimerTask {
         setTimer(timer);
     }
 
-    @Override
-    public void run() {
-    }
-
     public void runTaskSynchronously(TimerTask task, long delay, long period) {
         timer.scheduleAtFixedRate(task, delay, period);
+    }
+
+    @Override
+    public void run() {
     }
 
     private Timer setTimer(Timer timer) {

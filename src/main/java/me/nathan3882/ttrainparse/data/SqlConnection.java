@@ -55,7 +55,6 @@ public class SqlConnection {
             establishConnection();
         }
         if (connectionEstablished()) {
-            System.out.println("con est");
             if (closeConnectionTask == null) {
                 closeConnectionTask = new TaskManager(new Timer()) {
                     @Override
@@ -71,32 +70,12 @@ public class SqlConnection {
                 };
                 closeConnectionTask.runTaskSynchronously(closeConnectionTask, 5000L, 5000L);
             }
-            try {
-                latestOpeningMilis = System.currentTimeMillis();
-                if (open) return;
-                Class.forName("com.mysql.jdbc.Driver");
+            latestOpeningMilis = System.currentTimeMillis();
+            if (!open) {
                 establishConnection();
-                open = true;
-            } catch (Exception e) {
-                TTrainParser.getDebugManager().handle(e);
-                e.printStackTrace();
             }
-        } else {
-            System.out.println("con not est");
-        }
-    }
 
-    private Connection establishConnection() {
-        Connection ans;
-        try {
-            ans = DriverManager.getConnection("jdbc:mysql://" + host + ":" + port + "/" + databaseName + "?useSSL=false&allowMultiQueries=true", username, password);
-            setLatestOpeningMilis(System.currentTimeMillis());
-        } catch (Exception e) {
-            e.printStackTrace();
-            return null;
         }
-        this.connection = ans;
-        return ans;
     }
 
     public void closeConnection() {
@@ -121,15 +100,6 @@ public class SqlConnection {
         return connection;
     }
 
-    private void close(AutoCloseable resource) {
-        try {
-            resource.close();
-        } catch (Exception e) {
-            TTrainParser.getDebugManager().handle(e);
-            e.printStackTrace();
-        }
-    }
-
     public TTrainParser getTTrainParser() {
         return this.main;
     }
@@ -140,16 +110,39 @@ public class SqlConnection {
         } catch (SQLException e) {
             TTrainParser.getDebugManager().handle(e);
             e.printStackTrace();
+            return true;
         }
-        return false;
     }
 
     public boolean isOpen() {
         return !isClosed();
     }
 
+    private void establishConnection() {
+        Connection ans = null;
+        try {
+            ans = DriverManager.getConnection("jdbc:mysql://" + host + ":" + port + "/" + databaseName + "?useSSL=false&allowMultiQueries=true", username, password);
+            setLatestOpeningMilis(System.currentTimeMillis());
+            open = true;
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        if (ans == null) open = false;
+        this.connection = ans;
+    }
+
+    private void close(AutoCloseable resource) {
+        try {
+            resource.close();
+        } catch (Exception e) {
+            TTrainParser.getDebugManager().handle(e);
+            e.printStackTrace();
+        }
+    }
+
     public interface SqlTableName {
         String TIMETABLE_RENEWAL = "timetablerenewal";
+        String TRAINS = "trains";
         String TIMETABLE_LESSONS = "timetablelessons";
         String TIMETABLE_USERDATA = "timetableuserdata";
     }
