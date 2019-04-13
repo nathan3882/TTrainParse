@@ -12,7 +12,7 @@ import java.util.Map;
  * @author Nathan Allanson
  * @purpose Gets a timetable/buffered image that's able to be parsed by OCR, cancelling out every piece of futile external information.
  */
-public class ParsedTimetable {
+public class ParsedTimetable extends Lenience {
 
     private static List<ComparisonOutput.Response> responsesSoFar = new ArrayList<>(); //I could just iterate through previously stored comparison outputs and
     private static DecimalFormat decimalFormat = new DecimalFormat();
@@ -46,8 +46,8 @@ public class ParsedTimetable {
         Map<Integer, Integer> borderCoordinates = new HashMap<>();
         Map<Integer, List<String>> XYPixels = new HashMap<>(); //Integer = X Coordinate of the correlating list of pixels
 
-        int decByEveryTime = (ComparisonOutput.OCCURENCES_DECREASE_BY * this.getPrevDone());
-        float percentage = ((float) decByEveryTime / (float) ComparisonOutput.OCCURENCES_START_CHECK) * 100; //Must cast both values to float for accurate percentage.
+        int decByEveryTime = (getOccurencesDecreaseBy() * this.getPrevDone());
+        float percentage = ((float) decByEveryTime / (float) getOccurencesStartCheck()) * 100; //Must cast both values to float for accurate percentage.
         if (getPrevDone() > 0) {
             messageDisplay.displayMessage("Starting first parse with leniency being increased by " + decimalFormat.format(percentage) + "%!");
         }
