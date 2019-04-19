@@ -10,11 +10,11 @@ import java.sql.Statement;
 public class SqlUpdate {
 
     private final Connection connection;
-    private final TTrainParser main;
+    private final TTrainParser tTrainParser;
 
 
     public SqlUpdate(SqlConnection sqlConnection) {
-        this.main = sqlConnection.getTTrainParser();
+        this.tTrainParser = sqlConnection.getTTrainParser();
         this.connection = sqlConnection.getConnection();
         try {
             if (connection.isClosed()) sqlConnection.openConnection();
@@ -30,7 +30,7 @@ public class SqlUpdate {
      * @return success or not
      */
     public boolean executeUpdate(String sql, String name) {
-        if (main.hasInternet() && main.getSqlConnection().connectionEstablished()) {
+        if (tTrainParser.hasInternet() && tTrainParser.getSqlConnection().connectionEstablished()) {
             PreparedStatement preparedStatement;
             try {
                 connection.setAutoCommit(true);

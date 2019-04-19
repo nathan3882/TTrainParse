@@ -38,8 +38,8 @@ public class WelcomeForm extends MessageDisplay {
     private boolean isValidFile = false;
     private ParsedTimetable timetable = null;
 
-    public WelcomeForm(TTrainParser main) {
-        this(main, false);
+    public WelcomeForm(TTrainParser tTrainParser) {
+        this(tTrainParser, false);
     }
 
     public WelcomeForm(TTrainParser main, boolean isUpdating) {
@@ -120,7 +120,7 @@ public class WelcomeForm extends MessageDisplay {
                     if (isUpdatingTimetable() || !main.hasCroppedTimetableFileAlready(false)) { //is updating or hasn't got a pdf
                         start = System.currentTimeMillis();
                         if (timetable != null) { //Has been instantiated before, has at least some responses
-                            int previousPrevDone = timetable.getPrevDone();
+                            int previousPrevDone = timetable.getPreviousInstantiations();
                             timetable = new ParsedTimetable(main, instance, selectedFileImage, previousPrevDone); //parses jpg
                         } else {
                             timetable = new ParsedTimetable(main, instance, selectedFileImage, -1);

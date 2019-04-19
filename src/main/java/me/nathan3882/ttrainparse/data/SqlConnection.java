@@ -12,7 +12,7 @@ import java.util.concurrent.TimeUnit;
 public class SqlConnection {
 
     private static long latestOpeningMilis;
-    private TTrainParser main;
+    private TTrainParser tTrainParser;
     private boolean open;
     private TaskManager closeConnectionTask;
 
@@ -20,16 +20,16 @@ public class SqlConnection {
     private String databaseName = "ttrainparseUserdata";
     private int port = 3307;
     private String username = "nathan";
-    private String password = "password";
+    private String password = "PaSs123";
     private Connection connection;
 
-    public SqlConnection(TTrainParser main) {
-        this.main = main;
+    public SqlConnection(TTrainParser tTrainParser) {
+        this.tTrainParser = tTrainParser;
         establishConnection();
     }
 
-    public SqlConnection(TTrainParser main, String host, int port, String databaseName, String username, String password) {
-        this.main = main;
+    public SqlConnection(TTrainParser tTrainParser, String host, int port, String databaseName, String username, String password) {
+        this.tTrainParser = tTrainParser;
         this.host = host;
         this.databaseName = databaseName;
         this.port = port;
@@ -101,7 +101,7 @@ public class SqlConnection {
     }
 
     public TTrainParser getTTrainParser() {
-        return this.main;
+        return this.tTrainParser;
     }
 
     public boolean isClosed() {

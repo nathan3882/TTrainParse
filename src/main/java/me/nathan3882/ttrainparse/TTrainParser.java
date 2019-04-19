@@ -60,20 +60,21 @@ public class TTrainParser extends MessageDisplay {
     private static String activePanel;
     private static ITesseract tesseractInstance = new Tesseract();
     private static DebugManager debugManager;
+
+    static {
+        GLOBAL_CALENDAR.setTime(new Date());
+    }
+
     public BufferedImage allDayCroppedImage;
     public WelcomeForm welcomeForm;
     public LoginRegisterForm loginRegisterForm;
     public CoreForm coreForm;
-
     private JPanel cards = null;
-
     private SqlConnection sqlConnection;
     private User user;
     private boolean hasInternet = false;
 
     public static void main(String[] args) {
-
-        GLOBAL_CALENDAR.setTime(new Date());
 
         TTrainParser.debugManager = new DebugManager(System.currentTimeMillis());
 
@@ -143,55 +144,6 @@ public class TTrainParser extends MessageDisplay {
         instance().cards.add(panel, welcomePanel);
     }
 
-    public static Map<String, String[]> getSubjectNamesWithMultipleTeachers() {
-        Map<String, String[]> subjectNamesWithMultipleTeachers = new HashMap<>();
-        String fileName = TTrainParser.TEACHERS_FILE_NAME;
-        File file = new File(USER_DIRECTORY_FILE_SEP + fileName);
-        if (!hasTeachersFile()) {
-            generateTeachersFile();
-        }
-        if (!hasTeachersFile()) return null;
-        BufferedReader reader = null;
-        try {
-            reader = new BufferedReader(new FileReader(file));
-        } catch (FileNotFoundException e) {
-            TTrainParser.getDebugManager().handle(e);
-            e.printStackTrace();
-        }
-
-        while (true) {
-            String subjectWithTeachers = null; //Biology --- name1, name2, name3
-            try {
-                subjectWithTeachers = reader.readLine();
-                if (subjectWithTeachers == null) {
-                    reader.close();
-                    break;
-                }
-            } catch (IOException e) {
-                TTrainParser.getDebugManager().handle(e);
-                e.printStackTrace();
-            }
-            /**Following Strings are for Readability**/
-            String subjectName = subjectWithTeachers;
-            String[] value = new String[3];
-            String midString = " --- ";
-            if (subjectWithTeachers.contains(midString)) {
-                String[] mainSplit = subjectWithTeachers.split(midString);
-                subjectName = mainSplit[0];
-                String potentialTeachers = mainSplit[1];
-
-                if (potentialTeachers.contains(", ")) {
-                    value = potentialTeachers.split(", ");
-                } else value[0] = potentialTeachers;
-            } else {
-                value[0] = "UNKNOWN";
-            }
-            subjectNamesWithMultipleTeachers.put(subjectName, value);
-        }
-
-        return subjectNamesWithMultipleTeachers;
-    }
-
     private static void initFrame(String title) {
         JFrame frame = new JFrame(title);
         frame.setContentPane(instance().getCards());
@@ -228,14 +180,6 @@ public class TTrainParser extends MessageDisplay {
         return firstImage.getSubimage(topLeftX, topLeftY, subImageWidth, subImageHeight);
     }
 
-    public static ITesseract getTesseractInstance() {
-        return tesseractInstance;
-    }
-
-    public static DebugManager getDebugManager() {
-        return debugManager;
-    }
-
     public static boolean hasTeachersFile() {
         File file = new File(USER_DIRECTORY_FILE_SEP + TTrainParser.TEACHERS_FILE_NAME);
         return file.exists();
@@ -243,14 +187,6 @@ public class TTrainParser extends MessageDisplay {
 
     public static TTrainParser instance() {
         return tTrainParser;
-    }
-
-    public JPanel getCards() {
-        return cards;
-    }
-
-    public void setCards(JPanel cards) {
-        this.cards = cards;
     }
 
     public TablePart getTableType(String rgbString) {
@@ -286,12 +222,6 @@ public class TTrainParser extends MessageDisplay {
         if (!fileExists) generateDataFile();
     }
 
-    public String getLocallyStoredEmail() {
-        createDataFileIfNotPresent();
-        DataFileInfo info = getYamlReadDatafile();
-        return info.email;
-    }
-
     public boolean hasLocallyStoredEmail() {
         createDataFileIfNotPresent();
         return !getLocallyStoredEmail().equals("{NOT BEEN SET}");
@@ -319,14 +249,6 @@ public class TTrainParser extends MessageDisplay {
         }
         //No set filename, pdf file has been relocated
         return false;
-    }
-
-    public String getActivePanel() {
-        return activePanel;
-    }
-
-    private void setActivePanel(String panelName) {
-        activePanel = panelName;
     }
 
     /**
@@ -456,30 +378,6 @@ public class TTrainParser extends MessageDisplay {
         return fetchIp() != null;
     }
 
-    public SqlConnection getSqlConnection() {
-        return sqlConnection;
-    }
-
-    public User getUser() {
-        return this.user;
-    }
-
-    public void setUser(User user) {
-        this.user = user;
-    }
-
-    public DataFileInfo getYamlReadDatafile() {
-        DataFileInfo info;
-        try {
-            YamlReader reader = new YamlReader(new FileReader(TTrainParser.USER_DIRECTORY_FILE_SEP + "data.yml"));
-            info = reader.read(DataFileInfo.class);
-        } catch (FileNotFoundException | YamlException exception) {
-            exception.printStackTrace();
-            info = null; //for easier comparison in future, if null then something has gone wrong & regenerate
-        }
-        return info;
-    }
-
     public void configureCrsComboBox(JComboBox selectHomeCrsBox) {
         selectHomeCrsBox.addItem("POO / Poole");
         selectHomeCrsBox.addItem("PKS / Parkstone");
@@ -506,14 +404,6 @@ public class TTrainParser extends MessageDisplay {
                 break;
             }
         }
-    }
-
-    public int getCurrentDay() {
-        return GLOBAL_CALENDAR.get(Calendar.DAY_OF_WEEK);
-    }
-
-    private SqlConnection getNewSqlConnection() {
-        return new SqlConnection(tTrainParser);
     }
 
     private boolean wb(int number, int ofThisNumber, int within) {
@@ -544,5 +434,116 @@ public class TTrainParser extends MessageDisplay {
 
     private int min(int... numbers) {
         return Arrays.stream(numbers).min().orElse(Integer.MAX_VALUE);
+    }
+
+    public static Map<String, String[]> getSubjectNamesWithMultipleTeachers() {
+        Map<String, String[]> subjectNamesWithMultipleTeachers = new HashMap<>();
+        String fileName = TTrainParser.TEACHERS_FILE_NAME;
+        File file = new File(USER_DIRECTORY_FILE_SEP + fileName);
+        if (!hasTeachersFile()) {
+            generateTeachersFile();
+        }
+        if (!hasTeachersFile()) return null;
+        BufferedReader reader = null;
+        try {
+            reader = new BufferedReader(new FileReader(file));
+        } catch (FileNotFoundException e) {
+            TTrainParser.getDebugManager().handle(e);
+            e.printStackTrace();
+        }
+
+        while (true) {
+            String subjectWithTeachers = null; //Biology --- name1, name2, name3
+            try {
+                subjectWithTeachers = reader.readLine();
+                if (subjectWithTeachers == null) {
+                    reader.close();
+                    break;
+                }
+            } catch (IOException e) {
+                TTrainParser.getDebugManager().handle(e);
+                e.printStackTrace();
+            }
+            /**Following Strings are for Readability**/
+            String subjectName = subjectWithTeachers;
+            String[] value = new String[3];
+            String midString = " --- ";
+            if (subjectWithTeachers.contains(midString)) {
+                String[] mainSplit = subjectWithTeachers.split(midString);
+                subjectName = mainSplit[0];
+                String potentialTeachers = mainSplit[1];
+
+                if (potentialTeachers.contains(", ")) {
+                    value = potentialTeachers.split(", ");
+                } else value[0] = potentialTeachers;
+            } else {
+                value[0] = "UNKNOWN";
+            }
+            subjectNamesWithMultipleTeachers.put(subjectName, value);
+        }
+
+        return subjectNamesWithMultipleTeachers;
+    }
+
+    public static ITesseract getTesseractInstance() {
+        return tesseractInstance;
+    }
+
+    public static DebugManager getDebugManager() {
+        return debugManager;
+    }
+
+    public JPanel getCards() {
+        return cards;
+    }
+
+    public void setCards(JPanel cards) {
+        this.cards = cards;
+    }
+
+    public String getLocallyStoredEmail() {
+        createDataFileIfNotPresent();
+        DataFileInfo info = getYamlReadDatafile();
+        return info.email;
+    }
+
+    public String getActivePanel() {
+        return activePanel;
+    }
+
+    private void setActivePanel(String panelName) {
+        activePanel = panelName;
+    }
+
+    public SqlConnection getSqlConnection() {
+        return sqlConnection;
+    }
+
+    public User getUser() {
+        return this.user;
+    }
+
+    public void setUser(User user) {
+        this.user = user;
+    }
+
+    public DataFileInfo getYamlReadDatafile() {
+        DataFileInfo info;
+        try {
+            YamlReader reader = new YamlReader(new FileReader(TTrainParser.USER_DIRECTORY_FILE_SEP + "data.yml"));
+            info = reader.read(DataFileInfo.class);
+        } catch (FileNotFoundException | YamlException exception) {
+            exception.printStackTrace();
+            info = null; //for easier comparison in future, if null then something has gone wrong & regenerate
+        }
+        return info;
+    }
+
+    public int getCurrentDay() {
+        return GLOBAL_CALENDAR.get(Calendar.DAY_OF_WEEK);
+    }
+
+    private SqlConnection getNewSqlConnection() {
+        return new SqlConnection(tTrainParser);
     }
 }

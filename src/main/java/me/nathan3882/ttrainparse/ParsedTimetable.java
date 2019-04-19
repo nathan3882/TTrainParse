@@ -14,16 +14,16 @@ import java.util.Map;
  */
 public class ParsedTimetable extends Lenience {
 
-    private static List<ComparisonOutput.Response> responsesSoFar = new ArrayList<>(); //I could just iterate through previously stored comparison outputs and
+    private static List<ComparisonOutput.Response> previousResponses = new ArrayList<>(); //I could just iterate through previously stored comparison outputs and
     private static DecimalFormat decimalFormat = new DecimalFormat();
 
     static {
         decimalFormat.setMaximumFractionDigits(2);
     }
 
-    private int prevDone;
+    private int previousInstantiations;
     private BufferedImage firstImage;
-    private TTrainParser main;
+    private TTrainParser tTrainParser;
     private List<ComparisonOutput> comparisonOutputs = new ArrayList<>();
     private int yValueBottomBorder = -1;
     private int yValueTopBorder = -1;
@@ -31,12 +31,12 @@ public class ParsedTimetable extends Lenience {
     private int xValueRightBorder = -1;
     private BufferedImage newImage = null;
 
-    public ParsedTimetable(TTrainParser main, MessageDisplay messageDisplay, BufferedImage firstImage, int previousPrevDone) {
+    public ParsedTimetable(TTrainParser tTrainParser, MessageDisplay messageDisplay, BufferedImage firstImage, int previousPrevDone) {
         ComparisonOutput.topBottomInstantiations = 0;
         ComparisonOutput.leftRightInstantiations = 0;
-        this.prevDone = previousPrevDone + 1;
-        responsesSoFar.clear();
-        this.main = main;
+        clearPreviousResponses();
+        this.previousInstantiations = previousPrevDone + 1;
+        this.tTrainParser = tTrainParser;
         this.firstImage = firstImage;
 
         int height = firstImage.getHeight();
@@ -46,9 +46,9 @@ public class ParsedTimetable extends Lenience {
         Map<Integer, Integer> borderCoordinates = new HashMap<>();
         Map<Integer, List<String>> XYPixels = new HashMap<>(); //Integer = X Coordinate of the correlating list of pixels
 
-        int decByEveryTime = (getOccurencesDecreaseBy() * this.getPrevDone());
+        int decByEveryTime = (getOccurencesDecreaseBy() * this.getPreviousInstantiations());
         float percentage = ((float) decByEveryTime / (float) getOccurencesStartCheck()) * 100; //Must cast both values to float for accurate percentage.
-        if (getPrevDone() > 0) {
+        if (getPreviousInstantiations() > 0) {
             messageDisplay.displayMessage("Starting first parse with leniency being increased by " + decimalFormat.format(percentage) + "%!");
         }
         for (AnalysisType type : AnalysisType.values()) {
@@ -60,8 +60,12 @@ public class ParsedTimetable extends Lenience {
         }
     }
 
-    public int getPrevDone() {
-        return this.prevDone;
+    private void clearPreviousResponses() {
+        previousResponses.clear();
+    }
+
+    public int getPreviousInstantiations() {
+        return this.previousInstantiations;
     }
 
     public void addComparisonOutput(ComparisonOutput output) {
@@ -112,12 +116,12 @@ public class ParsedTimetable extends Lenience {
     }
 
     public List<ComparisonOutput.Response> getResponsesSoFar() {
-        return responsesSoFar;
+        return previousResponses;
     }
 
     public void addNewResponse(ComparisonOutput.Response response) {
         if (response == null) return;
-        responsesSoFar.add(response);
+        previousResponses.add(response);
     }
 
     /**
@@ -140,7 +144,7 @@ public class ParsedTimetable extends Lenience {
                     if (canReinstantiate(XYPixels.size(), width - 2)) { //analyses third of all pixels for left and right border
                         ComparisonOutput.leftRightInstantiations++;
                         ComparisonOutput output = //New comparison output for previous 1/3rd of pixel data
-                                new ComparisonOutput(main, this, new HashMap<>(XYPixels), true, new HashMap<>(borderCoordinates));
+                                new ComparisonOutput(tTrainParser, this, new HashMap<>(XYPixels), true, new HashMap<>(borderCoordinates));
                         addComparisonOutput(output);
                         XYPixels.clear(); //Clears previous 1/3 of pixel data
                     }
@@ -173,7 +177,7 @@ public class ParsedTimetable extends Lenience {
     }
 
     private TTrainParser getMainInstance() {
-        return this.main;
+        return this.tTrainParser;
     }
 
     private boolean canReinstantiate(int value, int heightOrWidth) {

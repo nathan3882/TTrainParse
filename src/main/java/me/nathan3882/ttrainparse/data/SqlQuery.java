@@ -9,7 +9,7 @@ import java.sql.SQLException;
 
 public class SqlQuery {
 
-    private final TTrainParser main;
+    private final TTrainParser tTrainParser;
     private final Connection connection;
     private String host = "localhost";
     private String databaseName = "userdata";
@@ -20,7 +20,7 @@ public class SqlQuery {
     private ResultSet resultSet = null;
 
     public SqlQuery(SqlConnection cction) {
-        this.main = cction.getTTrainParser();
+        this.tTrainParser = cction.getTTrainParser();
         this.connection = cction.getConnection();
         try {
             if (connection.isClosed()) cction.openConnection();
@@ -30,7 +30,7 @@ public class SqlQuery {
     }
 
     public ResultSet executeQuery(String sql, String name) {
-        if (main.hasInternet() && main.getSqlConnection().connectionEstablished()) {
+        if (tTrainParser.hasInternet() && tTrainParser.getSqlConnection().connectionEstablished()) {
             if (resultSet != null) {
                 close();
             }

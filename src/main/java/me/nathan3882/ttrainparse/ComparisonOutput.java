@@ -13,14 +13,14 @@ public class ComparisonOutput extends Lenience {
     public static int leftRightInstantiations = 0;
     public static int topBottomInstantiations = 0;
     private Response response;
-    private TTrainParser main;
+    private TTrainParser tTrainParser;
     private Map<Integer, List<String>> xOrYPixels;
     private Map<Integer, Integer> quantitiesOfBorder; //First integer is the x / y value,
     private boolean calculatingLeftRightBorder;
     private int value;
 
-    public ComparisonOutput(TTrainParser main, ParsedTimetable timetable, Map<Integer, List<String>> previousXYPixels, boolean calculatingLeftRightBorder, HashMap<Integer, Integer> borderCoordinates) {
-        this.main = main;
+    public ComparisonOutput(TTrainParser tTrainParser, ParsedTimetable timetable, Map<Integer, List<String>> previousXYPixels, boolean calculatingLeftRightBorder, HashMap<Integer, Integer> borderCoordinates) {
+        this.tTrainParser = tTrainParser;
         this.calculatingLeftRightBorder = calculatingLeftRightBorder;
         this.quantitiesOfBorder = new HashMap<Integer, Integer>();
         this.xOrYPixels = previousXYPixels;
@@ -63,7 +63,7 @@ public class ComparisonOutput extends Lenience {
                  * the actual border, this narrows it down in small intervals to allow the user to keep trying until
                  * it finds the line with the most quantity of border colour in it's pixels
                  */
-                int decByEveryTime = (getOccurencesDecreaseBy() * timetable.getPrevDone());
+                int decByEveryTime = (getOccurencesDecreaseBy() * timetable.getPreviousInstantiations());
                 int con = getOccurencesStartCheck() - decByEveryTime;
                 if (occurences <= con) { //if first retry, increase 50, if second, add 100 etc
                     System.out.println("Occurences of what would've been " + toSet.name() + " is lower than " + con + " at" + occurences + "in the" + xOrY);
@@ -132,7 +132,7 @@ public class ComparisonOutput extends Lenience {
         for (int xOrYValue : map.keySet()) {
             int amount = 0;
             for (String aColour : map.get(xOrYValue)) {
-                if (main.getTableType(aColour) == TablePart.BORDER) {
+                if (tTrainParser.getTableType(aColour) == TablePart.BORDER) {
                     amount++;
                 }
             }

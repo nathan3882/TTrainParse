@@ -26,7 +26,7 @@ import java.util.concurrent.TimeUnit;
 public class CoreForm extends MessageDisplay {
 
     private static final int DAY_TRAIN_RELEARN_COUNT = 30;
-    private final TTrainParser mainInstance;
+    private final TTrainParser tTrainParser;
     private TaskManager task;
     private User user;
     private JPanel coreFormPanel;
@@ -39,30 +39,30 @@ public class CoreForm extends MessageDisplay {
     private List<LessonInfo> differentDayInfo;
     private boolean showTrainsForEveryLesson;
 
-    public CoreForm(TTrainParser main) {
+    public CoreForm(TTrainParser tTrainParser) {
 
-        this.mainInstance = main;
-        getMainInstance().getSqlConnection().openConnection();
-        getMainInstance().coreForm = this;
+        this.tTrainParser = tTrainParser;
+        gettTrainParser().getSqlConnection().openConnection();
+        gettTrainParser().coreForm = this;
         updateHomeCrsHelpLabel.setText("<html><center>^ New home? Update it above ^</center></html>");
-        getMainInstance().configureCrsComboBox(updateHomeCrsComboBox);
-        getMainInstance().changeCrsComboBoxToCurrentCrs(updateHomeCrsComboBox);
+        gettTrainParser().configureCrsComboBox(updateHomeCrsComboBox);
+        gettTrainParser().changeCrsComboBoxToCurrentCrs(updateHomeCrsComboBox);
 
         updateHomeCrsComboBox.addItemListener(getUpdateHomeCrsComboBoxListener());
-        this.user = getMainInstance().getUser();
+        this.user = gettTrainParser().getUser();
         boolean hasInternet = user.hasInternet();
 
         int left;
         Date renewDate;
 
-        if (hasInternet && main.getSqlConnection().connectionEstablished()) {
-            getMainInstance().getSqlConnection().openConnection();
+        if (hasInternet && tTrainParser.getSqlConnection().connectionEstablished()) {
+            gettTrainParser().getSqlConnection().openConnection();
             if (!user.hasSqlEntry(SqlConnection.SqlTableName.TIMETABLE_RENEWAL)) {
                 user.generateDefaultRenewValues();
             }
             left = getUser().getTableUpdatesLeft();
             renewDate = getUser().getTableRenewDate();
-            updateTimetableButton.addActionListener(getUpdateTimetableListener(main));
+            updateTimetableButton.addActionListener(getUpdateTimetableListener(tTrainParser));
             updateTimetableInfoLabel.setText("<html><center>" + left + " timetable update/s available until..." + TTrainParser.DOUBLE_BREAK + renewDate + "..." + TTrainParser.BREAK + TTrainParser.BREAK + "when it will refresh :)</center></html>");
         } else {
             updateTimetableInfoLabel.setText("<html><center>You either don't have internet or no sql connection has been established.<br>Timetable updates disabled until fixed...</center></html>");
@@ -73,7 +73,7 @@ public class CoreForm extends MessageDisplay {
         StringBuilder mainString = new StringBuilder("<html><center>Here are all of your lessons + train times :)" + TTrainParser.DOUBLE_BREAK);
 
         boolean hasOcrTextStored = user.hasOcrTextStored(showThese);
-        boolean isUpdating = getMainInstance().welcomeForm.isUpdatingTimetable();
+        boolean isUpdating = gettTrainParser().welcomeForm.isUpdatingTimetable();
         boolean segment = true;
         boolean store = false;
         if (hasInternet) {
@@ -85,7 +85,7 @@ public class CoreForm extends MessageDisplay {
         }
         if (TTrainParser.hasTeachersFile()) {
             if (isUpdating || segment) {
-                Segmentation segmentation = new Segmentation(main);
+                Segmentation segmentation = new Segmentation(tTrainParser);
                 List<LessonInfo> info = getLessonInformation(segmentation, showThese, store);
                 mainString = getStringToDisplay(info, false, 2);
             }
@@ -110,8 +110,8 @@ public class CoreForm extends MessageDisplay {
         return new Date(milis.longValue());
     }
 
-    public TTrainParser getMainInstance() {
-        return mainInstance;
+    public TTrainParser gettTrainParser() {
+        return tTrainParser;
     }
 
     public User getUser() {
@@ -153,8 +153,6 @@ public class CoreForm extends MessageDisplay {
         mainString.append("<html><center>");
 
         Date currentDate = new Date();
-        Calendar calendar = Calendar.getInstance();
-        calendar.setTime(currentDate);
 
         int totalDaysToShow = differentDayInfo.size();
 
@@ -181,11 +179,11 @@ public class CoreForm extends MessageDisplay {
                     mainString.append(TTrainParser.BREAK);
                     LocalTime aLessonsStartTime = startTimes.get(k);
 
-                    DayOfWeek today = DayOfWeek.of(calendar.get(Calendar.DAY_OF_WEEK));
+                    DayOfWeek today = DayOfWeek.of(TTrainParser.GLOBAL_CALENDAR.get(Calendar.DAY_OF_WEEK));
                     DayOfWeek dayOfLesson = newCollegeDay.getDayOfWeek();
                     int dif = dayOfLesson.getValue() - today.getValue();
 
-                    updateLessonCalendar(calendar, lessonTimeCal, aLessonsStartTime, dif);
+                    updateLessonCalendar(TTrainParser.GLOBAL_CALENDAR, lessonTimeCal, aLessonsStartTime, dif);
 
                     Date aLessonsStartDate = lessonTimeCal.getTime();
 
@@ -200,7 +198,7 @@ public class CoreForm extends MessageDisplay {
                     mainString.append(lessonName + " lesson number " + (k + 1) + " starts at " + startsAtPrettyString + " and ends at " + finishesAtPrettyString + TTrainParser.BREAK);
                     boolean hasTrains = false;
                     if (showTrainsForEveryLesson || k == 0 || k == lastLesson) {
-                        LinkedList<LinkedList<JSONObject>> learned = getLearnedTrains(user.getHomeCrs(), aLessonsStartDate);
+                        LinkedList<LinkedList<JSONObject>> learned = getPotentialTwoBestLearnedTrains(user.getHomeCrs(), aLessonsStartDate);
                         if (learned.isEmpty()) {
                             List<Service> idealTrains = null;
                             try {
@@ -303,8 +301,8 @@ public class CoreForm extends MessageDisplay {
      * {crs: "BMH", arrival: "8:52", departure: "8:25",walk: "8"}; sep {crs: "BMH", arrival: "8:39", departure: "8:10",walk: "21"}; sep
      */
     private void performTrainSql(long currentMillis, String columnToReference, String servicesAsJson) throws SQLException {
-        SqlQuery query = new SqlQuery(getMainInstance().getSqlConnection());
-        SqlUpdate update = new SqlUpdate(getMainInstance().getSqlConnection());
+        SqlQuery query = new SqlQuery(gettTrainParser().getSqlConnection());
+        SqlUpdate update = new SqlUpdate(gettTrainParser().getSqlConnection());
         String checkString = "SELECT " + columnToReference + "" +
                 " FROM {table} WHERE insertTimestamp = '" + currentMillis + "'";
 
@@ -337,7 +335,7 @@ public class CoreForm extends MessageDisplay {
     /**
      * @returns a list of (lists that contain 2 best trains)
      */
-    private LinkedList<LinkedList<JSONObject>> getLearnedTrains(String homeCrs, Date aLessonsStartDate) {
+    private LinkedList<LinkedList<JSONObject>> getPotentialTwoBestLearnedTrains(String homeCrs, Date aLessonsStartDate) {
         LinkedList<LinkedList<JSONObject>> learned = new LinkedList<>();
         TrainDate trainDate = new TrainDate(aLessonsStartDate);
 
@@ -351,11 +349,10 @@ public class CoreForm extends MessageDisplay {
          * Selects the time column for example 900 for 9am lesson which contains json object like this:
          "{ crs: "BMH" departure: "10:05", arrival: "11:05", walk: "8"};" //crs = homeCrs, d = departure time, a = arrival to brock time, walk: different in mins between arrival and lesson start time
          */
-        SqlQuery query = new SqlQuery(getMainInstance().getSqlConnection());
+        SqlQuery query = new SqlQuery(gettTrainParser().getSqlConnection());
         String queryString = "SELECT `" + columnName + "`" +
                 " FROM {table} WHERE `homeCrs`='" + homeCrs + "'" +
                 " AND " + currentMillis + " - insertTimestamp <= " + aMonthInMillis;
-        System.out.println("QueryString = " + queryString);
         query.executeQuery(queryString, SqlConnection.SqlTableName.TRAINS); //Select if a month hasn't passed
         //The most common train for this lesson is XXX - although our app thinks otherwise, perhaps the train's have changed (XXX that arrives at XXX)
         try {
@@ -363,31 +360,17 @@ public class CoreForm extends MessageDisplay {
             while (query.getResultSet().next() && !query.getResultSet().wasNull()) { //go through responses containing homeCrs, and the train data for 900 1005 etc
                 String string;
                 try {
-                    string = query.getString(count);
+                    string = query.getString(count); //java.sql.SQLException: Column Index out of range, 2 > 1.
                 } catch (Exception exception) {
                     break;
                 }
                 if (string == null) continue;
                 String[] listOfTrains = string.split(" sep ");
-                System.out.println("While... has " + listOfTrains[0]);
                 LinkedList<JSONObject> temp = new LinkedList<>();
                 for (String aTrainJson : listOfTrains) {
                     temp.add(new JSONObject(aTrainJson));
                 }
-                //Example returned data for function is:
-                /*
-                [
-                 [
-                  {crs: "BMH" departure: "10:05", arrival: "11:05", walk: "8"},
-                  {crs: "BMH" departure: "10:27", arrival: "11:30", walk: "12"}
-                 ],
-                 [
-                  {crs: "BMH" departure: "10:05", arrival: "11:05", walk: "8"},
-                  {crs: "BMH" departure: "10:27", arrival: "11:12", walk: "12"}
-                 ]
-                ]
 
-                 */
                 learned.add(temp);
                 count++;
             }
@@ -459,7 +442,7 @@ public class CoreForm extends MessageDisplay {
                 continue; /*No Lessons*/
             }
 
-            ocrText = getMainInstance().depleteFutileInfo(ocrText);
+            ocrText = gettTrainParser().depleteFutileInfo(ocrText);
 
             if (store)
                 user.storeOcrText(ocrText, day, hasInternet); //store depleted text, for example Tuesday Computer Science 12:00 13:00
@@ -482,8 +465,8 @@ public class CoreForm extends MessageDisplay {
             this.task = new TaskManager(new Timer()) {
                 @Override
                 public void run() {
-                    if (user.hasInternet() && getMainInstance().getSqlConnection().connectionEstablished()) {
-                        getMainInstance().getSqlConnection().openConnection();
+                    if (user.hasInternet() && gettTrainParser().getSqlConnection().connectionEstablished()) {
+                        gettTrainParser().getSqlConnection().openConnection();
                         for (DayOfWeek day : showThese) {
                             if (!user.hasOcrTextStored(showThese)) {
                                 user.storeOcrText(texts.get(day), day, true);
@@ -499,8 +482,8 @@ public class CoreForm extends MessageDisplay {
     }
 
     private void initiateTimetableChange() {
-        getMainInstance().openPanel(TTrainParser.WELCOME_PANEL);
-        getMainInstance().welcomeForm.setUpdating(true);
+        gettTrainParser().openPanel(TTrainParser.WELCOME_PANEL);
+        gettTrainParser().welcomeForm.setUpdating(true);
     }
 
     private String upperFirst(String string) {

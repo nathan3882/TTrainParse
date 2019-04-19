@@ -13,14 +13,14 @@ import java.util.concurrent.TimeUnit;
 public class User {
 
     public static final long DEFAULT_RENEW_COOLDOWN_DAYS = 7;
-    private final TTrainParser main;
+    private final TTrainParser tTrainParser;
     private final SqlConnection connection;
     private String userEmail;
 
-    public User(TTrainParser main, String userEmail) {
-        this.main = main;
+    public User(TTrainParser tTrainParser, String userEmail) {
+        this.tTrainParser = tTrainParser;
         this.userEmail = userEmail;
-        this.connection = main.getSqlConnection();
+        this.connection = tTrainParser.getSqlConnection();
     }
 
     public static boolean hasSqlEntry(TTrainParser tTrainParser, String table, String userEmail) {
@@ -33,11 +33,11 @@ public class User {
     }
 
     public boolean hasSqlEntry(String table, String column) {
-        return hasSqlEntry(main, table, column);
+        return hasSqlEntry(tTrainParser, table, column);
     }
 
     public boolean hasSqlEntry(String table) {
-        return hasSqlEntry(main, table, getUserEmail());
+        return hasSqlEntry(tTrainParser, table, getUserEmail());
     }
 
     public String getUserEmail() {
@@ -182,7 +182,7 @@ public class User {
     }
 
     public boolean hasInternet() {
-        return main.hasInternet();
+        return tTrainParser.hasInternet();
     }
 
     public void setEmail(String userEmail) {

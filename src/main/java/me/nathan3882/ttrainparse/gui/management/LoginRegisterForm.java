@@ -28,20 +28,20 @@ public class LoginRegisterForm extends MessageDisplay {
     private JLabel emailHelpLabel;
     private JLabel homeCrsHelpLabel;
     private JComboBox selectHomeCrsBox;
-    private TTrainParser mainInstance;
+    private TTrainParser tTrainParser;
 
-    public LoginRegisterForm(TTrainParser mainInstance) {
-        this.mainInstance = mainInstance;
-        mainInstance.loginRegisterForm = this;
-        mainInstance.configureCrsComboBox(selectHomeCrsBox);
-        User user = mainInstance.getUser();
+    public LoginRegisterForm(TTrainParser tTrainParser) {
+        this.tTrainParser = tTrainParser;
+        tTrainParser.loginRegisterForm = this;
+        tTrainParser.configureCrsComboBox(selectHomeCrsBox);
+        User user = tTrainParser.getUser();
         if (user.hasEmailPwAndHomeData()) {
             homeCrsHelpLabel.setText("<html><center>New house? Add click below if you want to change:</html></center>");
-            mainInstance.changeCrsComboBoxToCurrentCrs(selectHomeCrsBox);
+            tTrainParser.changeCrsComboBoxToCurrentCrs(selectHomeCrsBox);
         } else {
             homeCrsHelpLabel.setText("<html><center>Add your home station below:</html></center>");
         }
-        if (mainInstance.hasLocallyStoredEmail()) {
+        if (tTrainParser.hasLocallyStoredEmail()) {
             aboveEverythingLabel.setText("<html><center>Welcome<br>You've probably already stored your timetable<br>Please login/register below using your previously created account</center></html>");
         }
         emailHelpLabel.setText("<html><center>Your email goes below</center></html>");
@@ -87,14 +87,14 @@ public class LoginRegisterForm extends MessageDisplay {
                 if (selectHomeCrsBox.getSelectedIndex() != -1) {
                     String selected = (String) selectHomeCrsBox.getSelectedItem();
                     String crs = selected.split(" / ")[0];
-                    mainInstance.createDataFileIfNotPresent();
-                    DataFileInfo info = mainInstance.getYamlReadDatafile();
-                    mainInstance.getUser().setEmail(emailText);
-                    mainInstance.getSqlConnection().openConnection();
-                    if (mainInstance.hasInternet() && mainInstance.getSqlConnection().connectionEstablished()) {
-                        boolean noEmailStored = !User.hasSqlEntry(mainInstance, SqlConnection.SqlTableName.TIMETABLE_USERDATA, emailText);
+                    tTrainParser.createDataFileIfNotPresent();
+                    DataFileInfo info = tTrainParser.getYamlReadDatafile();
+                    tTrainParser.getUser().setEmail(emailText);
+                    tTrainParser.getSqlConnection().openConnection();
+                    if (tTrainParser.hasInternet() && tTrainParser.getSqlConnection().connectionEstablished()) {
+                        boolean noEmailStored = !User.hasSqlEntry(tTrainParser, SqlConnection.SqlTableName.TIMETABLE_USERDATA, emailText);
                         if (noEmailStored) { //No account stored for entered email
-                            if (info == null || !mainInstance.hasLocallyStoredEmail()) {//create an account
+                            if (info == null || !tTrainParser.hasLocallyStoredEmail()) {//create an account
                                 info.setTimetableCroppedPngFileName(info.timetableCroppedPngFileName);
                                 doEmails(emailText, info);
                                 doDatabase(emailText, enteredPassword, crs);
@@ -107,13 +107,13 @@ public class LoginRegisterForm extends MessageDisplay {
                                     sendRegisteredMessage();
                                 } else { //different than locally stored, change local email - still not in db, will be next login
                                     doEmails(emailText, info);
-                                    mainInstance.changeCrsComboBoxToCurrentCrs(selectHomeCrsBox);
+                                    tTrainParser.changeCrsComboBoxToCurrentCrs(selectHomeCrsBox);
                                     displayMessage("Local Account changed - please re login!");
                                 }
                             }
                         } else { //Same email as entered stored in database, logging in to existing
-                            String gottenDBSalt = mainInstance.getUser().getDatabaseSalt(emailText);
-                            String gottenDBBytes = mainInstance.getUser().getDatabaseStoredPwBytes(emailText);
+                            String gottenDBSalt = tTrainParser.getUser().getDatabaseSalt(emailText);
+                            String gottenDBBytes = tTrainParser.getUser().getDatabaseStoredPwBytes(emailText);
 
                             if (gottenDBBytes.equals("invalid email")) { //= 'invalid email' when record doesnt exists
                                 displayMessage("This email is incorrect!");
@@ -127,14 +127,14 @@ public class LoginRegisterForm extends MessageDisplay {
                             } else {
                                 String localEmail = info.getEmail();
                                 if (emailText.equals(localEmail)) { //entered same as locally stored, but not in db yet
-                                    if (!crs.equals(mainInstance.getUser().getHomeCrs())) {
-                                        mainInstance.getUser().updateHomeCrs(crs);
+                                    if (!crs.equals(tTrainParser.getUser().getHomeCrs())) {
+                                        tTrainParser.getUser().updateHomeCrs(crs);
                                     }
                                     displayMessage("Successfully logged in to existing acc!");
-                                    mainInstance.openPanel(TTrainParser.CORE_PANEL);
+                                    tTrainParser.openPanel(TTrainParser.CORE_PANEL);
                                 } else { //different than locally stored, change local email - still not in db, will be next login
                                     doEmails(emailText, info);
-                                    mainInstance.changeCrsComboBoxToCurrentCrs(selectHomeCrsBox);
+                                    tTrainParser.changeCrsComboBoxToCurrentCrs(selectHomeCrsBox);
                                     displayMessage("Local Account changed - please re login!");
                                 }
                             }
@@ -159,7 +159,7 @@ public class LoginRegisterForm extends MessageDisplay {
 
     private void doEmails(String emailText, DataFileInfo info) {
         info.setEmail(emailText);
-        mainInstance.getUser().setEmail(emailText);
+        tTrainParser.getUser().setEmail(emailText);
         writeToDatafile(info);
     }
 
@@ -167,7 +167,7 @@ public class LoginRegisterForm extends MessageDisplay {
         Encryption encry = new Encryption(enteredPassword, Encryption.generateSalt());
         byte[] databaseSalt = encry.getSalt();
         byte[] databaseBytes = encry.getOriginalEncrypted();
-        mainInstance.getUser().storeEmailAndPasswordWithCrs(emailText, databaseBytes, databaseSalt, crs);
+        tTrainParser.getUser().storeEmailAndPasswordWithCrs(emailText, databaseBytes, databaseSalt, crs);
     }
 
     private boolean isValidPasscode(char[] password) {
