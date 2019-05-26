@@ -125,11 +125,15 @@ public class LessonInfo {
                 timeString = addingBefore + timeString;
                 startFinish = timeStringSplit(timeString);
             }
-            LocalTime startTime = parse(startFinish[0], false);
-            LocalTime finishTime = parse(startFinish[1], false);
+            try {
+                LocalTime startTime = parse(startFinish[0], false);
+                LocalTime finishTime = parse(startFinish[1], false);
 
-            addToList(subject, subjectAndBounds, orderedSubjectStartTimes, startTime);
-            addToList(subject, subjectAndBounds, orderedSubjectFinishTimes, finishTime);
+                addToList(subject, subjectAndBounds, orderedSubjectStartTimes, startTime);
+                addToList(subject, subjectAndBounds, orderedSubjectFinishTimes, finishTime);
+            } catch (ArrayIndexOutOfBoundsException e) {
+                continue;
+            }
         }
     }
 

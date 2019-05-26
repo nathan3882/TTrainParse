@@ -1,6 +1,6 @@
 package me.nathan3882.ttrainparse.gui.management;
 
-import me.nathan3882.ttrainparse.MessageDisplay;
+import me.nathan3882.ttrainparse.IMessageDisplay;
 import me.nathan3882.ttrainparse.ParsedTimetable;
 import me.nathan3882.ttrainparse.TTrainParser;
 import me.nathan3882.ttrainparse.User;
@@ -21,7 +21,7 @@ import java.io.FileWriter;
 import java.io.IOException;
 
 
-public class WelcomeForm extends MessageDisplay {
+public class WelcomeForm implements IMessageDisplay {
 
     public JPanel welcomePanel;
     public JLabel welcomeLabel;

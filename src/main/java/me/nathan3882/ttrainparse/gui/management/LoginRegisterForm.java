@@ -1,6 +1,6 @@
 package me.nathan3882.ttrainparse.gui.management;
 
-import me.nathan3882.ttrainparse.MessageDisplay;
+import me.nathan3882.ttrainparse.IMessageDisplay;
 import me.nathan3882.ttrainparse.TTrainParser;
 import me.nathan3882.ttrainparse.User;
 import me.nathan3882.ttrainparse.data.DataFileInfo;
@@ -16,7 +16,7 @@ import java.io.IOException;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-public class LoginRegisterForm extends MessageDisplay {
+public class LoginRegisterForm implements IMessageDisplay {
     private JPanel loginRegisterPanel;
     private JTextField emailTextField;
 

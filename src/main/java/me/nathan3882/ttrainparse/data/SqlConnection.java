@@ -121,7 +121,8 @@ public class SqlConnection {
     private void establishConnection() {
         Connection ans = null;
         try {
-            ans = DriverManager.getConnection("jdbc:mysql://" + host + ":" + port + "/" + databaseName + "?useSSL=false&allowMultiQueries=true", username, password);
+            ans = DriverManager.getConnection("jdbc:mysql://" + host + ":" + port + "/" + databaseName +
+                    "?useSSL=false&serverTimezone=GMT&allowMultiQueries=true", username, password);
             setLatestOpeningMilis(System.currentTimeMillis());
             open = true;
         } catch (Exception e) {

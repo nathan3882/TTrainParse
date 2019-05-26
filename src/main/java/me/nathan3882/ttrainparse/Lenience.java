@@ -23,21 +23,21 @@
 
 package me.nathan3882.ttrainparse;
 
-public class Lenience {
+public interface Lenience {
 
-    private final int occurencesStartCheck = 400;
-    private final int occurencesDecreaseBy = 30;
-    private final double responseSpecificity = .30;
+    int occurencesStartCheck = 400;
+    int occurencesDecreaseBy = 30;
+    double responseSpecificity = .30;
 
-    public int getOccurencesStartCheck() {
+    default int getOccurencesStartCheck() {
         return occurencesStartCheck;
     }
 
-    public int getOccurencesDecreaseBy() {
+    default int getOccurencesDecreaseBy() {
         return occurencesDecreaseBy;
     }
 
-    public double getResponseSpecificity() {
+    default double getResponseSpecificity() {
         return responseSpecificity;
     }
 }

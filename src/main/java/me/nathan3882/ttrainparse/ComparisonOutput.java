@@ -8,7 +8,7 @@ import java.util.Map.Entry;
  * @author Nathan Allanson
  * @purpose To determine whether previously iterated over pixels are part of the timetable border
  */
-public class ComparisonOutput extends Lenience {
+public class ComparisonOutput implements Lenience {
 
     public static int leftRightInstantiations = 0;
     public static int topBottomInstantiations = 0;

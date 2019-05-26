@@ -44,7 +44,7 @@ import java.util.*;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-public class TTrainParser extends MessageDisplay {
+public class TTrainParser {
 
     public static final Calendar GLOBAL_CALENDAR = Calendar.getInstance();
     public static final String USER_DIRECTORY = System.getProperty("user.dir");

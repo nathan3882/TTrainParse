@@ -12,7 +12,7 @@ import java.util.Map;
  * @author Nathan Allanson
  * @purpose Gets a timetable/buffered image that's able to be parsed by OCR, cancelling out every piece of futile external information.
  */
-public class ParsedTimetable extends Lenience {
+public class ParsedTimetable implements Lenience {
 
     private static List<ComparisonOutput.Response> previousResponses = new ArrayList<>(); //I could just iterate through previously stored comparison outputs and
     private static DecimalFormat decimalFormat = new DecimalFormat();
@@ -31,7 +31,7 @@ public class ParsedTimetable extends Lenience {
     private int xValueRightBorder = -1;
     private BufferedImage newImage = null;
 
-    public ParsedTimetable(TTrainParser tTrainParser, MessageDisplay messageDisplay, BufferedImage firstImage, int previousPrevDone) {
+    public ParsedTimetable(TTrainParser tTrainParser, IMessageDisplay messageDisplay, BufferedImage firstImage, int previousPrevDone) {
         ComparisonOutput.topBottomInstantiations = 0;
         ComparisonOutput.leftRightInstantiations = 0;
         clearPreviousResponses();

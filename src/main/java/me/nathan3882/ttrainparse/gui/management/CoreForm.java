@@ -23,7 +23,7 @@ import java.util.Timer;
 import java.util.Map.Entry;
 import java.util.concurrent.TimeUnit;
 
-public class CoreForm extends MessageDisplay {
+public class CoreForm implements IMessageDisplay {
 
     private static final int DAY_TRAIN_RELEARN_COUNT = 30;
     private final TTrainParser tTrainParser;
