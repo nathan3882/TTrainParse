@@ -10,6 +10,12 @@ import java.util.LinkedHashMap;
 import java.util.LinkedList;
 import java.util.Map;
 
+/**
+ * Segmentation.java is a class that allows the program to completely isolate each individual day from
+ * a ParsedTimetable
+ * The reason iterativeY is 5 is because the x, y pixel referenced will be just below the very top
+ * this will allow the iteration from left to right to definetely come accross a pixel of type TablePart.BORDER.
+ */
 public class Segmentation {
 
     private final BufferedImage allDayImage;

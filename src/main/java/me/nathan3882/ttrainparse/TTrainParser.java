@@ -44,6 +44,14 @@ import java.util.*;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+/**
+ * This is the main class which bridges all other classes together
+ * - contains the main function, that is main(String[] args) that is called upon running the program, from here it loads:
+ * An initial SqlConnection object to allow future SqlQuery & SqlUpdate instantiations
+ * A global calendar to save constantly getting a new instance of ‘Calendar’
+ * WelocmeForm and LoginRegisterForm and CoreForm
+ * These form instantiations are done depending on the user’s circumstances – if the user hasCroppedTimetableFileAlready or has a locally stored email or has an sql entry for this locally stored email, then load the LOGIN_REGISTER_FORM – if not, create a new User and open WELCOME_PANEL
+ */
 public class TTrainParser {
 
     public static final Calendar GLOBAL_CALENDAR = Calendar.getInstance();

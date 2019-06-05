@@ -180,7 +180,7 @@ public class ParsedTimetable implements Lenience {
         return this.tTrainParser;
     }
 
-    private boolean canReinstantiate(int value, int heightOrWidth) {
+    boolean canReinstantiate(int value, int heightOrWidth) {
         return value >= (heightOrWidth / 3) - 1; //Dividing integers gives absolute value, ie 9.9 will be 9 so just take 1 away to be accurate
     }
 

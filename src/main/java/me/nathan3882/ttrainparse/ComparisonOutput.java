@@ -6,7 +6,25 @@ import java.util.Map.Entry;
 
 /**
  * @author Nathan Allanson
- * @purpose To determine whether previously iterated over pixels are part of the timetable border
+ * @purpose
+ * ComparisonOutput.java is a class that has a main focus of determing and analysing a previous 3rd of pixel
+ * data that it was fed from by ParsedTimetable’s constructor.
+ * The boolean function {@link ParsedTimetable#canReinstantiate(int, int)} determines when ComaprisonOutput
+ * is instantiated. If it returns true, all of the pixels are fed into {@link ComparisonOutput} and analysed
+ * ComparisonOutput.java sets a 'response' for every analysed set of pixels.
+ * If ParsedTimetable has been instantiated perhaps more than once because it failed the first time around...
+ * ComparisonOutput.java's strictness in terms of responding to pixels that are that are of type
+ * TablePart.BORDER decreases.
+ *
+ * This leads to lower quantities returning valid Responses as opposed to higher strictnesses
+ * returning a Response of MIDDLE_NOT_A_BORDER more frequently.
+ *
+ * This feature allows much more compatibility with different timetables + monitors
+ *
+ * The user can keep trying until the ComparisonOutput finds it's valid borders.
+ * The pixel sorting algorithm utilises a modified n log(n) merge sort algorithm.
+ * Note, the constant “OCCURENCES_START_CHECK” is basically the minimum quantity of borders to register
+ * that it is infact a border.
  */
 public class ComparisonOutput implements Lenience {
 

@@ -7,7 +7,17 @@ import java.util.*;
 
 /**
  * @author Nathan Allanson
- * @purpose Used to fetch information about a specific day of the week, called from
+ * @purpose LessonInfo.java is a class that is instantiated by two arguments.
+ * Argument one being of type “List<String>” named “depletedWordsForADay” and argument two
+ * being of type “DayOfWeek” named “dayOfWeek”) where depletedWordsForADay is iterated over word by word;
+ * an example of a string is shown as a screenshot above, under either columns “TUESDAY” or “WEDNESDAY”.
+ * It’s then analysed in order to locate index locations for any of the colons in the string.
+ * With these colon character locations,
+ * +/- offsets can be applied to to locate other valuable information regarding the specific lesson.
+ * For example start time and end time
+ * -  Business studies 09:00 – 10:05
+ * Once location of a colon has been found at [19] the program would’ve already inferred that it
+ * had passed “Business Studies” and now knows this colon belongs to business studies
  * @instantiatedBy CoreForm.java
  */
 
