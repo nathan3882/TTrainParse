@@ -1,4 +1,4 @@
-# BrockTrainParse
+# Timetable Train Parse
 TTrainParse is an easy to use program that allows any student who is enlisted at Brockenhurst College to take a print screen of their online timetable @ students.brock.ac.uk/timetable (note, it doesn't have to be cropped to fill the entire screen) and my program completely strip of all information and get each day's lesson start – finish times, to allow seamless integration with a SOAP client I developed that consumes the South Western Railway's public database, manipulating the Departure and Arrival board responses according to lesson times.<br><br>All the user must do is send a screenshot, configure the automatically generated Teacher Names.txt so it's tailored to their teacher / teachers and lesson / lessons and hey, sorted.
 
 # Why?
